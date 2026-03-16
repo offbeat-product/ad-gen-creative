@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, Image, Play, Music as MusicIcon, Pause,
@@ -155,20 +156,23 @@ const EmptyState = () => (
   </div>
 );
 
-const CompletionBanner = ({ total, onNavigate }: { total: number; onNavigate: () => void }) => (
-  <div className="text-center py-6 space-y-3">
-    <p className="text-xl font-bold font-display">🎉 すべての生成が完了しました！</p>
-    <p className="text-sm text-muted-foreground">合計 {total}本 のクリエイティブを生成しました</p>
-    <Button variant="brand" size="lg" onClick={() => alert('結果画面は次フェーズで実装予定')}>
-      結果を確認する
-    </Button>
-    <div>
-      <button onClick={onNavigate} className="text-sm text-muted-foreground hover:text-foreground underline">
-        ダッシュボードに戻る
-      </button>
+const CompletionBanner = ({ total, onNavigate }: { total: number; onNavigate: () => void }) => {
+  const navigate = useNavigate();
+  return (
+    <div className="text-center py-6 space-y-3">
+      <p className="text-xl font-bold font-display">🎉 すべての生成が完了しました！</p>
+      <p className="text-sm text-muted-foreground">合計 {total}本 のクリエイティブを生成しました</p>
+      <Button variant="brand" size="lg" onClick={() => navigate('/result/latest')}>
+        結果を確認する
+      </Button>
+      <div>
+        <button onClick={onNavigate} className="text-sm text-muted-foreground hover:text-foreground underline">
+          ダッシュボードに戻る
+        </button>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const ImagePlaceholder = ({ label, aspect = '16/9', size = 'md' }: { label: string; aspect?: string; size?: 'sm' | 'md' }) => (
   <div

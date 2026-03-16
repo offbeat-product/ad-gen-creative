@@ -11,6 +11,7 @@ import Dashboard from "@/pages/Dashboard";
 import Generate from "@/pages/Generate";
 import GenerateProgress from "@/pages/GenerateProgress";
 import HistoryPage from "@/pages/History";
+import GenerationResult from "@/pages/GenerationResult";
 import Settings from "@/pages/Settings";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -37,6 +38,7 @@ const App = () => (
               <Route path="/generate" element={<Generate />} />
               <Route path="/generate/progress" element={<GenerateProgress />} />
               <Route path="/history" element={<HistoryPage />} />
+              <Route path="/result/:id" element={<GenerationResult />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
             <Route path="*" element={<NotFound />} />

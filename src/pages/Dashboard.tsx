@@ -61,7 +61,7 @@ const Dashboard = () => {
             </thead>
             <tbody>
               {recentGenerations.map((row, i) => (
-                <tr key={i} className="border-b last:border-0 hover:bg-accent/50 transition-colors cursor-pointer">
+                <tr key={i} className="border-b last:border-0 hover:bg-primary-wash transition-colors cursor-pointer" onClick={() => navigate(`/result/r${i + 1}`)}>
                   <td className="p-3 text-muted-foreground">{row.date}</td>
                   <td className="p-3 font-medium">{row.client}</td>
                   <td className="p-3 hidden sm:table-cell">{row.product}</td>
