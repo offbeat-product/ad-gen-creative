@@ -1,4 +1,5 @@
 import { Target, Type, Palette, Sparkles, ListChecks } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { type WizardState, clients, products, projects } from '@/data/wizard-data';
 import { Slider } from '@/components/ui/slider';
@@ -52,15 +53,32 @@ const StepPatternCount = ({ state, updateState, goBack }: Props) => {
         ))}
       </div>
 
-      {/* Total calculation */}
-      <div className="rounded-2xl bg-foreground text-primary-foreground p-8 text-center">
-        <div className="text-muted-foreground text-lg mb-2">
-          訴求軸 {state.appealAxis} × コピー {state.copyPatterns} × トンマナ {state.tonePatterns}
+      {/* Breakdown */}
+      <div className="rounded-2xl border bg-card p-6 space-y-4">
+        <h3 className="font-semibold font-display flex items-center gap-2">
+          <span className="text-lg">📊</span> 生成されるクリエイティブの内訳
+        </h3>
+        <div className="space-y-2 text-sm">
+          <div className="flex items-center gap-2">
+            <Target className="h-4 w-4 text-secondary" />
+            <span>訴求軸: <span className="font-bold tabular-nums text-secondary">{state.appealAxis}</span> パターン</span>
+          </div>
+          <div className="flex items-center gap-2 pl-6 text-muted-foreground">
+            <Type className="h-4 w-4 text-secondary/70" />
+            <span>× コピー <span className="font-bold tabular-nums text-foreground">{state.copyPatterns}</span> パターン = <span className="font-bold tabular-nums text-foreground">{state.appealAxis * state.copyPatterns}</span> 通り</span>
+          </div>
+          <div className="flex items-center gap-2 pl-12 text-muted-foreground">
+            <Palette className="h-4 w-4 text-secondary/50" />
+            <span>× トンマナ <span className="font-bold tabular-nums text-foreground">{state.tonePatterns}</span> パターン = <span className="font-bold tabular-nums text-foreground">{total}</span> 本</span>
+          </div>
         </div>
-        <div className="flex items-baseline justify-center gap-2">
-          <span className="text-muted-foreground text-lg">= 合計</span>
-          <span className="text-6xl font-bold tabular-nums text-secondary">{total}</span>
-          <span className="text-muted-foreground text-lg">本</span>
+
+        <Separator />
+
+        <div className="text-center space-y-1">
+          <div className="text-sm text-muted-foreground">合計制作本数</div>
+          <div className="text-[40px] font-bold tabular-nums text-secondary leading-tight">{total}<span className="text-lg text-muted-foreground ml-1">本</span></div>
+          <p className="text-xs text-muted-foreground">※訴求軸 × コピー × トンマナの組み合わせで自動計算</p>
         </div>
       </div>
 
