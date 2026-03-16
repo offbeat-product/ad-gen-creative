@@ -367,9 +367,9 @@ const HistoryPage = () => {
             <AnimatePresence mode="wait">
               <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
                 {/* Filters */}
-                <div className="flex flex-wrap items-center gap-3 mb-4">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-4">
                   <Select value={clientFilter} onValueChange={(v) => { setClientFilter(v); setPage(1); }}>
-                    <SelectTrigger className="w-[180px]"><SelectValue placeholder="クライアント" /></SelectTrigger>
+                    <SelectTrigger className="w-[140px] sm:w-[180px]"><SelectValue placeholder="クライアント" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">全て</SelectItem>
                       <SelectItem value="レバレジーズ">レバレジーズ</SelectItem>
