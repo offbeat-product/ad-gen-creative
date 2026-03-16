@@ -58,18 +58,6 @@ const StepPattern = ({ state, updateState }: Props) => {
         </div>
       )}
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium">何本制作しますか？</label>
-        <input
-          type="number"
-          min={1}
-          max={50}
-          value={state.productionCount}
-          onChange={e => updateState({ productionCount: Math.max(1, Math.min(50, parseInt(e.target.value) || 1)) })}
-          className="w-32 rounded-xl border bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring tabular-nums"
-        />
-        <p className="text-xs text-muted-foreground">※ステップ⑧のパターン数設定で自動計算もできます</p>
-      </div>
     </div>
   );
 };
