@@ -469,14 +469,14 @@ const GenerationResult = () => {
               {/* Filters */}
               <div className="flex flex-wrap gap-3 mb-6 mt-4">
                 <Select value={filterScript} onValueChange={setFilterScript}>
-                  <SelectTrigger className="w-[180px]"><SelectValue placeholder="台本パターン" /></SelectTrigger>
+                  <SelectTrigger className="w-[140px] sm:w-[180px]"><SelectValue placeholder="台本パターン" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">全て</SelectItem>
                     {scriptLetters.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <Select value={filterTone} onValueChange={setFilterTone}>
-                  <SelectTrigger className="w-[240px]"><SelectValue placeholder="トンマナ" /></SelectTrigger>
+                  <SelectTrigger className="w-[160px] sm:w-[240px]"><SelectValue placeholder="トンマナ" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">全て</SelectItem>
                     {TONMANA.map((t, i) => <SelectItem key={i} value={String(i + 1)}>{i + 1}: {t.name}</SelectItem>)}
