@@ -11,9 +11,25 @@ interface Props {
   goBack: () => void;
 }
 
+const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
 const StepPatternCount = ({ state, updateState, goBack }: Props) => {
   const navigate = useNavigate();
   const total = state.appealAxis * state.copyPatterns * state.tonePatterns;
+  const scriptCount = state.appealAxis * state.copyPatterns;
+  const firstLetter = ALPHA[0];
+  const lastLetter = ALPHA[Math.min(scriptCount - 1, 25)];
+
+  // Generate pattern ID preview string
+  const allIds: string[] = [];
+  for (let s = 0; s < scriptCount; s++) {
+    for (let t = 1; t <= state.tonePatterns; t++) {
+      allIds.push(`${ALPHA[s]}${t}`);
+    }
+  }
+  const patternIdPreview = allIds.length <= 8
+    ? allIds.join(', ')
+    : `${allIds.slice(0, 6).join(', ')} ... ${allIds[allIds.length - 1]}`;
 
   const client = clients.find(c => c.id === state.clientId);
   const product = state.clientId ? (products[state.clientId] ?? []).find(p => p.id === state.productId) : null;
