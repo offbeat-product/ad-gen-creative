@@ -63,15 +63,14 @@ const StepPatternCount = ({ state, updateState, goBack }: Props) => {
         <div className="space-y-2 text-sm">
           <div className="flex items-center gap-2">
             <Target className="h-4 w-4 text-secondary" />
-            <span>訴求軸: <span className="font-bold tabular-nums text-secondary">{state.appealAxis}</span> パターン</span>
+            <span>台本パターン: <span className="font-bold tabular-nums text-secondary">{scriptCount}</span> パターン（{firstLetter}〜{lastLetter}）</span>
           </div>
           <div className="flex items-center gap-2 pl-6 text-muted-foreground">
-            <Type className="h-4 w-4 text-secondary/70" />
-            <span>× コピー <span className="font-bold tabular-nums text-foreground">{state.copyPatterns}</span> パターン = <span className="font-bold tabular-nums text-foreground">{state.appealAxis * state.copyPatterns}</span> 通り</span>
+            <span>訴求軸 <span className="font-bold tabular-nums text-foreground">{state.appealAxis}</span> × コピー <span className="font-bold tabular-nums text-foreground">{state.copyPatterns}</span> = <span className="font-bold tabular-nums text-foreground">{scriptCount}</span> 通り</span>
           </div>
-          <div className="flex items-center gap-2 pl-12 text-muted-foreground">
-            <Palette className="h-4 w-4 text-secondary/50" />
-            <span>× トンマナ <span className="font-bold tabular-nums text-foreground">{state.tonePatterns}</span> パターン = <span className="font-bold tabular-nums text-foreground">{total}</span> 本</span>
+          <div className="flex items-center gap-2">
+            <Palette className="h-4 w-4 text-secondary" />
+            <span>トンマナ: <span className="font-bold tabular-nums text-secondary">{state.tonePatterns}</span> パターン（1〜{state.tonePatterns}）</span>
           </div>
         </div>
 
@@ -80,7 +79,8 @@ const StepPatternCount = ({ state, updateState, goBack }: Props) => {
         <div className="text-center space-y-1">
           <div className="text-sm text-muted-foreground">合計制作本数</div>
           <div className="text-[40px] font-bold tabular-nums text-secondary leading-tight">{total}<span className="text-lg text-muted-foreground ml-1">本</span></div>
-          <p className="text-xs text-muted-foreground">※訴求軸 × コピー × トンマナの組み合わせで自動計算</p>
+          <p className="text-xs text-muted-foreground font-mono">{patternIdPreview}</p>
+          <p className="text-xs text-muted-foreground mt-1">※訴求軸 × コピー × トンマナの組み合わせで自動計算</p>
         </div>
       </div>
 
