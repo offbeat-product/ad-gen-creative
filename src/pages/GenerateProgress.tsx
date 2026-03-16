@@ -7,7 +7,7 @@ import {
   Sparkles, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { type WizardState, clients, products, projects } from '@/data/wizard-data';
+import { type WizardState } from '@/data/wizard-data';
 import PipelineTimeline from '@/components/progress/PipelineTimeline';
 import PreviewPanel from '@/components/progress/PreviewPanel';
 
@@ -278,9 +278,10 @@ const GenerateProgress = () => {
   };
 
   // Summary line
-  const client = clients.find(c => c.id === state.clientId);
-  const product = state.clientId ? (products[state.clientId] ?? []).find(p => p.id === state.productId) : null;
-  const project = state.productId ? (projects[state.productId] ?? []).find(p => p.id === state.projectId) : null;
+  // These are display-only labels for the progress page summary line
+  const client = { name: state.clientId ?? '—' };
+  const product = { name: state.productId ?? '—' };
+  const project = { name: state.projectId ?? '—' };
   const typeLabel = state.creativeType === 'video' ? `動画${state.videoDuration}秒` : '静止画バナー';
   const patternLabel = state.productionPattern === 'new' ? '新規制作' : 'パターン展開';
   const summaryLine = `${typeLabel} / ${client?.name ?? '—'} / ${product?.name ?? '—'} / ${project?.name ?? '—'} / ${patternLabel} / 合計${total}本`;

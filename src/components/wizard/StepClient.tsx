@@ -1,23 +1,50 @@
 import { useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { type WizardState, clients } from '@/data/wizard-data';
+import { type WizardState } from '@/data/wizard-data';
+import { useClients, useProductCount } from '@/hooks/use-supabase-data';
+import { useNavigate } from 'react-router-dom';
 
 interface Props {
   state: WizardState;
   updateState: (u: Partial<WizardState>) => void;
 }
 
+const ClientCard = ({ client, selected, onClick }: { client: { id: string; name: string }; selected: boolean; onClick: () => void }) => {
+  const productCount = useProductCount(client.id);
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "text-left rounded-xl border p-4 transition-all duration-200",
+        selected
+          ? "border-secondary bg-secondary-wash/50 scale-[1.01]"
+          : "border-border bg-card hover:shadow-elevated hover:-translate-y-0.5"
+      )}
+    >
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-semibold">{client.name}</span>
+      </div>
+      <div className="flex gap-4 text-xs text-muted-foreground">
+        <span>商材 {productCount}</span>
+      </div>
+    </button>
+  );
+};
+
 const StepClient = ({ state, updateState }: Props) => {
   const [search, setSearch] = useState('');
+  const { clients, loading } = useClients();
+  const navigate = useNavigate();
   const filtered = clients.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
 
-  const colorMap: Record<string, string> = {
-    'primary-wash': 'bg-primary-wash text-primary-dark',
-    'secondary-wash': 'bg-secondary-wash text-secondary',
-    'success-wash': 'bg-success-wash text-success',
-    'warning-wash': 'bg-warning-wash text-warning',
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -34,33 +61,25 @@ const StepClient = ({ state, updateState }: Props) => {
         />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {filtered.map((c) => (
-          <button
-            key={c.id}
-            onClick={() => updateState({ clientId: c.id, productId: null, projectId: null })}
-            className={cn(
-              "text-left rounded-xl border p-4 transition-all duration-200",
-              state.clientId === c.id
-                ? "border-secondary bg-secondary-wash/50 scale-[1.01]"
-                : "border-border bg-card hover:shadow-elevated hover:-translate-y-0.5"
-            )}
-          >
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-semibold">{c.name}</span>
-              <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium", colorMap[c.industryColor])}>
-                {c.industry}
-              </span>
-            </div>
-            <div className="flex gap-4 text-xs text-muted-foreground">
-              <span>商材 {c.productCount}</span>
-              <span>ルール {c.ruleCount}</span>
-              <span>ナレッジ {c.knowledge}</span>
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">最終更新: {c.lastUpdated}</div>
+      {filtered.length === 0 ? (
+        <div className="text-center py-12 space-y-3">
+          <p className="text-muted-foreground">クライアントが登録されていません。設定画面からクライアントを追加してください。</p>
+          <button onClick={() => navigate('/settings?tab=clients')} className="text-secondary text-sm hover:underline">
+            設定画面へ →
           </button>
-        ))}
-      </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {filtered.map((c) => (
+            <ClientCard
+              key={c.id}
+              client={c}
+              selected={state.clientId === c.id}
+              onClick={() => updateState({ clientId: c.id, productId: null, projectId: null })}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

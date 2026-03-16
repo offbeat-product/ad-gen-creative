@@ -23,7 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { PipelineStep } from '@/pages/GenerateProgress';
 import type { WizardState } from '@/data/wizard-data';
-import { clients, products, projects } from '@/data/wizard-data';
+import { useClients, useProducts, useProjects } from '@/hooks/use-supabase-data';
 
 const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
@@ -63,9 +63,12 @@ const ActionBar = ({ step, stepIndex, state, pipeline, completedIndexes, selecte
   const isText = step.stepType === 'text';
   const isAudio = step.stepType === 'audio';
 
+  const { clients } = useClients();
+  const { products } = useProducts(state.clientId);
+  const { projects } = useProjects(state.productId);
   const client = clients.find(c => c.id === state.clientId);
-  const product = state.clientId ? (products[state.clientId] ?? []).find(p => p.id === state.productId) : null;
-  const project = state.productId ? (projects[state.productId] ?? []).find(p => p.id === state.projectId) : null;
+  const product = products.find(p => p.id === state.productId);
+  const project = projects.find(p => p.id === state.projectId);
   const typeLabel = state.creativeType === 'video' ? `動画${state.videoDuration}秒` : '静止画バナー';
   const patternLabel = state.productionPattern === 'new' ? '新規制作' : 'パターン展開';
   const currentPatternId = selectedPatternId || 'A1';
