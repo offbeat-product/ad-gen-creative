@@ -32,9 +32,12 @@ const StepPatternCount = ({ state, updateState, goBack }: Props) => {
     ? allIds.join(', ')
     : `${allIds.slice(0, 6).join(', ')} ... ${allIds[allIds.length - 1]}`;
 
+  const { clients } = useClients();
+  const { products } = useProducts(state.clientId);
+  const { projects } = useProjects(state.productId);
   const client = clients.find(c => c.id === state.clientId);
-  const product = state.clientId ? (products[state.clientId] ?? []).find(p => p.id === state.productId) : null;
-  const project = state.productId ? (projects[state.productId] ?? []).find(p => p.id === state.projectId) : null;
+  const product = products.find(p => p.id === state.productId);
+  const project = projects.find(p => p.id === state.projectId);
 
   const sliders = [
     { icon: Target, label: '訴求軸', sub: '異なる訴求切り口の数', key: 'appealAxis' as const, value: state.appealAxis },
