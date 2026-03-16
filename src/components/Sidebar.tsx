@@ -29,6 +29,14 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
+        {/* Logo */}
+        <div className="h-14 px-4 flex items-center border-b border-border">
+          <h2 className="text-lg font-bold brand-gradient-text whitespace-nowrap">∞ Ad Gen</h2>
+          <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto lg:hidden" onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
         <nav className="space-y-1 px-3 py-3 whitespace-nowrap">
           {navItems.map((item) => (
             <NavLink
