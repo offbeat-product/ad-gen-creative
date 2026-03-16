@@ -35,10 +35,6 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
           </Button>
         </div>
 
-        {/* Tagline */}
-        <div className="px-4 pt-3 pb-1 hidden lg:block">
-          <p className="text-[11px] text-muted-foreground leading-tight">ルールと勝ちパターンから、AIがクリエイティブを生成。</p>
-        </div>
 
         <nav className="space-y-1 px-3 py-2 whitespace-nowrap">
           {navItems.map((item) => (

@@ -17,7 +17,10 @@ const Header = ({ onMenuToggle }: HeaderProps) => {
         <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuToggle}>
           <Menu className="h-5 w-5" />
         </Button>
-        <h1 className="text-lg font-bold brand-gradient-text">∞ Ad Gen</h1>
+        <div className="flex items-baseline gap-2">
+          <h1 className="text-lg font-bold brand-gradient-text whitespace-nowrap">∞ Ad Gen</h1>
+          <span className="text-[11px] text-muted-foreground whitespace-nowrap hidden sm:inline">ルールと勝ちパターンから、AIがクリエイティブを生成。</span>
+        </div>
       </div>
       <div className="flex items-center gap-3">
         <span className="text-sm text-muted-foreground hidden sm:inline">{userName}</span>
