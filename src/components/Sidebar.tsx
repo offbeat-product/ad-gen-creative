@@ -25,22 +25,22 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
 
       <aside
         className={cn(
-          "fixed top-0 left-0 z-40 h-screen w-60 min-w-[240px] shrink-0 border-r bg-background transition-transform duration-300 lg:translate-x-0 lg:static lg:h-[calc(100vh-3.5rem)] lg:top-14",
+          "fixed top-0 left-0 z-40 h-screen w-60 min-w-[240px] shrink-0 border-r bg-background transition-transform duration-300 lg:translate-x-0 lg:static",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        {/* Logo + tagline (sidebar top, like Ad Check) */}
-        <div className="px-4 pt-4 pb-2 border-b border-border lg:border-0">
+        {/* Logo + tagline */}
+        <div className="h-14 px-4 flex flex-col justify-center border-b border-border">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold brand-gradient-text">∞ Ad Gen</h2>
-            <Button variant="ghost" size="icon" className="lg:hidden" onClick={onClose}>
+            <h2 className="text-lg font-bold brand-gradient-text whitespace-nowrap">∞ Ad Gen</h2>
+            <Button variant="ghost" size="icon" className="h-7 w-7 lg:hidden" onClick={onClose}>
               <X className="h-4 w-4" />
             </Button>
           </div>
-          <p className="text-[11px] text-muted-foreground mt-0.5 leading-tight">ルールと勝ちパターンから、AIがクリエイティブを生成。</p>
+          <p className="text-[11px] text-muted-foreground leading-tight whitespace-nowrap">ルールと勝ちパターンから、AIがクリエイティブを生成。</p>
         </div>
 
-        <nav className="space-y-1 px-3 py-2 whitespace-nowrap">
+        <nav className="space-y-1 px-3 py-3 whitespace-nowrap">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
