@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Sparkles, Building2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
+import { useClientCount } from '@/hooks/use-supabase-data';
 
 const recentGenerations = [
   { date: '03/16 15:30', client: 'レバレジーズ', product: 'LevTech Rookie', type: '動画30秒', count: '6本', status: '完了' },
@@ -25,6 +26,7 @@ const Dashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const userName = user?.email?.split('@')[0] ?? '';
+  const clientCount = useClientCount();
 
   return (
     <motion.div className="max-w-7xl mx-auto space-y-8" variants={stagger} initial="initial" animate="animate">
@@ -40,7 +42,7 @@ const Dashboard = () => {
       {/* Summary Cards */}
       <motion.div variants={fadeUp} className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <SummaryCard icon={Sparkles} iconColor="text-secondary" label="今月の生成数" value="24件" sub="+8件 ↑" subColor="text-success" borderColor="border-secondary" />
-        <SummaryCard icon={Building2} iconColor="text-primary" label="稼働クライアント数" value="4社" borderColor="border-primary" />
+        <SummaryCard icon={Building2} iconColor="text-primary" label="稼働クライアント数" value={`${clientCount}社`} borderColor="border-primary" />
         <SummaryCard icon={Clock} iconColor="text-warning" label="平均生成時間" value="2分30秒" borderColor="border-warning" />
       </motion.div>
 
