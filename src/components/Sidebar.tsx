@@ -35,6 +35,11 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
           </Button>
         </div>
 
+        {/* Tagline */}
+        <div className="px-4 pt-3 pb-1 hidden lg:block">
+          <p className="text-[11px] text-muted-foreground leading-tight">ルールと勝ちパターンから、AIがクリエイティブを生成。</p>
+        </div>
+
         <nav className="space-y-1 px-3 py-2 whitespace-nowrap">
           {navItems.map((item) => (
             <NavLink
@@ -46,7 +51,7 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
                 cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                   isActive
-                    ? "bg-secondary-wash text-secondary border-l-[3px] border-secondary"
+                    ? "bg-primary-wash text-primary border-l-[3px] border-primary"
                     : "text-muted-foreground hover:bg-accent hover:text-foreground"
                 )
               }
