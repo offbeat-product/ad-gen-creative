@@ -30,7 +30,7 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
         )}
       >
         {/* Logo */}
-        <div className="h-14 px-4 flex items-center border-b border-border">
+        <div className="h-14 px-4 flex items-center border-b border-border bg-white">
           <h2 className="text-lg font-bold brand-gradient-text whitespace-nowrap">∞ Ad Gen</h2>
           <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto lg:hidden" onClick={onClose}>
             <X className="h-4 w-4" />
