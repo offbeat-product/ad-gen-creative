@@ -12,6 +12,7 @@ interface Props {
 }
 
 const StepPatternCount = ({ state, updateState, goBack }: Props) => {
+  const navigate = useNavigate();
   const total = state.appealAxis * state.copyPatterns * state.tonePatterns;
 
   const client = clients.find(c => c.id === state.clientId);
