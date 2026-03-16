@@ -11,7 +11,7 @@ const AppLayout = () => {
       <Header onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
       <div className="flex">
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <main className="flex-1 min-h-[calc(100vh-3.5rem)] p-4 lg:p-8">
+        <main className="flex-1 min-w-0 min-h-[calc(100vh-3.5rem)] p-4 lg:p-8">
           <Outlet />
         </main>
       </div>

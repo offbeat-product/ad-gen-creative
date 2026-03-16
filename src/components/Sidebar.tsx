@@ -25,7 +25,7 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
 
       <aside
         className={cn(
-          "fixed top-14 left-0 z-40 h-[calc(100vh-3.5rem)] w-60 border-r bg-background transition-transform duration-300 lg:translate-x-0 lg:static",
+          "fixed top-14 left-0 z-40 h-[calc(100vh-3.5rem)] w-60 min-w-[240px] shrink-0 border-r bg-background transition-transform duration-300 lg:translate-x-0 lg:static",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -35,7 +35,7 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
           </Button>
         </div>
 
-        <nav className="space-y-1 px-3 py-2">
+        <nav className="space-y-1 px-3 py-2 whitespace-nowrap">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
