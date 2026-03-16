@@ -23,7 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { PipelineStep } from '@/pages/GenerateProgress';
 import type { WizardState } from '@/data/wizard-data';
-import { clients, products, projects } from '@/data/wizard-data';
+import { useClients, useProducts, useProjects } from '@/hooks/use-supabase-data';
 
 const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
