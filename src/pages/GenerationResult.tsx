@@ -434,17 +434,17 @@ const GenerationResult = () => {
       </nav>
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+      <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight font-display">生成結果 — EXPO 2026春</h1>
-          <p className="text-sm text-secondary mt-1">動画30秒 / レバレジーズ / LevTech Rookie / パターン展開 / 合計18本 / 2026/03/16 15:30</p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight font-display">生成結果 — EXPO 2026春</h1>
+          <p className="text-xs sm:text-sm text-secondary mt-1">動画30秒 / レバレジーズ / LevTech Rookie / パターン展開 / 合計18本 / 2026/03/16 15:30</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => toast({ title: '一括ダウンロード完了' })}>
-            <Download className="h-3.5 w-3.5 mr-1" />一括ダウンロード
+            <Download className="h-3.5 w-3.5 mr-1" />一括DL
           </Button>
           <Button size="sm" className="bg-primary text-primary-foreground" onClick={() => toast({ title: 'Ad Checkに一括送信しました' })}>
-            <ShieldCheck className="h-3.5 w-3.5 mr-1" />一括Ad Check送信
+            <ShieldCheck className="h-3.5 w-3.5 mr-1" />Ad Check
           </Button>
           <Button variant="outline" size="sm">
             <Share2 className="h-3.5 w-3.5 mr-1" />共有
