@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { Target, Type, Palette, Sparkles, ListChecks } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
@@ -11,6 +12,7 @@ interface Props {
 }
 
 const StepPatternCount = ({ state, updateState, goBack }: Props) => {
+  const navigate = useNavigate();
   const total = state.appealAxis * state.copyPatterns * state.tonePatterns;
 
   const client = clients.find(c => c.id === state.clientId);
@@ -24,7 +26,7 @@ const StepPatternCount = ({ state, updateState, goBack }: Props) => {
   ];
 
   const handleGenerate = () => {
-    alert('生成を開始します！（デモ）');
+    navigate('/generate/progress', { state: { wizardState: state } });
   };
 
   return (
