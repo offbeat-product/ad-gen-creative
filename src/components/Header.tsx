@@ -1,5 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, Menu } from 'lucide-react';
+import { LogOut, Menu, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface HeaderProps {
@@ -8,7 +8,6 @@ interface HeaderProps {
 
 const Header = ({ onMenuToggle }: HeaderProps) => {
   const { user, signOut } = useAuth();
-
   const userName = user?.email?.split('@')[0] ?? '';
 
   return (
@@ -17,12 +16,12 @@ const Header = ({ onMenuToggle }: HeaderProps) => {
         <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenuToggle}>
           <Menu className="h-5 w-5" />
         </Button>
-        <div className="flex items-baseline gap-2">
-          <h1 className="text-lg font-bold brand-gradient-text whitespace-nowrap">∞ Ad Gen</h1>
-          <span className="text-[11px] text-muted-foreground whitespace-nowrap hidden sm:inline">ルールと勝ちパターンから、AIがクリエイティブを生成。</span>
-        </div>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="icon" className="relative">
+          <Bell className="h-4 w-4" />
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary" />
+        </Button>
         <span className="text-sm text-muted-foreground hidden sm:inline">{userName}</span>
         <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground">
           <LogOut className="h-4 w-4" />
