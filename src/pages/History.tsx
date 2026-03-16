@@ -352,22 +352,24 @@ const HistoryPage = () => {
       {/* Grouping Tabs */}
       <motion.div variants={fadeUp}>
         <Tabs defaultValue="list">
-          <TabsList className="mb-4">
-            <TabsTrigger value="list">一覧表示</TabsTrigger>
-            <TabsTrigger value="client">クライアント別</TabsTrigger>
-            <TabsTrigger value="product">商材別</TabsTrigger>
-            <TabsTrigger value="project">案件別</TabsTrigger>
-            <TabsTrigger value="type">生成タイプ別</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-4 px-4 lg:mx-0 lg:px-0 mb-4">
+            <TabsList className="w-max">
+              <TabsTrigger value="list">一覧表示</TabsTrigger>
+              <TabsTrigger value="client">クライアント別</TabsTrigger>
+              <TabsTrigger value="product">商材別</TabsTrigger>
+              <TabsTrigger value="project">案件別</TabsTrigger>
+              <TabsTrigger value="type">生成タイプ別</TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Tab 1: List view */}
           <TabsContent value="list">
             <AnimatePresence mode="wait">
               <motion.div key="list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
                 {/* Filters */}
-                <div className="flex flex-wrap items-center gap-3 mb-4">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-4">
                   <Select value={clientFilter} onValueChange={(v) => { setClientFilter(v); setPage(1); }}>
-                    <SelectTrigger className="w-[180px]"><SelectValue placeholder="クライアント" /></SelectTrigger>
+                    <SelectTrigger className="w-[140px] sm:w-[180px]"><SelectValue placeholder="クライアント" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">全て</SelectItem>
                       <SelectItem value="レバレジーズ">レバレジーズ</SelectItem>

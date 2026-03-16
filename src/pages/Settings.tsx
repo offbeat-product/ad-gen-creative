@@ -20,13 +20,15 @@ const Settings = () => (
     </div>
 
     <Tabs defaultValue="ai">
-      <TabsList className="overflow-x-auto w-full justify-start">
-        <TabsTrigger value="ai">AI生成設定</TabsTrigger>
-        <TabsTrigger value="clients">クライアント管理</TabsTrigger>
-        <TabsTrigger value="team">チーム管理</TabsTrigger>
-        <TabsTrigger value="notifications">通知設定</TabsTrigger>
-        <TabsTrigger value="account">アカウント</TabsTrigger>
-      </TabsList>
+      <div className="overflow-x-auto -mx-4 px-4 lg:mx-0 lg:px-0">
+        <TabsList className="w-max justify-start">
+          <TabsTrigger value="ai">AI生成設定</TabsTrigger>
+          <TabsTrigger value="clients">クライアント管理</TabsTrigger>
+          <TabsTrigger value="team">チーム管理</TabsTrigger>
+          <TabsTrigger value="notifications">通知設定</TabsTrigger>
+          <TabsTrigger value="account">アカウント</TabsTrigger>
+        </TabsList>
+      </div>
 
       <TabsContent value="ai"><SettingsAI /></TabsContent>
       <TabsContent value="clients"><SettingsClients /></TabsContent>
