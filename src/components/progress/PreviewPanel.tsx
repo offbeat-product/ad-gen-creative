@@ -29,6 +29,32 @@ interface Props {
   onNavigateDashboard: () => void;
 }
 
+/* ─── Pattern naming helpers ─── */
+
+const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+/** Get the script pattern letter for a given appealIdx * copyCount + copyIdx */
+const getPatternLetter = (appealIdx: number, copyIdx: number, copyCount: number) =>
+  ALPHA[appealIdx * copyCount + copyIdx] ?? '?';
+
+const getPatternRange = (appealIdx: number, copyCount: number) => {
+  const start = ALPHA[appealIdx * copyCount];
+  const end = ALPHA[appealIdx * copyCount + copyCount - 1];
+  return `${start}〜${end}`;
+};
+
+const generatePatternIds = (appealCount: number, copyCount: number, toneCount: number) => {
+  const ids: string[] = [];
+  for (let a = 0; a < appealCount; a++) {
+    for (let c = 0; c < copyCount; c++) {
+      for (let t = 0; t < toneCount; t++) {
+        ids.push(`${ALPHA[a * copyCount + c]}${t + 1}`);
+      }
+    }
+  }
+  return ids;
+};
+
 /* ─── Dummy data for previews ─── */
 
 const APPEAL_AXES_VIDEO = [
@@ -77,10 +103,30 @@ const COPY_DATA: Record<string, string[]> = {
 };
 
 const SCENE_DATA = [
-  { time: '0:00-0:05', type: 'Hook', telop: 'あなたは今、この仕事に満足していますか？', visual: 'オフィスで悩む若者のシルエット' },
-  { time: '0:05-0:15', type: 'Problem', telop: '実は、未経験からエンジニアに転職した人の多くが同じ悩みを持っていました', visual: '統計データとグラフのアニメーション' },
-  { time: '0:15-0:25', type: 'Solution', telop: 'LevTech Rookieなら、最短3ヶ月でIT業界デビュー', visual: 'サービス画面とメンターの映像' },
-  { time: '0:25-0:30', type: 'CTA', telop: '今すぐ無料カウンセリングを予約', visual: 'CTA画面とQRコード' },
+  {
+    time: '0:00-0:05', type: '冒頭',
+    telop: 'あなたは今、この仕事に満足していますか？',
+    visual: 'オフィスで悩む若者のシルエット',
+    na: 'あなたは今、この仕事に満足していますか？',
+  },
+  {
+    time: '0:05-0:15', type: '前半',
+    telop: '実は、未経験から転職した人の多くが同じ悩みを持っていました',
+    visual: '統計データとグラフのアニメーション',
+    na: '実は、未経験からエンジニアに転職した人の多くが、最初は同じ不安を抱えていました。',
+  },
+  {
+    time: '0:15-0:25', type: '後半',
+    telop: 'LevTech Rookieなら、最短3ヶ月でIT業界デビュー',
+    visual: 'サービス画面とメンターの映像',
+    na: 'LevTech Rookieなら、経験豊富なメンターが一人ひとりに寄り添い、最短3ヶ月でIT業界デビューを実現します。',
+  },
+  {
+    time: '0:25-0:30', type: '締め',
+    telop: '今すぐ無料カウンセリングを予約',
+    visual: 'CTA画面とQRコード',
+    na: '今すぐ無料カウンセリングを予約。あなたの未来が変わる。',
+  },
 ];
 
 const NA_SCRIPT = `(0:00-0:05) あなたは今、この仕事に満足していますか？
@@ -154,8 +200,9 @@ const AudioPlayer = ({ label }: { label: string }) => (
 
 /* ─── Step-specific preview renderers ─── */
 
-const PreviewAppealAxis = ({ isVideo }: { isVideo: boolean }) => {
+const PreviewAppealAxis = ({ isVideo, state }: { isVideo: boolean; state: WizardState }) => {
   const axes = isVideo ? APPEAL_AXES_VIDEO : APPEAL_AXES_BANNER;
+  const copyCount = state.copyPatterns;
   return (
     <div className="space-y-3">
       {axes.map((axis, i) => (
@@ -163,15 +210,21 @@ const PreviewAppealAxis = ({ isVideo }: { isVideo: boolean }) => {
           <div className="w-8 h-8 rounded-full bg-secondary/10 text-secondary flex items-center justify-center text-sm font-bold shrink-0">
             {i + 1}
           </div>
-          <p className="text-sm font-medium">{axis}</p>
+          <div className="flex-1">
+            <p className="text-sm font-medium">{axis}</p>
+          </div>
+          <Badge variant="outline" className="text-xs shrink-0">
+            パターン {getPatternRange(i, copyCount)}
+          </Badge>
         </div>
       ))}
     </div>
   );
 };
 
-const PreviewCopy = ({ isVideo }: { isVideo: boolean }) => {
+const PreviewCopy = ({ isVideo, state }: { isVideo: boolean; state: WizardState }) => {
   const axes = isVideo ? APPEAL_AXES_VIDEO : APPEAL_AXES_BANNER;
+  const copyCount = state.copyPatterns;
   return (
     <div className="space-y-6">
       {axes.map((axis, i) => (
@@ -182,7 +235,12 @@ const PreviewCopy = ({ isVideo }: { isVideo: boolean }) => {
           </h4>
           <div className="space-y-2 pl-7">
             {(COPY_DATA[axis] ?? []).map((copy, j) => (
-              <div key={j} className="rounded-lg border p-3 text-sm">{copy}</div>
+              <div key={j} className="rounded-lg border p-3 text-sm flex items-center gap-3">
+                <Badge variant="outline" className="text-xs shrink-0 font-mono">
+                  {getPatternLetter(i, j, copyCount)}
+                </Badge>
+                <span>{copy}</span>
+              </div>
             ))}
           </div>
         </div>
@@ -192,47 +250,78 @@ const PreviewCopy = ({ isVideo }: { isVideo: boolean }) => {
 };
 
 const PreviewStoryboard = ({ isVideo, state }: { isVideo: boolean; state: WizardState }) => {
+  const copyCount = state.copyPatterns;
+  const scriptCount = state.appealAxis * copyCount;
+  const tabKeys = Array.from({ length: Math.min(scriptCount, 9) }, (_, i) => ALPHA[i]);
+
   if (!isVideo) {
     return (
       <div className="space-y-4">
-        <p className="text-sm text-muted-foreground">バナー構成案を表示しています</p>
-        <div className="grid grid-cols-1 gap-4">
-          <div className="border rounded-lg p-4 space-y-3">
-            <p className="text-sm font-medium">構成案 #1</p>
-            <div className="space-y-2 text-sm">
-              <div className="flex gap-2"><span className="text-muted-foreground w-24 shrink-0">ヘッドコピー:</span><span>美脚革命、始めませんか？</span></div>
-              <div className="flex gap-2"><span className="text-muted-foreground w-24 shrink-0">サブコピー:</span><span>着圧効果で理想のラインを実現</span></div>
-              <div className="flex gap-2"><span className="text-muted-foreground w-24 shrink-0">ビジュアル:</span><span>商品着用イメージ（全身）</span></div>
-              <div className="flex gap-2"><span className="text-muted-foreground w-24 shrink-0">CTA:</span><span>「今すぐチェック」ボタン 右下配置</span></div>
-            </div>
-          </div>
-        </div>
+        <Tabs defaultValue={tabKeys[0]}>
+          <TabsList className="w-full flex-wrap h-auto gap-1">
+            {tabKeys.map((letter) => (
+              <TabsTrigger key={letter} value={letter} className="text-xs font-mono">
+                {letter}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {tabKeys.map((letter) => (
+            <TabsContent key={letter} value={letter}>
+              <div className="border rounded-lg p-4 space-y-3 mt-3">
+                <p className="text-sm font-medium">構成案 パターン {letter}</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex gap-2">
+                    <Badge className="bg-secondary text-secondary-foreground text-xs shrink-0">冒頭</Badge>
+                    <span className="text-muted-foreground w-24 shrink-0">ヘッドコピー:</span>
+                    <span>美脚革命、始めませんか？</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Badge className="bg-secondary text-secondary-foreground text-xs shrink-0">前半</Badge>
+                    <span className="text-muted-foreground w-24 shrink-0">サブコピー:</span>
+                    <span>着圧効果で理想のラインを実現</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Badge className="bg-secondary text-secondary-foreground text-xs shrink-0">後半</Badge>
+                    <span className="text-muted-foreground w-24 shrink-0">ビジュアル:</span>
+                    <span>商品着用イメージ（全身）</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Badge className="bg-secondary text-secondary-foreground text-xs shrink-0">締め</Badge>
+                    <span className="text-muted-foreground w-24 shrink-0">CTA・オファー:</span>
+                    <span>「今すぐチェック」ボタン 右下配置</span>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+          ))}
+        </Tabs>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      <Tabs defaultValue="combo-0">
+      <Tabs defaultValue={tabKeys[0]}>
         <TabsList className="w-full flex-wrap h-auto gap-1">
-          {APPEAL_AXES_VIDEO.slice(0, 3).map((_, i) => (
-            <TabsTrigger key={i} value={`combo-${i}`} className="text-xs">
-              訴求軸{i + 1} × コピー1
+          {tabKeys.map((letter) => (
+            <TabsTrigger key={letter} value={letter} className="text-xs font-mono">
+              {letter}
             </TabsTrigger>
           ))}
         </TabsList>
-        {APPEAL_AXES_VIDEO.slice(0, 3).map((_, i) => (
-          <TabsContent key={i} value={`combo-${i}`}>
+        {tabKeys.map((letter) => (
+          <TabsContent key={letter} value={letter}>
             <div className="space-y-3 mt-3">
               {SCENE_DATA.map((scene, j) => (
                 <div key={j} className="border rounded-lg p-3">
                   <div className="flex items-center gap-2 mb-2">
                     <Badge variant="outline" className="text-xs">{scene.time}</Badge>
-                    <Badge className="bg-secondary text-secondary-foreground text-xs">{scene.type}</Badge>
+                    <Badge className="bg-secondary text-secondary-foreground text-xs">【{scene.type}】</Badge>
                   </div>
                   <div className="space-y-1 text-sm">
                     <div className="flex gap-2"><span className="text-muted-foreground w-16 shrink-0">テロップ:</span><span>{scene.telop}</span></div>
                     <div className="flex gap-2"><span className="text-muted-foreground w-16 shrink-0">映像:</span><span>{scene.visual}</span></div>
+                    <div className="flex gap-2"><span className="text-muted-foreground w-16 shrink-0">NA:</span><span>{scene.na}</span></div>
                   </div>
                 </div>
               ))}
@@ -291,7 +380,10 @@ const PreviewStyleFrames = () => (
   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
     {STYLE_FRAMES.map((sf, i) => (
       <div key={i} className="border rounded-lg p-4 space-y-3">
-        <p className="text-sm font-medium">{sf.name}</p>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-xs font-mono">トンマナ {i + 1}</Badge>
+          <p className="text-sm font-medium">{sf.name}</p>
+        </div>
         <div className="flex gap-2">
           {sf.colors.map((c, j) => (
             <div key={j} className="w-8 h-8 rounded-full border" style={{ backgroundColor: c }} />
@@ -314,44 +406,57 @@ const PreviewEkonte = ({ total }: { total: number }) => {
   );
 };
 
-const PreviewHorizontalVideo = ({ total, state }: { total: number; state: WizardState }) => (
-  <div className="space-y-4">
-    <div className="bg-muted rounded-xl flex items-center justify-center" style={{ aspectRatio: '16/9' }}>
-      <Play className="h-12 w-12 text-muted-foreground" />
-    </div>
-    <p className="text-xs text-muted-foreground">解像度: 1920 × 1080 / {state.videoDuration}秒</p>
-    <div className="flex gap-2 overflow-x-auto pb-2">
-      {Array.from({ length: Math.min(total, 6) }).map((_, i) => (
-        <div key={i} className="w-24 h-14 rounded bg-muted flex items-center justify-center shrink-0 border text-xs text-muted-foreground">
-          #{i + 1}
-        </div>
-      ))}
-    </div>
-  </div>
-);
+const PreviewFinalVideo = ({ total, state, aspect, resolution }: {
+  total: number; state: WizardState; aspect: '16/9' | '9/16'; resolution: string;
+}) => {
+  const ids = generatePatternIds(state.appealAxis, state.copyPatterns, state.tonePatterns);
+  const [selectedIdx, setSelectedIdx] = useState(0);
+  const selectedId = ids[selectedIdx] ?? 'A1';
+  const scriptLetter = selectedId.replace(/\d+$/, '');
+  const toneNum = selectedId.replace(/^[A-Z]+/, '');
+  const toneName = STYLE_FRAMES[parseInt(toneNum) - 1]?.name ?? `トンマナ ${toneNum}`;
 
-const PreviewVerticalVideo = ({ total, state }: { total: number; state: WizardState }) => (
-  <div className="space-y-4 flex flex-col items-center">
-    <div className="bg-muted rounded-xl flex items-center justify-center w-48" style={{ aspectRatio: '9/16' }}>
-      <Play className="h-10 w-10 text-muted-foreground" />
+  return (
+    <div className="space-y-4">
+      <div className="text-sm">
+        <span className="font-mono font-bold text-secondary text-lg mr-2">{selectedId}</span>
+        <span className="text-muted-foreground">台本パターン {scriptLetter} × {toneName}</span>
+      </div>
+      <div className={cn("bg-muted rounded-xl flex items-center justify-center mx-auto", aspect === '9/16' && 'w-48')} style={{ aspectRatio: aspect }}>
+        <Play className="h-12 w-12 text-muted-foreground" />
+      </div>
+      <p className="text-xs text-muted-foreground text-center">解像度: {resolution} / {state.videoDuration}秒</p>
+      <div className="flex gap-2 overflow-x-auto pb-2">
+        {ids.slice(0, Math.min(ids.length, 18)).map((id, i) => (
+          <button
+            key={id}
+            onClick={() => setSelectedIdx(i)}
+            className={cn(
+              "shrink-0 rounded border text-xs font-mono flex items-center justify-center transition-all",
+              aspect === '9/16' ? 'w-12 h-20' : 'w-24 h-14',
+              i === selectedIdx
+                ? 'border-secondary bg-secondary/10 text-secondary font-bold'
+                : 'bg-muted text-muted-foreground hover:border-secondary/50',
+            )}
+          >
+            {id}
+          </button>
+        ))}
+      </div>
     </div>
-    <p className="text-xs text-muted-foreground">解像度: 1080 × 1920 / {state.videoDuration}秒</p>
-    <div className="flex gap-2 overflow-x-auto pb-2 w-full">
-      {Array.from({ length: Math.min(total, 6) }).map((_, i) => (
-        <div key={i} className="w-12 h-20 rounded bg-muted flex items-center justify-center shrink-0 border text-xs text-muted-foreground">
-          #{i + 1}
-        </div>
-      ))}
-    </div>
-  </div>
-);
+  );
+};
 
-const PreviewBannerImages = ({ total }: { total: number }) => {
-  const count = Math.min(total, 9);
+const PreviewBannerImages = ({ total, state }: { total: number; state: WizardState }) => {
+  const ids = generatePatternIds(state.appealAxis, state.copyPatterns, state.tonePatterns);
+  const count = Math.min(ids.length, 9);
   return (
     <div className="grid grid-cols-3 gap-3">
-      {Array.from({ length: count }).map((_, i) => (
-        <ImagePlaceholder key={i} label={`バリエーション ${i + 1}`} aspect="1/1" size="sm" />
+      {ids.slice(0, count).map((id, i) => (
+        <div key={id} className="space-y-1">
+          <ImagePlaceholder label={id} aspect="1/1" size="sm" />
+          <p className="text-xs text-center font-mono text-muted-foreground">{id}</p>
+        </div>
       ))}
     </div>
   );
@@ -361,7 +466,10 @@ const PreviewToneManner = () => (
   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
     {STYLE_FRAMES.map((sf, i) => (
       <div key={i} className="border rounded-lg p-4 space-y-3">
-        <p className="text-sm font-medium">{sf.name}</p>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-xs font-mono">トンマナ {i + 1}</Badge>
+          <p className="text-sm font-medium">{sf.name}</p>
+        </div>
         <div className="flex gap-2">
           {sf.colors.map((c, j) => (
             <div key={j} className="w-8 h-8 rounded-full border" style={{ backgroundColor: c }} />
@@ -392,10 +500,9 @@ const PreviewPanel = ({
     if (!step || selectedStepIndex === null) return null;
 
     if (isVideo) {
-      // Video pipeline: 11 steps
       switch (selectedStepIndex) {
-        case 0: return <PreviewAppealAxis isVideo />;
-        case 1: return <PreviewCopy isVideo />;
+        case 0: return <PreviewAppealAxis isVideo state={state} />;
+        case 1: return <PreviewCopy isVideo state={state} />;
         case 2: return <PreviewStoryboard isVideo state={state} />;
         case 3: return <PreviewNAScript state={state} />;
         case 4: return <PreviewNarration />;
@@ -403,18 +510,17 @@ const PreviewPanel = ({
         case 6: return <PreviewVCon />;
         case 7: return <PreviewStyleFrames />;
         case 8: return <PreviewEkonte total={total} />;
-        case 9: return <PreviewHorizontalVideo total={total} state={state} />;
-        case 10: return <PreviewVerticalVideo total={total} state={state} />;
+        case 9: return <PreviewFinalVideo total={total} state={state} aspect="16/9" resolution="1920 × 1080" />;
+        case 10: return <PreviewFinalVideo total={total} state={state} aspect="9/16" resolution="1080 × 1920" />;
         default: return null;
       }
     } else {
-      // Banner pipeline: 5 steps
       switch (selectedStepIndex) {
-        case 0: return <PreviewAppealAxis isVideo={false} />;
-        case 1: return <PreviewCopy isVideo={false} />;
+        case 0: return <PreviewAppealAxis isVideo={false} state={state} />;
+        case 1: return <PreviewCopy isVideo={false} state={state} />;
         case 2: return <PreviewStoryboard isVideo={false} state={state} />;
         case 3: return <PreviewToneManner />;
-        case 4: return <PreviewBannerImages total={total} />;
+        case 4: return <PreviewBannerImages total={total} state={state} />;
         default: return null;
       }
     }
