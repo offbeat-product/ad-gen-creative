@@ -1,4 +1,5 @@
 import { Target, Type, Palette, Sparkles, ListChecks } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { type WizardState, clients, products, projects } from '@/data/wizard-data';
 import { Slider } from '@/components/ui/slider';
