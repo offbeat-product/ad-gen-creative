@@ -35,6 +35,7 @@ const App = () => (
             <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/generate" element={<Generate />} />
+              <Route path="/generate/progress" element={<GenerateProgress />} />
               <Route path="/history" element={<HistoryPage />} />
               <Route path="/settings" element={<Settings />} />
             </Route>

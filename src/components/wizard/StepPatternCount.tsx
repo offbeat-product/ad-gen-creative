@@ -26,7 +26,7 @@ const StepPatternCount = ({ state, updateState, goBack }: Props) => {
   ];
 
   const handleGenerate = () => {
-    alert('生成を開始します！（デモ）');
+    navigate('/generate/progress', { state: { wizardState: state } });
   };
 
   return (
