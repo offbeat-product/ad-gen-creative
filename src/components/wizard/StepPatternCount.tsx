@@ -46,7 +46,6 @@ const StepPatternCount = ({ state, updateState, goBack }: Props) => {
               min={1}
               max={10}
               step={1}
-              className="[&_[role=slider]]:bg-secondary [&_[role=slider]]:border-secondary [&_.bg-primary]:bg-secondary"
             />
             <p className="text-xs text-muted-foreground">{s.sub}</p>
           </div>
