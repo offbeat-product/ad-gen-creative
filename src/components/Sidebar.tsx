@@ -35,7 +35,7 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
           </Button>
         </div>
 
-        <nav className="space-y-1 px-3 py-2">
+        <nav className="space-y-1 px-3 py-2 whitespace-nowrap">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
