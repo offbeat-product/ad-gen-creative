@@ -142,7 +142,7 @@ const ActionBar = ({ step }: Props) => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="h-6 w-6 text-secondary" />
-              クリエイターに制作依頼
+              プロに制作依頼
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
