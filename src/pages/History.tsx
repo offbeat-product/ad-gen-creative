@@ -352,13 +352,15 @@ const HistoryPage = () => {
       {/* Grouping Tabs */}
       <motion.div variants={fadeUp}>
         <Tabs defaultValue="list">
-          <TabsList className="mb-4">
-            <TabsTrigger value="list">一覧表示</TabsTrigger>
-            <TabsTrigger value="client">クライアント別</TabsTrigger>
-            <TabsTrigger value="product">商材別</TabsTrigger>
-            <TabsTrigger value="project">案件別</TabsTrigger>
-            <TabsTrigger value="type">生成タイプ別</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-4 px-4 lg:mx-0 lg:px-0 mb-4">
+            <TabsList className="w-max">
+              <TabsTrigger value="list">一覧表示</TabsTrigger>
+              <TabsTrigger value="client">クライアント別</TabsTrigger>
+              <TabsTrigger value="product">商材別</TabsTrigger>
+              <TabsTrigger value="project">案件別</TabsTrigger>
+              <TabsTrigger value="type">生成タイプ別</TabsTrigger>
+            </TabsList>
+          </div>
 
           {/* Tab 1: List view */}
           <TabsContent value="list">
