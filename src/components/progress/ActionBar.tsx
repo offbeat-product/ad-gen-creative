@@ -172,7 +172,7 @@ const ActionBar = ({ step }: Props) => {
               <Button variant="outline">キャンセル</Button>
             </DialogClose>
             <Button onClick={handleCreatorSubmit} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
-              依頼を送信する
+              Off Beatに依頼する
             </Button>
           </DialogFooter>
         </DialogContent>
