@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { Target, Type, Palette, Sparkles, ListChecks } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
