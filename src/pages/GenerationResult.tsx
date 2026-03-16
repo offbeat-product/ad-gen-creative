@@ -454,11 +454,13 @@ const GenerationResult = () => {
 
       {/* Tabs */}
       <Tabs defaultValue="all">
-        <TabsList>
-          <TabsTrigger value="all">全パターン一覧</TabsTrigger>
-          <TabsTrigger value="appeal">訴求軸別</TabsTrigger>
-          <TabsTrigger value="step">工程別</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4 lg:mx-0 lg:px-0">
+          <TabsList className="w-max">
+            <TabsTrigger value="all">全パターン一覧</TabsTrigger>
+            <TabsTrigger value="appeal">訴求軸別</TabsTrigger>
+            <TabsTrigger value="step">工程別</TabsTrigger>
+          </TabsList>
+        </div>
 
         {/* Tab 1: All patterns */}
         <TabsContent value="all">
