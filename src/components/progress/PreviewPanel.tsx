@@ -589,7 +589,7 @@ const PreviewPanel = ({
           )}
 
           {/* Action bar */}
-          <ActionBar step={step} stepIndex={selectedStepIndex} />
+          <ActionBar step={step} stepIndex={selectedStepIndex} state={state} pipeline={pipeline} completedIndexes={completedIndexes} />
         </>
       )}
     </div>
