@@ -92,7 +92,7 @@ const ActionBar = ({ step }: Props) => {
         {/* Creator request - not for audio */}
         {!isAudio && (
           <Button variant="outline" size="sm" onClick={() => setCreatorOpen(true)}>
-            <UserPlus className="h-3.5 w-3.5 mr-1" />クリエイターに依頼
+            <UserPlus className="h-3.5 w-3.5 mr-1" />プロに依頼
           </Button>
         )}
 
@@ -142,11 +142,11 @@ const ActionBar = ({ step }: Props) => {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <UserPlus className="h-6 w-6 text-secondary" />
-              クリエイターに制作依頼
+              プロに制作依頼
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <p className="text-sm">AIでの自動生成が難しいため、クリエイターに制作を依頼します。</p>
+            <p className="text-sm">AIでの自動生成が難しい工程を、Off Beatのプロクリエイターが制作します。</p>
             <div className="space-y-2">
               <Label className="text-sm">担当クリエイター</Label>
               <Select>
@@ -172,7 +172,7 @@ const ActionBar = ({ step }: Props) => {
               <Button variant="outline">キャンセル</Button>
             </DialogClose>
             <Button onClick={handleCreatorSubmit} className="bg-secondary text-secondary-foreground hover:bg-secondary/90">
-              依頼を送信する
+              Off Beatに依頼する
             </Button>
           </DialogFooter>
         </DialogContent>
