@@ -7,7 +7,7 @@ import {
   Sparkles, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { type WizardState, clients, products, projects } from '@/data/wizard-data';
+import { type WizardState } from '@/data/wizard-data';
 import PipelineTimeline from '@/components/progress/PipelineTimeline';
 import PreviewPanel from '@/components/progress/PreviewPanel';
 
