@@ -9,6 +9,7 @@ import AppLayout from "@/components/AppLayout";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import Generate from "@/pages/Generate";
+import GenerateProgress from "@/pages/GenerateProgress";
 import HistoryPage from "@/pages/History";
 import Settings from "@/pages/Settings";
 import NotFound from "./pages/NotFound.tsx";
