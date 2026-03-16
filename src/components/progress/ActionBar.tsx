@@ -146,7 +146,7 @@ const ActionBar = ({ step }: Props) => {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <p className="text-sm">AIでの自動生成が難しいため、クリエイターに制作を依頼します。</p>
+            <p className="text-sm">AIでの自動生成が難しい工程を、Off Beatのプロクリエイターが制作します。</p>
             <div className="space-y-2">
               <Label className="text-sm">担当クリエイター</Label>
               <Select>
