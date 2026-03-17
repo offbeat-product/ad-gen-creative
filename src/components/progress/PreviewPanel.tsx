@@ -443,6 +443,10 @@ const PreviewStoryboard = ({ isVideo, state, genStepResult }: { isVideo: boolean
 };
 
 const PreviewNAScript = ({ state, genStepResult }: { state: WizardState; genStepResult?: any }) => {
+  const copyCount = state.copyPatterns;
+  const scriptCount = state.appealAxis * copyCount;
+  const tabKeys = Array.from({ length: Math.min(scriptCount, 9) }, (_, i) => ALPHA[i]);
+
   // Try real data: { narrations: [{ pattern: string, script: string, char_count: number }] }
   const realNarrations: any[] | null = (() => {
     try {
@@ -453,17 +457,44 @@ const PreviewNAScript = ({ state, genStepResult }: { state: WizardState; genStep
     return null;
   })();
 
-  if (realNarrations) {
+  if (realNarrations && realNarrations.length > 1) {
+    return (
+      <div className="space-y-4">
+        <Badge className="bg-success-wash text-success text-xs">AI生成データ</Badge>
+        <Tabs defaultValue={tabKeys[0]}>
+          <TabsList className="w-full flex-wrap h-auto gap-1">
+            {tabKeys.map((letter) => (
+              <TabsTrigger key={letter} value={letter} className="text-xs font-mono">{letter}</TabsTrigger>
+            ))}
+          </TabsList>
+          {tabKeys.map((letter, tabIdx) => {
+            const narration = realNarrations[tabIdx];
+            const script = narration?.script ?? '';
+            const charCount = narration?.char_count ?? script.replace(/[\s\n]/g, '').length;
+            return (
+              <TabsContent key={letter} value={letter}>
+                <div className="bg-muted rounded-lg p-4 mt-3">
+                  <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed">{script}</pre>
+                  <p className="text-xs text-muted-foreground mt-3">{charCount}文字 / {state.videoDuration}秒尺</p>
+                </div>
+              </TabsContent>
+            );
+          })}
+        </Tabs>
+      </div>
+    );
+  }
+
+  if (realNarrations && realNarrations.length === 1) {
+    const narration = realNarrations[0];
     return (
       <div className="space-y-3">
         <Badge className="bg-success-wash text-success text-xs">AI生成データ</Badge>
-        {realNarrations.map((narration, i) => (
-          <div key={i} className="bg-muted rounded-lg p-4">
-            {narration.pattern && <p className="text-xs font-medium text-secondary mb-2">パターン {narration.pattern}</p>}
-            <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed">{narration.script}</pre>
-            {narration.char_count && <p className="text-xs text-muted-foreground mt-2">{narration.char_count}文字 / {state.videoDuration}秒尺</p>}
-          </div>
-        ))}
+        <div className="bg-muted rounded-lg p-4">
+          {narration.pattern && <p className="text-xs font-medium text-secondary mb-2">パターン {narration.pattern}</p>}
+          <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed">{narration.script}</pre>
+          {narration.char_count && <p className="text-xs text-muted-foreground mt-2">{narration.char_count}文字 / {state.videoDuration}秒尺</p>}
+        </div>
       </div>
     );
   }

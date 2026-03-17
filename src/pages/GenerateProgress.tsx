@@ -714,6 +714,7 @@ const GenerateProgress = () => {
 
   const handleStepClick = (idx: number) => {
     if (completedIndexes.has(idx)) {
+      userSelectedStepRef.current = idx;
       setSelectedStepIndex(idx);
       setMobileTimelineOpen(false);
     }
