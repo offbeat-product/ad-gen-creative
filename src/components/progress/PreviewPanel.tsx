@@ -726,7 +726,7 @@ const PreviewToneManner = () => (
 
 const PreviewPanel = ({
   pipeline, selectedStepIndex, completedIndexes, allDone, total, state,
-  waitingForApproval, effectiveAutoMode, genStepResult, appealAxesResult, copyStepResult, jobId,
+  waitingForApproval, effectiveAutoMode, genStepResult, appealAxesResult, copyStepResult, compositionStepResult, jobId,
   onApprove, onRegenerate, onSwitchToAuto, onNavigateDashboard,
 }: Props) => {
   const parsedResult = (() => {
