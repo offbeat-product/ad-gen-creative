@@ -335,12 +335,21 @@ const GenerateProgress = () => {
   const step4TriggeredRef = useRef(false);
   const dummyAnimationStartedRef = useRef(false);
 
-  // Reset dedup refs on jobId change
+  // Reset dedup refs and UI state on jobId change
   useEffect(() => {
     step2TriggeredRef.current = false;
     step3TriggeredRef.current = false;
     step4TriggeredRef.current = false;
     dummyAnimationStartedRef.current = false;
+    setActiveIndex(-1);
+    setCompletedIndexes(new Set());
+    setWaitingForApproval(-1);
+    setCountUpValues({});
+    setAllDone(false);
+    setShowConfetti(false);
+    setSelectedStepIndex(null);
+    setErrorMap({});
+    setDummyPhaseStarted(false);
   }, [jobId]);
 
   const effectiveAutoMode = (jobData?.generation_mode === 'auto') || switchedToAuto;
