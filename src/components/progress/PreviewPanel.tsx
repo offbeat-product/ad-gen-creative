@@ -301,7 +301,7 @@ const PreviewCopy = ({ isVideo, state, genStepResult, appealAxesResult }: { isVi
     return (
       <div className="space-y-6">
         <Badge className="bg-success-wash text-success text-xs">AI生成データ</Badge>
-        {groups.map((group, i) => {
+        {groups.map((group: { axisIndex: number; copies: any[] }, i: number) => {
           const axInfo = axesLookup[group.axisIndex];
           const heading = axInfo
             ? `${axInfo.axis_type}（${axInfo.axis_label}）`
