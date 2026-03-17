@@ -504,6 +504,8 @@ const GenerateProgress = () => {
 
     // If we have a jobId, NEVER animate text steps — they are driven by Supabase data only
     if (jobId && pipeline[activeIndex].stepType === 'text') return;
+    // Also guard by stepKey for text 4 steps (belt-and-suspenders)
+    if (jobId && TEXT_STEP_KEYS.includes(pipeline[activeIndex].stepKey)) return;
 
     const step = pipeline[activeIndex];
 
