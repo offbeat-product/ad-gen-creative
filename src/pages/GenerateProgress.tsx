@@ -199,12 +199,19 @@ export interface GenStepRow {
   completed_at: string | null;
 }
 
-/* ─── Safe JSON parse helper ─── */
+/* ─── Safe JSON parse helper (handles double-encoded strings) ─── */
 
-const safeParse = (v: any) => {
+const safeParse = (v: any): any => {
   if (!v) return null;
   if (typeof v === 'object') return v;
-  try { return JSON.parse(v); } catch { return null; }
+  try {
+    const parsed = JSON.parse(v);
+    // Handle double-encoded: if result is still a string after first parse, parse again
+    if (typeof parsed === 'string') {
+      try { return JSON.parse(parsed); } catch { return parsed; }
+    }
+    return parsed;
+  } catch { return null; }
 };
 
 /* ─── Text step keys (driven by Supabase only) ─── */
@@ -244,8 +251,15 @@ const triggerWebhook = async (
   if (step2Result?.copies) previousResults.copies = step2Result.copies;
   if (step3Result?.compositions) previousResults.compositions = step3Result.compositions;
 
-  console.log(`[Webhook] Calling ${nextStepKey} with previous_results:`, JSON.stringify(previousResults, null, 2));
-  console.log(`[Webhook] Raw results - step1:`, step1?.result, `step2:`, step2?.result, `step3:`, step3?.result);
+  console.log(`[Webhook] Calling ${nextStepKey}`);
+  console.log(`[Webhook] Raw step1.result type=${typeof step1?.result}:`, step1?.result);
+  console.log(`[Webhook] Raw step2.result type=${typeof step2?.result}:`, step2?.result);
+  console.log(`[Webhook] Raw step3.result type=${typeof step3?.result}:`, step3?.result);
+  console.log(`[Webhook] Parsed step1Result:`, step1Result);
+  console.log(`[Webhook] Parsed step2Result:`, step2Result);
+  console.log(`[Webhook] Parsed step3Result:`, step3Result);
+  console.log(`[Webhook] previous_results:`, previousResults);
+  console.log(`[Webhook] previous_results JSON:`, JSON.stringify(previousResults));
 
   try {
     await fetch(url, {
