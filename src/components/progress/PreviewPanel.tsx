@@ -27,6 +27,7 @@ interface Props {
   genStepResult?: any;
   appealAxesResult?: any;
   copyStepResult?: any;
+  compositionStepResult?: any;
   jobId?: string | null;
   onApprove: (idx: number) => void;
   onRegenerate: (idx: number) => void;
@@ -508,12 +509,12 @@ const PreviewStoryboard = ({ isVideo, state, genStepResult, copyStepResult, appe
   );
 };
 
-const PreviewNAScript = ({ state, genStepResult, copyStepResult, appealAxesResult }: { state: WizardState; genStepResult?: any; copyStepResult?: any; appealAxesResult?: any }) => {
+const PreviewNAScript = ({ state, genStepResult, copyStepResult, appealAxesResult, compositionStepResult }: { state: WizardState; genStepResult?: any; copyStepResult?: any; appealAxesResult?: any; compositionStepResult?: any }) => {
   const copyCount = state.copyPatterns;
   const scriptCount = state.appealAxis * copyCount;
   const tabKeys = Array.from({ length: Math.min(scriptCount, 9) }, (_, i) => ALPHA[i]);
 
-  // Try real data: { narrations: [{ pattern: string, script: string, char_count: number }] }
+  // Try real data
   const realNarrations: any[] | null = (() => {
     try {
       if (genStepResult?.narrations && Array.isArray(genStepResult.narrations)) {
@@ -523,8 +524,15 @@ const PreviewNAScript = ({ state, genStepResult, copyStepResult, appealAxesResul
     return null;
   })();
 
+  // Build composition lookup by pattern_id
+  const compositionByPattern: Record<string, any> = {};
+  if (compositionStepResult?.compositions && Array.isArray(compositionStepResult.compositions)) {
+    for (const comp of compositionStepResult.compositions) {
+      if (comp.pattern_id) compositionByPattern[comp.pattern_id] = comp;
+    }
+  }
+
   if (realNarrations && realNarrations.length > 0) {
-    // Match narrations to tabs by pattern_id
     const narrationByPattern: Record<string, any> = {};
     for (const n of realNarrations) {
       if (n.pattern_id) narrationByPattern[n.pattern_id] = n;
@@ -542,29 +550,58 @@ const PreviewNAScript = ({ state, genStepResult, copyStepResult, appealAxesResul
           {tabKeys.map((letter, tabIdx) => {
             const narration = narrationByPattern[letter] ?? realNarrations[tabIdx];
             console.log('DEBUG narration data:', narration);
-            const sections: any[] = narration?.sections ?? [];
+            const naSections: any[] = narration?.sections ?? [];
             const charCount = narration?.char_count ?? 0;
+            const composition = compositionByPattern[letter];
+            const compScenes: any[] = composition?.scenes ?? [];
             return (
               <TabsContent key={letter} value={letter}>
-                <div className="mt-3">
+                <div className="mt-3 space-y-4">
                   <PatternHeader patternId={letter} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} />
-                  <div className="space-y-3">
-                    {sections.map((sec: any, j: number) => (
-                      <div key={j} className="border rounded-lg p-3">
-                        <div className="flex items-center gap-2 mb-2">
-                          {sec.time_range && <Badge variant="outline" className="text-xs">{sec.time_range}</Badge>}
-                          <Badge className="bg-secondary text-secondary-foreground text-xs">【{sec.part}】</Badge>
+
+                  {/* 構成案・字コンテ */}
+                  {compScenes.length > 0 && (
+                    <div>
+                      <p className="text-sm font-bold mb-2">━━ 構成案・字コンテ ━━</p>
+                      <div className="space-y-2">
+                        {compScenes.map((scene: any, j: number) => (
+                          <div key={j} className="bg-muted/50 rounded-lg p-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              {scene.time_range && <Badge variant="outline" className="text-xs">{scene.time_range}</Badge>}
+                              <Badge className="bg-secondary text-secondary-foreground text-xs">【{scene.part ?? scene.type}】</Badge>
+                            </div>
+                            <div className="space-y-1 text-sm">
+                              {scene.telop && <div className="flex gap-2"><span className="text-muted-foreground w-16 shrink-0">テロップ:</span><span>{scene.telop}</span></div>}
+                              {scene.visual && <div className="flex gap-2"><span className="text-muted-foreground w-16 shrink-0">映像:</span><span>{scene.visual}</span></div>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* NA原稿 */}
+                  <div>
+                    <p className="text-sm font-bold mb-2">━━ NA原稿 ━━</p>
+                    <div className="space-y-2">
+                      {naSections.map((sec: any, j: number) => (
+                        <div key={j} className="bg-accent/30 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            {sec.time_range && <Badge variant="outline" className="text-xs">{sec.time_range}</Badge>}
+                            <Badge className="bg-secondary text-secondary-foreground text-xs">【{sec.part}】</Badge>
+                          </div>
+                          <p className="text-sm leading-relaxed">{sec.text}</p>
                         </div>
-                        <p className="text-sm leading-relaxed">{sec.text}</p>
-                      </div>
-                    ))}
-                    {sections.length === 0 && narration?.full_script && (
-                      <div className="bg-muted rounded-lg p-4">
-                        <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed">{narration.full_script}</pre>
-                      </div>
-                    )}
+                      ))}
+                      {naSections.length === 0 && narration?.full_script && (
+                        <div className="bg-accent/30 rounded-lg p-4">
+                          <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed">{narration.full_script}</pre>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <Separator className="my-3" />
+
+                  <Separator />
                   <p className="text-xs text-muted-foreground">合計: {charCount}文字 / {state.videoDuration}秒尺</p>
                 </div>
               </TabsContent>
@@ -725,7 +762,7 @@ const PreviewToneManner = () => (
 
 const PreviewPanel = ({
   pipeline, selectedStepIndex, completedIndexes, allDone, total, state,
-  waitingForApproval, effectiveAutoMode, genStepResult, appealAxesResult, copyStepResult, jobId,
+  waitingForApproval, effectiveAutoMode, genStepResult, appealAxesResult, copyStepResult, compositionStepResult, jobId,
   onApprove, onRegenerate, onSwitchToAuto, onNavigateDashboard,
 }: Props) => {
   const parsedResult = (() => {
@@ -755,7 +792,7 @@ const PreviewPanel = ({
         case 0: return <PreviewAppealAxis isVideo state={state} genStepResult={parsedResult} />;
         case 1: return <PreviewCopy isVideo state={state} genStepResult={parsedResult} appealAxesResult={appealAxesResult} />;
         case 2: return <PreviewStoryboard isVideo state={state} genStepResult={parsedResult} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} />;
-        case 3: return <PreviewNAScript state={state} genStepResult={parsedResult} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} />;
+        case 3: return <PreviewNAScript state={state} genStepResult={parsedResult} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} compositionStepResult={compositionStepResult} />;
         case 4: return <PreviewNarration />;
         case 5: return <PreviewBGM />;
         case 6: return <PreviewVCon />;
