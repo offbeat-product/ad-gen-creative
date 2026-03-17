@@ -381,6 +381,8 @@ const GenerateProgress = () => {
   const [elapsed, setElapsed] = useState(0);
   const [switchedToAuto, setSwitchedToAuto] = useState(false);
   const [selectedStepIndex, setSelectedStepIndex] = useState<number | null>(null);
+  const userSelectedStepRef = useRef<number | null>(null);
+  const lastAutoCompletedRef = useRef<number>(-1);
   const [mobileTimelineOpen, setMobileTimelineOpen] = useState(true);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
 
@@ -475,7 +477,19 @@ const GenerateProgress = () => {
       } else if (!dummyAnimationStartedRef.current) {
         setActiveIndex(-1);
       }
-      if (latestCompletedIdx >= 0) setSelectedStepIndex(latestCompletedIdx);
+      // Only auto-update selected step if user hasn't manually selected one,
+      // or if a NEW step just completed (reset user selection on new completion)
+      if (latestCompletedIdx >= 0) {
+        if (latestCompletedIdx > lastAutoCompletedRef.current) {
+          // A new step just completed — auto-navigate and clear user selection
+          lastAutoCompletedRef.current = latestCompletedIdx;
+          userSelectedStepRef.current = null;
+          setSelectedStepIndex(latestCompletedIdx);
+        } else if (userSelectedStepRef.current === null) {
+          // No user selection active — follow auto
+          setSelectedStepIndex(latestCompletedIdx);
+        }
+      }
 
       // ── Auto mode: trigger next webhook when a step completes ──
       if (isJobAutoMode) {
@@ -517,7 +531,7 @@ const GenerateProgress = () => {
               const nextGs = steps.find((s: any) => s.step_key === nextKey);
               if (nextGs?.status === 'pending') {
                 setWaitingForApproval(pIdx);
-                setSelectedStepIndex(pIdx); // Ensure selected matches waiting
+                if (userSelectedStepRef.current === null) setSelectedStepIndex(pIdx);
                 foundApproval = true;
                 break;
               }
@@ -525,7 +539,7 @@ const GenerateProgress = () => {
               // Last text step (narration_script) completed → wait for approval to start dummy phase
               if (!dummyAnimationStartedRef.current) {
                 setWaitingForApproval(pIdx);
-                setSelectedStepIndex(pIdx);
+                if (userSelectedStepRef.current === null) setSelectedStepIndex(pIdx);
                 foundApproval = true;
               }
               break;
@@ -700,6 +714,7 @@ const GenerateProgress = () => {
 
   const handleStepClick = (idx: number) => {
     if (completedIndexes.has(idx)) {
+      userSelectedStepRef.current = idx;
       setSelectedStepIndex(idx);
       setMobileTimelineOpen(false);
     }
