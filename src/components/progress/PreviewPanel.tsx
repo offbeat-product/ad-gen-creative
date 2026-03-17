@@ -27,6 +27,7 @@ interface Props {
   genStepResult?: any;
   appealAxesResult?: any;
   copyStepResult?: any;
+  compositionStepResult?: any;
   jobId?: string | null;
   onApprove: (idx: number) => void;
   onRegenerate: (idx: number) => void;
