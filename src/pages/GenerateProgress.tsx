@@ -539,7 +539,7 @@ const GenerateProgress = () => {
               // Last text step (narration_script) completed → wait for approval to start dummy phase
               if (!dummyAnimationStartedRef.current) {
                 setWaitingForApproval(pIdx);
-                setSelectedStepIndex(pIdx);
+                if (userSelectedStepRef.current === null) setSelectedStepIndex(pIdx);
                 foundApproval = true;
               }
               break;
