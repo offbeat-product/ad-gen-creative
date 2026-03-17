@@ -26,6 +26,7 @@ interface Props {
   effectiveAutoMode: boolean;
   genStepResult?: any;
   appealAxesResult?: any;
+  copyStepResult?: any;
   jobId?: string | null;
   onApprove: (idx: number) => void;
   onRegenerate: (idx: number) => void;
