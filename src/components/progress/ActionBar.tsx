@@ -145,7 +145,7 @@ const ActionBar = ({ step, stepIndex, state, pipeline, completedIndexes, selecte
   };
 
   const handleDownload = () => {
-    toast({ title: 'ダウンロード完了' });
+    onDownload?.();
   };
 
   const handleCopyLink = () => {
