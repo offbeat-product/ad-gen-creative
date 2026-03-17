@@ -285,7 +285,7 @@ const PreviewCopy = ({ isVideo, state, genStepResult }: { isVideo: boolean; stat
               {group.appeal_axis}
             </h4>
             <div className="space-y-2 pl-7">
-              {group.copies.map((copy, j) => (
+              {(group.copies ?? []).map((copy, j) => (
                 <div key={j} className="rounded-lg border p-3 text-sm flex items-center gap-3">
                   <Badge variant="outline" className="text-xs shrink-0 font-mono">
                     {getPatternLetter(i, j, copyCount)}
