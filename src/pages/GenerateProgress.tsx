@@ -253,38 +253,39 @@ const triggerWebhook = async (
   let previousResults: Record<string, any> = {};
   let webhookLabel = nextStepKey;
 
+  // Step1 result is always needed for _rules_text, _refs_text, _patterns_text
+  const step1Result = getStepResult('appeal_axis');
+  const knowledgeFields = {
+    _rules_text: step1Result?._rules_text || '',
+    _refs_text: step1Result?._refs_text || '',
+    _patterns_text: step1Result?._patterns_text || '',
+  };
+
   if (nextStepKey === 'copy') {
-    const step1Result = getStepResult('appeal_axis');
-    console.log('DEBUG appeal_axes:', JSON.stringify(step1Result?.appeal_axes));
     previousResults = {
       appeal_axes: step1Result?.appeal_axes || [],
+      ...knowledgeFields,
     };
     webhookLabel = 'WF2';
   }
 
   if (nextStepKey === 'composition') {
     const step2Result = getStepResult('copy');
-    console.log('DEBUG copies:', JSON.stringify(step2Result?.copies));
     previousResults = {
       copies: step2Result?.copies || [],
+      ...knowledgeFields,
     };
     webhookLabel = 'WF3';
-    console.log('Calling WF3 with previous_results:', {
-      copies: step2Result?.copies,
-    });
   }
 
   if (nextStepKey === 'narration_script') {
-    const step1Result = getStepResult('appeal_axis');
     const step2Result = getStepResult('copy');
     const step3Result = getStepResult('composition');
-    console.log('DEBUG appeal_axes:', JSON.stringify(step1Result?.appeal_axes));
-    console.log('DEBUG copies:', JSON.stringify(step2Result?.copies));
-    console.log('DEBUG compositions:', JSON.stringify(step3Result?.compositions));
     previousResults = {
       appeal_axes: step1Result?.appeal_axes || [],
       copies: step2Result?.copies || [],
       compositions: step3Result?.compositions || [],
+      ...knowledgeFields,
     };
     webhookLabel = 'WF4';
   }
