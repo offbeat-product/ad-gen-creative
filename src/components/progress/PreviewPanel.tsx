@@ -655,6 +655,12 @@ const PreviewPanel = ({
   waitingForApproval, effectiveAutoMode, genStepResult, jobId,
   onApprove, onRegenerate, onSwitchToAuto, onNavigateDashboard,
 }: Props) => {
+  const parsedResult = (() => {
+    if (typeof genStepResult === 'string') {
+      try { return JSON.parse(genStepResult); } catch { return genStepResult; }
+    }
+    return genStepResult;
+  })();
   const isVideo = state.creativeType === 'video';
   const noSelection = selectedStepIndex === null || !completedIndexes.has(selectedStepIndex);
 
