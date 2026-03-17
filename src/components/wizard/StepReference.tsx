@@ -75,11 +75,17 @@ const StepReference = ({ state, updateState }: Props) => {
     return () => { cancelled = true; };
   }, [state.productId]);
 
-  const toggleRef = (id: string) => {
+  const toggleRef = (id: string, fileName: string) => {
     const ids = state.referenceIds.includes(id)
       ? state.referenceIds.filter(r => r !== id)
       : [...state.referenceIds, id];
-    updateState({ referenceIds: ids });
+    const fileNames = { ...state.referenceFileNames };
+    if (ids.includes(id)) {
+      fileNames[id] = fileName;
+    } else {
+      delete fileNames[id];
+    }
+    updateState({ referenceIds: ids, referenceFileNames: fileNames });
   };
 
   const addUrl = () => {
