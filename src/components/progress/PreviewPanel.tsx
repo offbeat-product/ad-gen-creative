@@ -285,7 +285,7 @@ const PreviewCopy = ({ isVideo, state, genStepResult }: { isVideo: boolean; stat
     return (
       <div className="space-y-6">
         <Badge className="bg-success-wash text-success text-xs">AI生成データ</Badge>
-        {groups.map(([axisText, copies], i) => (
+        {groups.map(([axisText, copies]: [string, any[]], i: number) => (
           <div key={i}>
             <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-secondary/10 text-secondary flex items-center justify-center text-xs font-bold">{i + 1}</span>
