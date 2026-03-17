@@ -406,6 +406,183 @@ export type Database = {
         }
         Relationships: []
       }
+      gen_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          creative_type: string
+          duration_seconds: number | null
+          generation_mode: string | null
+          id: string
+          num_appeal_axes: number | null
+          num_copies: number | null
+          num_tonmana: number | null
+          production_pattern: string | null
+          project_id: string | null
+          reference_creative_ids: string[] | null
+          settings: Json | null
+          started_at: string | null
+          status: string | null
+          total_patterns: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          creative_type: string
+          duration_seconds?: number | null
+          generation_mode?: string | null
+          id?: string
+          num_appeal_axes?: number | null
+          num_copies?: number | null
+          num_tonmana?: number | null
+          production_pattern?: string | null
+          project_id?: string | null
+          reference_creative_ids?: string[] | null
+          settings?: Json | null
+          started_at?: string | null
+          status?: string | null
+          total_patterns?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          creative_type?: string
+          duration_seconds?: number | null
+          generation_mode?: string | null
+          id?: string
+          num_appeal_axes?: number | null
+          num_copies?: number | null
+          num_tonmana?: number | null
+          production_pattern?: string | null
+          project_id?: string | null
+          reference_creative_ids?: string[] | null
+          settings?: Json | null
+          started_at?: string | null
+          status?: string | null
+          total_patterns?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gen_jobs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gen_patterns: {
+        Row: {
+          appeal_axis_index: number | null
+          appeal_axis_text: string | null
+          composition: Json | null
+          copy_index: number | null
+          copy_text: string | null
+          created_at: string | null
+          id: string
+          job_id: string | null
+          narration_script: string | null
+          pattern_id: string
+          status: string | null
+          tonmana_index: number | null
+          tonmana_name: string | null
+        }
+        Insert: {
+          appeal_axis_index?: number | null
+          appeal_axis_text?: string | null
+          composition?: Json | null
+          copy_index?: number | null
+          copy_text?: string | null
+          created_at?: string | null
+          id?: string
+          job_id?: string | null
+          narration_script?: string | null
+          pattern_id: string
+          status?: string | null
+          tonmana_index?: number | null
+          tonmana_name?: string | null
+        }
+        Update: {
+          appeal_axis_index?: number | null
+          appeal_axis_text?: string | null
+          composition?: Json | null
+          copy_index?: number | null
+          copy_text?: string | null
+          created_at?: string | null
+          id?: string
+          job_id?: string | null
+          narration_script?: string | null
+          pattern_id?: string
+          status?: string | null
+          tonmana_index?: number | null
+          tonmana_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gen_patterns_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "gen_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gen_steps: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          job_id: string | null
+          result: Json | null
+          started_at: string | null
+          status: string | null
+          step_key: string
+          step_label: string
+          step_number: number
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          job_id?: string | null
+          result?: Json | null
+          started_at?: string | null
+          status?: string | null
+          step_key: string
+          step_label: string
+          step_number: number
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          job_id?: string | null
+          result?: Json | null
+          started_at?: string | null
+          status?: string | null
+          step_key?: string
+          step_label?: string
+          step_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gen_steps_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "gen_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           accepted_at: string | null

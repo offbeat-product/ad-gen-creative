@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Check } from 'lucide-react';
+import { Check, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { PipelineStep } from '@/pages/GenerateProgress';
 
@@ -16,6 +16,7 @@ interface Props {
   remainStr: string;
   allDone: boolean;
   effectiveAutoMode: boolean;
+  errorMap?: Record<number, string>;
   onStepClick: (idx: number) => void;
   onSwitchToAuto: () => void;
 }
@@ -24,7 +25,7 @@ const PipelineTimeline = ({
   pipeline, activeIndex, completedIndexes, selectedStepIndex,
   countUpValues, total, progressPct, completedCount,
   elapsedStr, remainStr, allDone, effectiveAutoMode,
-  onStepClick, onSwitchToAuto,
+  errorMap = {}, onStepClick, onSwitchToAuto,
 }: Props) => {
   return (
     <div className="space-y-4">
@@ -66,6 +67,7 @@ const PipelineTimeline = ({
           const isDone = completedIndexes.has(i);
           const isRunning = activeIndex === i && !isDone;
           const isSelected = selectedStepIndex === i;
+          const hasError = !!errorMap[i];
           const StepIcon = step.icon;
 
           const runText = step.countUp && countUpValues[i] !== undefined
@@ -81,12 +83,17 @@ const PipelineTimeline = ({
                 isDone && "cursor-pointer hover:bg-success-wash/50",
                 isSelected && isDone && "bg-secondary-wash border-l-[3px] border-secondary",
                 isRunning && "bg-secondary-wash/30",
-                !isDone && !isRunning && "opacity-60",
+                hasError && "bg-destructive/5",
+                !isDone && !isRunning && !hasError && "opacity-60",
               )}
             >
               {/* Timeline dot */}
               <div className="absolute -left-8 top-2.5 flex items-center justify-center">
-                {isDone ? (
+                {hasError ? (
+                  <div className="w-[26px] h-[26px] rounded-full bg-destructive flex items-center justify-center">
+                    <AlertCircle className="h-3.5 w-3.5 text-destructive-foreground" />
+                  </div>
+                ) : isDone ? (
                   <motion.div
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
@@ -110,11 +117,11 @@ const PipelineTimeline = ({
               <div className="flex items-center gap-2">
                 <StepIcon className={cn(
                   "h-3.5 w-3.5 shrink-0",
-                  isDone ? 'text-success' : isRunning ? 'text-secondary' : 'text-muted-foreground',
+                  hasError ? 'text-destructive' : isDone ? 'text-success' : isRunning ? 'text-secondary' : 'text-muted-foreground',
                 )} />
                 <span className={cn(
                   "text-sm font-medium truncate",
-                  !isDone && !isRunning && 'text-muted-foreground',
+                  hasError ? 'text-destructive' : !isDone && !isRunning && 'text-muted-foreground',
                 )}>
                   {step.label}
                 </span>
@@ -135,8 +142,13 @@ const PipelineTimeline = ({
                 </motion.div>
               )}
 
-              {/* Completed summary (1 line) */}
-              {isDone && !isRunning && (
+              {/* Error message */}
+              {hasError && (
+                <p className="text-xs text-destructive mt-0.5 truncate">{errorMap[i]}</p>
+              )}
+
+              {/* Completed summary */}
+              {isDone && !isRunning && !hasError && (
                 <p className="text-xs text-success mt-0.5 truncate">{step.completedText}</p>
               )}
             </div>

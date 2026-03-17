@@ -24,6 +24,8 @@ interface Props {
   state: WizardState;
   waitingForApproval: number;
   effectiveAutoMode: boolean;
+  genStepResult?: any;
+  jobId?: string | null;
   onApprove: (idx: number) => void;
   onRegenerate: (idx: number) => void;
   onSwitchToAuto: () => void;
@@ -34,7 +36,6 @@ interface Props {
 
 const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-/** Get the script pattern letter for a given appealIdx * copyCount + copyIdx */
 const getPatternLetter = (appealIdx: number, copyIdx: number, copyCount: number) =>
   ALPHA[appealIdx * copyCount + copyIdx] ?? '?';
 
@@ -56,7 +57,7 @@ const generatePatternIds = (appealCount: number, copyCount: number, toneCount: n
   return ids;
 };
 
-/* ─── Dummy data for previews ─── */
+/* ─── Dummy data for previews (fallback) ─── */
 
 const APPEAL_AXES_VIDEO = [
   '未経験からエンジニア転職を実現',
@@ -104,30 +105,10 @@ const COPY_DATA: Record<string, string[]> = {
 };
 
 const SCENE_DATA = [
-  {
-    time: '0:00-0:05', type: '冒頭',
-    telop: 'あなたは今、この仕事に満足していますか？',
-    visual: 'オフィスで悩む若者のシルエット',
-    na: 'あなたは今、この仕事に満足していますか？',
-  },
-  {
-    time: '0:05-0:15', type: '前半',
-    telop: '実は、未経験から転職した人の多くが同じ悩みを持っていました',
-    visual: '統計データとグラフのアニメーション',
-    na: '実は、未経験からエンジニアに転職した人の多くが、最初は同じ不安を抱えていました。',
-  },
-  {
-    time: '0:15-0:25', type: '後半',
-    telop: 'LevTech Rookieなら、最短3ヶ月でIT業界デビュー',
-    visual: 'サービス画面とメンターの映像',
-    na: 'LevTech Rookieなら、経験豊富なメンターが一人ひとりに寄り添い、最短3ヶ月でIT業界デビューを実現します。',
-  },
-  {
-    time: '0:25-0:30', type: '締め',
-    telop: '今すぐ無料カウンセリングを予約',
-    visual: 'CTA画面とQRコード',
-    na: '今すぐ無料カウンセリングを予約。あなたの未来が変わる。',
-  },
+  { time: '0:00-0:05', type: '冒頭', telop: 'あなたは今、この仕事に満足していますか？', visual: 'オフィスで悩む若者のシルエット', na: 'あなたは今、この仕事に満足していますか？' },
+  { time: '0:05-0:15', type: '前半', telop: '実は、未経験から転職した人の多くが同じ悩みを持っていました', visual: '統計データとグラフのアニメーション', na: '実は、未経験からエンジニアに転職した人の多くが、最初は同じ不安を抱えていました。' },
+  { time: '0:15-0:25', type: '後半', telop: 'LevTech Rookieなら、最短3ヶ月でIT業界デビュー', visual: 'サービス画面とメンターの映像', na: 'LevTech Rookieなら、経験豊富なメンターが一人ひとりに寄り添い、最短3ヶ月でIT業界デビューを実現します。' },
+  { time: '0:25-0:30', type: '締め', telop: '今すぐ無料カウンセリングを予約', visual: 'CTA画面とQRコード', na: '今すぐ無料カウンセリングを予約。あなたの未来が変わる。' },
 ];
 
 const NA_SCRIPT = `(0:00-0:05) あなたは今、この仕事に満足していますか？
@@ -156,13 +137,13 @@ const EmptyState = () => (
   </div>
 );
 
-const CompletionBanner = ({ total, onNavigate }: { total: number; onNavigate: () => void }) => {
+const CompletionBanner = ({ total, onNavigate, jobId }: { total: number; onNavigate: () => void; jobId?: string | null }) => {
   const navigate = useNavigate();
   return (
     <div className="text-center py-6 space-y-3">
       <p className="text-xl font-bold font-display">🎉 すべての生成が完了しました！</p>
       <p className="text-sm text-muted-foreground">合計 {total}本 のクリエイティブを生成しました</p>
-      <Button variant="brand" size="lg" onClick={() => navigate('/result/latest')}>
+      <Button variant="brand" size="lg" onClick={() => navigate(`/result/${jobId ?? 'latest'}`)}>
         結果を確認する
       </Button>
       <div>
@@ -204,11 +185,25 @@ const AudioPlayer = ({ label }: { label: string }) => (
 
 /* ─── Step-specific preview renderers ─── */
 
-const PreviewAppealAxis = ({ isVideo, state }: { isVideo: boolean; state: WizardState }) => {
-  const axes = isVideo ? APPEAL_AXES_VIDEO : APPEAL_AXES_BANNER;
+const PreviewAppealAxis = ({ isVideo, state, genStepResult }: { isVideo: boolean; state: WizardState; genStepResult?: any }) => {
+  // Try to use real data
+  const realAxes: string[] | null = (() => {
+    try {
+      if (genStepResult?.appeal_axes && Array.isArray(genStepResult.appeal_axes)) {
+        return genStepResult.appeal_axes;
+      }
+    } catch {}
+    return null;
+  })();
+
+  const axes = realAxes ?? (isVideo ? APPEAL_AXES_VIDEO : APPEAL_AXES_BANNER);
   const copyCount = state.copyPatterns;
+
   return (
     <div className="space-y-3">
+      {realAxes && (
+        <Badge className="bg-success-wash text-success text-xs mb-2">AI生成データ</Badge>
+      )}
       {axes.map((axis, i) => (
         <div key={i} className="rounded-lg border p-4 flex items-start gap-3">
           <div className="w-8 h-8 rounded-full bg-secondary/10 text-secondary flex items-center justify-center text-sm font-bold shrink-0">
@@ -226,9 +221,47 @@ const PreviewAppealAxis = ({ isVideo, state }: { isVideo: boolean; state: Wizard
   );
 };
 
-const PreviewCopy = ({ isVideo, state }: { isVideo: boolean; state: WizardState }) => {
-  const axes = isVideo ? APPEAL_AXES_VIDEO : APPEAL_AXES_BANNER;
+const PreviewCopy = ({ isVideo, state, genStepResult }: { isVideo: boolean; state: WizardState; genStepResult?: any }) => {
+  // Try to use real data: { copies: [{ appeal_axis: string, copies: string[] }] }
+  const realData: Array<{ appeal_axis: string; copies: string[] }> | null = (() => {
+    try {
+      if (genStepResult?.copies && Array.isArray(genStepResult.copies)) {
+        return genStepResult.copies;
+      }
+    } catch {}
+    return null;
+  })();
+
   const copyCount = state.copyPatterns;
+
+  if (realData) {
+    return (
+      <div className="space-y-6">
+        <Badge className="bg-success-wash text-success text-xs">AI生成データ</Badge>
+        {realData.map((group, i) => (
+          <div key={i}>
+            <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-secondary/10 text-secondary flex items-center justify-center text-xs font-bold">{i + 1}</span>
+              {group.appeal_axis}
+            </h4>
+            <div className="space-y-2 pl-7">
+              {group.copies.map((copy, j) => (
+                <div key={j} className="rounded-lg border p-3 text-sm flex items-center gap-3">
+                  <Badge variant="outline" className="text-xs shrink-0 font-mono">
+                    {getPatternLetter(i, j, copyCount)}
+                  </Badge>
+                  <span>{copy}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Fallback to dummy
+  const axes = isVideo ? APPEAL_AXES_VIDEO : APPEAL_AXES_BANNER;
   return (
     <div className="space-y-6">
       {axes.map((axis, i) => (
@@ -253,20 +286,73 @@ const PreviewCopy = ({ isVideo, state }: { isVideo: boolean; state: WizardState 
   );
 };
 
-const PreviewStoryboard = ({ isVideo, state }: { isVideo: boolean; state: WizardState }) => {
+const PreviewStoryboard = ({ isVideo, state, genStepResult }: { isVideo: boolean; state: WizardState; genStepResult?: any }) => {
   const copyCount = state.copyPatterns;
   const scriptCount = state.appealAxis * copyCount;
   const tabKeys = Array.from({ length: Math.min(scriptCount, 9) }, (_, i) => ALPHA[i]);
 
+  // Try real data: { compositions: [{ pattern: string, scenes: [...] }] }
+  const realCompositions: any[] | null = (() => {
+    try {
+      if (genStepResult?.compositions && Array.isArray(genStepResult.compositions)) {
+        return genStepResult.compositions;
+      }
+    } catch {}
+    return null;
+  })();
+
+  if (realCompositions) {
+    return (
+      <div className="space-y-4">
+        <Badge className="bg-success-wash text-success text-xs">AI生成データ</Badge>
+        <Tabs defaultValue={tabKeys[0]}>
+          <TabsList className="w-full flex-wrap h-auto gap-1">
+            {tabKeys.map((letter) => (
+              <TabsTrigger key={letter} value={letter} className="text-xs font-mono">{letter}</TabsTrigger>
+            ))}
+          </TabsList>
+          {tabKeys.map((letter, tabIdx) => {
+            const comp = realCompositions[tabIdx];
+            const scenes = comp?.scenes ?? [];
+            return (
+              <TabsContent key={letter} value={letter}>
+                <div className="space-y-3 mt-3">
+                  {scenes.map((scene: any, j: number) => (
+                    <div key={j} className="border rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        {scene.time && <Badge variant="outline" className="text-xs">{scene.time}</Badge>}
+                        <Badge className="bg-secondary text-secondary-foreground text-xs">【{scene.type ?? `シーン${j+1}`}】</Badge>
+                      </div>
+                      <div className="space-y-1 text-sm">
+                        {scene.telop && <div className="flex gap-2"><span className="text-muted-foreground w-16 shrink-0">テロップ:</span><span>{scene.telop}</span></div>}
+                        {scene.visual && <div className="flex gap-2"><span className="text-muted-foreground w-16 shrink-0">映像:</span><span>{scene.visual}</span></div>}
+                        {scene.na && <div className="flex gap-2"><span className="text-muted-foreground w-16 shrink-0">NA:</span><span>{scene.na}</span></div>}
+                        {scene.content && <p className="text-muted-foreground">{scene.content}</p>}
+                      </div>
+                    </div>
+                  ))}
+                  {scenes.length === 0 && comp && (
+                    <div className="border rounded-lg p-4">
+                      <pre className="text-sm whitespace-pre-wrap font-sans">{typeof comp === 'string' ? comp : JSON.stringify(comp, null, 2)}</pre>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            );
+          })}
+        </Tabs>
+      </div>
+    );
+  }
+
+  // Fallback to dummy
   if (!isVideo) {
     return (
       <div className="space-y-4">
         <Tabs defaultValue={tabKeys[0]}>
           <TabsList className="w-full flex-wrap h-auto gap-1">
             {tabKeys.map((letter) => (
-              <TabsTrigger key={letter} value={letter} className="text-xs font-mono">
-                {letter}
-              </TabsTrigger>
+              <TabsTrigger key={letter} value={letter} className="text-xs font-mono">{letter}</TabsTrigger>
             ))}
           </TabsList>
           {tabKeys.map((letter) => (
@@ -274,26 +360,10 @@ const PreviewStoryboard = ({ isVideo, state }: { isVideo: boolean; state: Wizard
               <div className="border rounded-lg p-4 space-y-3 mt-3">
                 <p className="text-sm font-medium">構成案 パターン {letter}</p>
                 <div className="space-y-2 text-sm">
-                  <div className="flex gap-2">
-                    <Badge className="bg-secondary text-secondary-foreground text-xs shrink-0">冒頭</Badge>
-                    <span className="text-muted-foreground w-24 shrink-0">ヘッドコピー:</span>
-                    <span>美脚革命、始めませんか？</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Badge className="bg-secondary text-secondary-foreground text-xs shrink-0">前半</Badge>
-                    <span className="text-muted-foreground w-24 shrink-0">サブコピー:</span>
-                    <span>着圧効果で理想のラインを実現</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Badge className="bg-secondary text-secondary-foreground text-xs shrink-0">後半</Badge>
-                    <span className="text-muted-foreground w-24 shrink-0">ビジュアル:</span>
-                    <span>商品着用イメージ（全身）</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Badge className="bg-secondary text-secondary-foreground text-xs shrink-0">締め</Badge>
-                    <span className="text-muted-foreground w-24 shrink-0">CTA・オファー:</span>
-                    <span>「今すぐチェック」ボタン 右下配置</span>
-                  </div>
+                  <div className="flex gap-2"><Badge className="bg-secondary text-secondary-foreground text-xs shrink-0">冒頭</Badge><span className="text-muted-foreground w-24 shrink-0">ヘッドコピー:</span><span>美脚革命、始めませんか？</span></div>
+                  <div className="flex gap-2"><Badge className="bg-secondary text-secondary-foreground text-xs shrink-0">前半</Badge><span className="text-muted-foreground w-24 shrink-0">サブコピー:</span><span>着圧効果で理想のラインを実現</span></div>
+                  <div className="flex gap-2"><Badge className="bg-secondary text-secondary-foreground text-xs shrink-0">後半</Badge><span className="text-muted-foreground w-24 shrink-0">ビジュアル:</span><span>商品着用イメージ（全身）</span></div>
+                  <div className="flex gap-2"><Badge className="bg-secondary text-secondary-foreground text-xs shrink-0">締め</Badge><span className="text-muted-foreground w-24 shrink-0">CTA・オファー:</span><span>「今すぐチェック」ボタン 右下配置</span></div>
                 </div>
               </div>
             </TabsContent>
@@ -308,9 +378,7 @@ const PreviewStoryboard = ({ isVideo, state }: { isVideo: boolean; state: Wizard
       <Tabs defaultValue={tabKeys[0]}>
         <TabsList className="w-full flex-wrap h-auto gap-1">
           {tabKeys.map((letter) => (
-            <TabsTrigger key={letter} value={letter} className="text-xs font-mono">
-              {letter}
-            </TabsTrigger>
+            <TabsTrigger key={letter} value={letter} className="text-xs font-mono">{letter}</TabsTrigger>
           ))}
         </TabsList>
         {tabKeys.map((letter) => (
@@ -337,8 +405,32 @@ const PreviewStoryboard = ({ isVideo, state }: { isVideo: boolean; state: Wizard
   );
 };
 
-const PreviewNAScript = ({ state }: { state: WizardState }) => {
-  const charCount = state.videoDuration === 15 ? 60 : state.videoDuration === 30 ? 120 : 240;
+const PreviewNAScript = ({ state, genStepResult }: { state: WizardState; genStepResult?: any }) => {
+  // Try real data: { narrations: [{ pattern: string, script: string, char_count: number }] }
+  const realNarrations: any[] | null = (() => {
+    try {
+      if (genStepResult?.narrations && Array.isArray(genStepResult.narrations)) {
+        return genStepResult.narrations;
+      }
+    } catch {}
+    return null;
+  })();
+
+  if (realNarrations) {
+    return (
+      <div className="space-y-3">
+        <Badge className="bg-success-wash text-success text-xs">AI生成データ</Badge>
+        {realNarrations.map((narration, i) => (
+          <div key={i} className="bg-muted rounded-lg p-4">
+            {narration.pattern && <p className="text-xs font-medium text-secondary mb-2">パターン {narration.pattern}</p>}
+            <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed">{narration.script}</pre>
+            {narration.char_count && <p className="text-xs text-muted-foreground mt-2">{narration.char_count}文字 / {state.videoDuration}秒尺</p>}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       <div className="bg-muted rounded-lg p-4">
@@ -456,7 +548,7 @@ const PreviewBannerImages = ({ total, state }: { total: number; state: WizardSta
   const count = Math.min(ids.length, 9);
   return (
     <div className="grid grid-cols-3 gap-3">
-      {ids.slice(0, count).map((id, i) => (
+      {ids.slice(0, count).map((id) => (
         <div key={id} className="space-y-1">
           <ImagePlaceholder label={id} aspect="1/1" size="sm" />
           <p className="text-xs text-center font-mono text-muted-foreground">{id}</p>
@@ -489,8 +581,8 @@ const PreviewToneManner = () => (
 
 const PreviewPanel = ({
   pipeline, selectedStepIndex, completedIndexes, allDone, total, state,
-  waitingForApproval, effectiveAutoMode, onApprove, onRegenerate, onSwitchToAuto,
-  onNavigateDashboard,
+  waitingForApproval, effectiveAutoMode, genStepResult, jobId,
+  onApprove, onRegenerate, onSwitchToAuto, onNavigateDashboard,
 }: Props) => {
   const isVideo = state.creativeType === 'video';
   const noSelection = selectedStepIndex === null || !completedIndexes.has(selectedStepIndex);
@@ -505,10 +597,10 @@ const PreviewPanel = ({
 
     if (isVideo) {
       switch (selectedStepIndex) {
-        case 0: return <PreviewAppealAxis isVideo state={state} />;
-        case 1: return <PreviewCopy isVideo state={state} />;
-        case 2: return <PreviewStoryboard isVideo state={state} />;
-        case 3: return <PreviewNAScript state={state} />;
+        case 0: return <PreviewAppealAxis isVideo state={state} genStepResult={genStepResult} />;
+        case 1: return <PreviewCopy isVideo state={state} genStepResult={genStepResult} />;
+        case 2: return <PreviewStoryboard isVideo state={state} genStepResult={genStepResult} />;
+        case 3: return <PreviewNAScript state={state} genStepResult={genStepResult} />;
         case 4: return <PreviewNarration />;
         case 5: return <PreviewBGM />;
         case 6: return <PreviewVCon />;
@@ -520,9 +612,9 @@ const PreviewPanel = ({
       }
     } else {
       switch (selectedStepIndex) {
-        case 0: return <PreviewAppealAxis isVideo={false} state={state} />;
-        case 1: return <PreviewCopy isVideo={false} state={state} />;
-        case 2: return <PreviewStoryboard isVideo={false} state={state} />;
+        case 0: return <PreviewAppealAxis isVideo={false} state={state} genStepResult={genStepResult} />;
+        case 1: return <PreviewCopy isVideo={false} state={state} genStepResult={genStepResult} />;
+        case 2: return <PreviewStoryboard isVideo={false} state={state} genStepResult={genStepResult} />;
         case 3: return <PreviewToneManner />;
         case 4: return <PreviewBannerImages total={total} state={state} />;
         default: return null;
@@ -532,14 +624,10 @@ const PreviewPanel = ({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Completion banner */}
-      {allDone && (
-        <CompletionBanner total={total} onNavigate={onNavigateDashboard} />
-      )}
+      {allDone && <CompletionBanner total={total} onNavigate={onNavigateDashboard} jobId={jobId} />}
 
       {step && selectedStepIndex !== null && (
         <>
-          {/* Step header */}
           <div className="px-6 pt-5 pb-3">
             <div className="flex items-center gap-3">
               <step.icon className="h-5 w-5 text-secondary" />
@@ -560,7 +648,6 @@ const PreviewPanel = ({
 
           <Separator />
 
-          {/* Preview content */}
           <div className="flex-1 overflow-y-auto px-6 py-4">
             <AnimatePresence mode="wait">
               <motion.div
@@ -577,7 +664,6 @@ const PreviewPanel = ({
 
           <Separator />
 
-          {/* Step-confirm mode approval buttons */}
           {!effectiveAutoMode && isWaitingApproval && (
             <div className="px-6 py-3 flex items-center gap-3 border-b border-border">
               <Button variant="brand" onClick={() => onApprove(selectedStepIndex)}>
@@ -592,7 +678,6 @@ const PreviewPanel = ({
             </div>
           )}
 
-          {/* Action bar */}
           <ActionBar step={step} stepIndex={selectedStepIndex} state={state} pipeline={pipeline} completedIndexes={completedIndexes} />
         </>
       )}
