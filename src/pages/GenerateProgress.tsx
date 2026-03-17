@@ -381,6 +381,8 @@ const GenerateProgress = () => {
   const [elapsed, setElapsed] = useState(0);
   const [switchedToAuto, setSwitchedToAuto] = useState(false);
   const [selectedStepIndex, setSelectedStepIndex] = useState<number | null>(null);
+  const userSelectedStepRef = useRef<number | null>(null);
+  const lastAutoCompletedRef = useRef<number>(-1);
   const [mobileTimelineOpen, setMobileTimelineOpen] = useState(true);
   const timerRef = useRef<ReturnType<typeof setInterval>>();
 
