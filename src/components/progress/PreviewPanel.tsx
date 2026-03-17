@@ -313,7 +313,7 @@ const PreviewCopy = ({ isVideo, state, genStepResult, appealAxesResult }: { isVi
                 {heading}
               </h4>
             <div className="space-y-2 pl-7">
-              {copies.map((copy: any, j: number) => (
+              {group.copies.map((copy: any, j: number) => (
                 <div key={j} className="rounded-lg border p-3 text-sm flex items-center gap-3">
                   <Badge variant="outline" className="text-xs shrink-0 font-mono">
                     {copy.pattern_id ?? getPatternLetter(i, j, copyCount)}
@@ -323,7 +323,8 @@ const PreviewCopy = ({ isVideo, state, genStepResult, appealAxesResult }: { isVi
               ))}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     );
   }
