@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Download, ShieldCheck, Share2, Play, Image, MoreHorizontal,
   Target, Type, Film, FileText, Mic, Music, PenTool, Monitor, Smartphone,
-  LayoutTemplate, Palette, ChevronDown, ChevronRight, X,
+  LayoutTemplate, Palette, ChevronDown, ChevronRight, X, Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
@@ -21,17 +21,18 @@ import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
-/* ─── Constants ─── */
+/* ─── Dummy Constants (fallback) ─── */
 const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
-const APPEAL_AXES = [
+const DUMMY_APPEAL_AXES = [
   '未経験からエンジニア転職を実現',
   '年収400万→600万のキャリアアップ',
   '最短3ヶ月でIT業界デビュー',
 ];
 
-const COPY_DATA: Record<string, string[]> = {
+const DUMMY_COPY_DATA: Record<string, string[]> = {
   '未経験からエンジニア転職を実現': [
     '未経験でも大丈夫。あなたの"好き"がキャリアになる。',
     'プログラミング経験ゼロからエンジニアへ。最短ルートはここにある。',
@@ -49,23 +50,23 @@ const COPY_DATA: Record<string, string[]> = {
   ],
 };
 
-const TONMANA = [
+const DUMMY_TONMANA = [
   { name: 'クリーン・コーポレート', colors: ['#1e293b', '#ffffff', '#3b82f6', '#94a3b8'] },
   { name: 'カジュアル・ポップ', colors: ['#f97316', '#facc15', '#ffffff', '#e2e8f0'] },
 ];
 
-const SCENE_DATA = [
+const DUMMY_SCENE_DATA = [
   { time: '0:00-0:05', type: '冒頭', telop: 'あなたは今、この仕事に満足していますか？', visual: 'オフィスで悩む若者のシルエット', na: 'あなたは今、この仕事に満足していますか？' },
   { time: '0:05-0:15', type: '前半', telop: '実は、未経験から転職した人の多くが同じ悩みを持っていました', visual: '統計データとグラフのアニメーション', na: '実は、未経験からエンジニアに転職した人の多くが、最初は同じ不安を抱えていました。' },
   { time: '0:15-0:25', type: '後半', telop: 'LevTech Rookieなら、最短3ヶ月でIT業界デビュー', visual: 'サービス画面とメンターの映像', na: 'LevTech Rookieなら、経験豊富なメンターが一人ひとりに寄り添い、最短3ヶ月でIT業界デビューを実現します。' },
   { time: '0:25-0:30', type: '締め', telop: '今すぐ無料カウンセリングを予約', visual: 'CTA画面とQRコード', na: '今すぐ無料カウンセリングを予約。あなたの未来が変わる。' },
 ];
 
-const APPEAL_COUNT = 3;
-const COPY_COUNT = 3;
-const TONE_COUNT = 2;
+const DUMMY_APPEAL_COUNT = 3;
+const DUMMY_COPY_COUNT = 3;
+const DUMMY_TONE_COUNT = 2;
 
-interface PatternItem {
+interface DummyPatternItem {
   id: string;
   appealIdx: number;
   copyIdx: number;
@@ -76,15 +77,15 @@ interface PatternItem {
   status: 'ai-done' | 'pro-pending' | 'adcheck';
 }
 
-const generatePatterns = (): PatternItem[] => {
-  const items: PatternItem[] = [];
-  for (let a = 0; a < APPEAL_COUNT; a++) {
-    for (let c = 0; c < COPY_COUNT; c++) {
-      for (let t = 0; t < TONE_COUNT; t++) {
-        const letter = ALPHA[a * COPY_COUNT + c];
-        const appeal = APPEAL_AXES[a];
-        const copies = COPY_DATA[appeal] ?? [];
-        const statuses: PatternItem['status'][] = ['ai-done', 'ai-done', 'ai-done', 'pro-pending', 'adcheck', 'ai-done'];
+const generateDummyPatterns = (): DummyPatternItem[] => {
+  const items: DummyPatternItem[] = [];
+  for (let a = 0; a < DUMMY_APPEAL_COUNT; a++) {
+    for (let c = 0; c < DUMMY_COPY_COUNT; c++) {
+      for (let t = 0; t < DUMMY_TONE_COUNT; t++) {
+        const letter = ALPHA[a * DUMMY_COPY_COUNT + c];
+        const appeal = DUMMY_APPEAL_AXES[a];
+        const copies = DUMMY_COPY_DATA[appeal] ?? [];
+        const statuses: DummyPatternItem['status'][] = ['ai-done', 'ai-done', 'ai-done', 'pro-pending', 'adcheck', 'ai-done'];
         items.push({
           id: `${letter}${t + 1}`,
           appealIdx: a,
@@ -92,7 +93,7 @@ const generatePatterns = (): PatternItem[] => {
           toneIdx: t,
           appeal,
           copy: copies[c] ?? '',
-          tonmana: TONMANA[t].name,
+          tonmana: DUMMY_TONMANA[t].name,
           status: statuses[items.length % statuses.length],
         });
       }
@@ -101,12 +102,28 @@ const generatePatterns = (): PatternItem[] => {
   return items;
 };
 
-const ALL_PATTERNS = generatePatterns();
+const DUMMY_ALL_PATTERNS = generateDummyPatterns();
+
+/* ─── Unified pattern interface ─── */
+interface PatternItem {
+  id: string;
+  appealIdx: number;
+  copyIdx: number;
+  toneIdx: number;
+  appeal: string;
+  copy: string;
+  tonmana: string;
+  status: string;
+  composition?: any;
+  narration_script?: string;
+}
 
 const statusConfig: Record<string, { label: string; className: string }> = {
+  'generated': { label: 'AI生成済み', className: 'bg-success-wash text-success' },
   'ai-done': { label: 'AI生成済み', className: 'bg-success-wash text-success' },
   'pro-pending': { label: 'プロに依頼中', className: 'bg-secondary-wash text-secondary' },
   'adcheck': { label: 'Ad Check中', className: 'bg-primary-wash text-primary' },
+  'pending': { label: '生成中', className: 'bg-muted text-muted-foreground' },
 };
 
 const VIDEO_STEPS = [
@@ -127,7 +144,7 @@ const VIDEO_STEPS = [
 
 const PatternCard = ({ item, onClick }: { item: PatternItem; onClick: () => void }) => {
   const { toast } = useToast();
-  const sc = statusConfig[item.status];
+  const sc = statusConfig[item.status] ?? statusConfig['ai-done'];
   const fullText = `${item.appeal} × ${item.copy}`;
 
   return (
@@ -136,12 +153,9 @@ const PatternCard = ({ item, onClick }: { item: PatternItem; onClick: () => void
       onClick={onClick}
       whileHover={{ y: -2 }}
     >
-      {/* Thumbnail */}
       <div className="aspect-video bg-muted flex items-center justify-center">
         <Play className="h-8 w-8 text-muted-foreground/40" />
       </div>
-
-      {/* Mini actions */}
       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -162,8 +176,6 @@ const PatternCard = ({ item, onClick }: { item: PatternItem; onClick: () => void
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-
-      {/* Info */}
       <div className="p-3 space-y-2">
         <div className="flex items-center justify-between">
           <span className="text-lg font-bold text-secondary">{item.id}</span>
@@ -201,13 +213,30 @@ const PatternDetailModal = ({ item, open, onClose }: { item: PatternItem | null;
   const [videoOrientation, setVideoOrientation] = useState<'h' | 'v'>('h');
 
   if (!item) return null;
-  const sc = statusConfig[item.status];
+  const sc = statusConfig[item.status] ?? statusConfig['ai-done'];
+
+  // Parse composition
+  let compositionSections: { type: string; telop?: string; visual?: string; na?: string }[] = [];
+  if (item.composition) {
+    try {
+      const comp = typeof item.composition === 'string' ? JSON.parse(item.composition) : item.composition;
+      if (Array.isArray(comp)) {
+        compositionSections = comp;
+      } else if (comp.scenes) {
+        compositionSections = comp.scenes;
+      } else if (comp.sections) {
+        compositionSections = comp.sections;
+      }
+    } catch {}
+  }
+  if (compositionSections.length === 0) {
+    compositionSections = DUMMY_SCENE_DATA.map(s => ({ type: s.type, telop: s.telop }));
+  }
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-[800px] max-h-[85vh] overflow-y-auto p-0">
         <div className="flex flex-col lg:flex-row">
-          {/* Left: preview */}
           <div className="lg:w-[55%] p-6 bg-muted/30">
             <Tabs value={videoOrientation} onValueChange={(v) => setVideoOrientation(v as 'h' | 'v')}>
               <TabsList className="mb-3">
@@ -230,8 +259,6 @@ const PatternDetailModal = ({ item, open, onClose }: { item: PatternItem | null;
               </TabsContent>
             </Tabs>
           </div>
-
-          {/* Right: details */}
           <div className="lg:w-[45%] p-6 space-y-4">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
@@ -239,16 +266,12 @@ const PatternDetailModal = ({ item, open, onClose }: { item: PatternItem | null;
                 <Badge className={cn('text-xs', sc.className)}>{sc.label}</Badge>
               </DialogTitle>
             </DialogHeader>
-
             <div className="space-y-1 text-sm">
               <p><span className="text-muted-foreground">訴求軸:</span> {item.appeal}</p>
               <p><span className="text-muted-foreground">コピー:</span> {item.copy}</p>
               <p><span className="text-muted-foreground">トンマナ:</span> {item.tonmana}</p>
             </div>
-
             <Separator />
-
-            {/* Storyboard collapsible */}
             <Collapsible open={storyOpen} onOpenChange={setStoryOpen}>
               <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium w-full">
                 {storyOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
@@ -256,38 +279,29 @@ const PatternDetailModal = ({ item, open, onClose }: { item: PatternItem | null;
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="mt-2 space-y-2 text-xs text-muted-foreground bg-muted rounded-lg p-3">
-                  {SCENE_DATA.map((s, i) => (
+                  {compositionSections.map((s, i) => (
                     <div key={i}>
-                      <span className="font-medium text-foreground">【{s.type}】</span> {s.telop}
+                      <span className="font-medium text-foreground">【{s.type}】</span> {s.telop || ''}
                     </div>
                   ))}
                 </div>
               </CollapsibleContent>
             </Collapsible>
-
-            {/* NA collapsible */}
             <Collapsible open={naOpen} onOpenChange={setNaOpen}>
               <CollapsibleTrigger className="flex items-center gap-2 text-sm font-medium w-full">
                 {naOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
                 NA原稿
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <div className="mt-2 text-xs text-muted-foreground bg-muted rounded-lg p-3 space-y-1">
-                  {SCENE_DATA.map((s, i) => (
-                    <p key={i}>({s.time}) {s.na}</p>
-                  ))}
+                <div className="mt-2 text-xs text-muted-foreground bg-muted rounded-lg p-3 whitespace-pre-wrap">
+                  {item.narration_script || DUMMY_SCENE_DATA.map(s => `(${s.time}) ${s.na}`).join('\n')}
                 </div>
               </CollapsibleContent>
             </Collapsible>
-
             <div className="text-xs text-muted-foreground space-y-1">
               <p><span className="font-medium">BGM:</span> アップテンポ・ポジティブ（BPM 120）</p>
-              <p><span className="font-medium">生成日時:</span> 2026/03/16 15:30</p>
             </div>
-
             <Separator />
-
-            {/* Actions */}
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={() => toast({ title: 'ダウンロード完了' })}>
                 <Download className="h-3.5 w-3.5 mr-1" />ダウンロード
@@ -306,34 +320,102 @@ const PatternDetailModal = ({ item, open, onClose }: { item: PatternItem | null;
   );
 };
 
-/* ─── Step Accordion Content ─── */
+/* ─── Step Accordion Content (with real data support) ─── */
 
-const StepAccordionContent = ({ stepLabel }: { stepLabel: string }) => {
+const StepAccordionContent = ({ stepLabel, realSteps, patterns }: { stepLabel: string; realSteps: any[]; patterns: PatternItem[] }) => {
+  // Try to find matching real step
+  const stepKeyMap: Record<string, string> = {
+    '訴求軸作成': 'appeal_axis',
+    'コピー作成': 'copy',
+    '構成案・字コンテ作成': 'composition',
+    '構成案作成': 'composition',
+    'NA原稿作成': 'narration_script',
+  };
+  const stepKey = stepKeyMap[stepLabel];
+  const realStep = stepKey ? realSteps.find(s => s.step_key === stepKey) : null;
+  const result = realStep?.result;
+
   switch (stepLabel) {
-    case '訴求軸作成':
+    case '訴求軸作成': {
+      if (result) {
+        const axes = result.appeal_axes || result;
+        if (Array.isArray(axes)) {
+          return (
+            <div className="grid gap-3">
+              {axes.map((ax: any, i: number) => (
+                <div key={i} className="bg-card rounded-lg border border-border p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Badge variant="outline" className="text-xs">訴求軸{i + 1}</Badge>
+                  </div>
+                  <p className="text-sm font-medium">{typeof ax === 'string' ? ax : ax.text || ax.appeal_axis || JSON.stringify(ax)}</p>
+                </div>
+              ))}
+            </div>
+          );
+        }
+      }
+      // Fallback: use unique appeal axes from patterns
+      const axes = [...new Set(patterns.map(p => p.appeal))].filter(Boolean);
+      if (axes.length > 0) {
+        return (
+          <div className="grid gap-3">
+            {axes.map((ax, i) => (
+              <div key={i} className="bg-card rounded-lg border border-border p-4">
+                <Badge variant="outline" className="text-xs mb-1">訴求軸{i + 1}</Badge>
+                <p className="text-sm font-medium">{ax}</p>
+              </div>
+            ))}
+          </div>
+        );
+      }
       return (
         <div className="grid gap-3">
-          {APPEAL_AXES.map((ax, i) => (
+          {DUMMY_APPEAL_AXES.map((ax, i) => (
             <div key={i} className="bg-card rounded-lg border border-border p-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Badge variant="outline" className="text-xs">訴求軸{i + 1}</Badge>
-                <span className="text-xs text-muted-foreground">パターン {ALPHA[i * COPY_COUNT]}〜{ALPHA[i * COPY_COUNT + COPY_COUNT - 1]}</span>
-              </div>
+              <Badge variant="outline" className="text-xs mb-1">訴求軸{i + 1}</Badge>
               <p className="text-sm font-medium">{ax}</p>
             </div>
           ))}
         </div>
       );
-    case 'コピー作成':
+    }
+    case 'コピー作成': {
+      if (result) {
+        const copies = result.copies || result;
+        if (Array.isArray(copies)) {
+          return (
+            <div className="grid gap-2">
+              {copies.map((c: any, i: number) => (
+                <div key={i} className="bg-card rounded-lg border border-border p-3">
+                  <p className="text-sm">{typeof c === 'string' ? c : c.text || c.copy || JSON.stringify(c)}</p>
+                </div>
+              ))}
+            </div>
+          );
+        }
+      }
+      // Fallback from patterns
+      const uniqueCopies = [...new Set(patterns.map(p => p.copy))].filter(Boolean);
+      if (uniqueCopies.length > 0) {
+        return (
+          <div className="grid gap-2">
+            {uniqueCopies.map((c, i) => (
+              <div key={i} className="bg-card rounded-lg border border-border p-3">
+                <p className="text-sm">{c}</p>
+              </div>
+            ))}
+          </div>
+        );
+      }
+      // Dummy fallback
       return (
         <div className="space-y-4">
-          {APPEAL_AXES.map((ax, ai) => (
+          {DUMMY_APPEAL_AXES.map((ax, ai) => (
             <div key={ai}>
               <h4 className="text-sm font-medium mb-2 text-muted-foreground">訴求軸{ai + 1}: {ax}</h4>
               <div className="grid gap-2">
-                {(COPY_DATA[ax] ?? []).map((copy, ci) => (
-                  <div key={ci} className="bg-card rounded-lg border border-border p-3 flex items-start gap-2">
-                    <Badge className="bg-secondary/10 text-secondary text-xs shrink-0">{ALPHA[ai * COPY_COUNT + ci]}</Badge>
+                {(DUMMY_COPY_DATA[ax] ?? []).map((copy, ci) => (
+                  <div key={ci} className="bg-card rounded-lg border border-border p-3">
                     <p className="text-sm">{copy}</p>
                   </div>
                 ))}
@@ -342,6 +424,54 @@ const StepAccordionContent = ({ stepLabel }: { stepLabel: string }) => {
           ))}
         </div>
       );
+    }
+    case '構成案・字コンテ作成':
+    case '構成案作成': {
+      if (result) {
+        const compositions = result.compositions || result;
+        if (Array.isArray(compositions)) {
+          return (
+            <div className="space-y-3">
+              {compositions.map((comp: any, i: number) => (
+                <div key={i} className="bg-card rounded-lg border border-border p-3 text-sm">
+                  {typeof comp === 'string' ? comp : JSON.stringify(comp, null, 2)}
+                </div>
+              ))}
+            </div>
+          );
+        }
+      }
+      return (
+        <div className="grid gap-3 grid-cols-2 sm:grid-cols-3">
+          {Array.from({ length: 9 }).map((_, i) => (
+            <ImagePlaceholder key={i} label={`${ALPHA[i]}`} />
+          ))}
+        </div>
+      );
+    }
+    case 'NA原稿作成': {
+      if (result) {
+        const narrations = result.narrations || result;
+        if (Array.isArray(narrations)) {
+          return (
+            <div className="space-y-3">
+              {narrations.map((n: any, i: number) => (
+                <div key={i} className="bg-card rounded-lg border border-border p-3 text-sm whitespace-pre-wrap">
+                  {typeof n === 'string' ? n : n.text || n.script || JSON.stringify(n)}
+                </div>
+              ))}
+            </div>
+          );
+        }
+      }
+      return (
+        <div className="bg-card rounded-lg border border-border p-3 text-sm space-y-1">
+          {DUMMY_SCENE_DATA.map((s, i) => (
+            <p key={i} className="text-muted-foreground">({s.time}) {s.na}</p>
+          ))}
+        </div>
+      );
+    }
     case 'BGM提案':
       return (
         <div className="grid gap-3 sm:grid-cols-3">
@@ -356,7 +486,7 @@ const StepAccordionContent = ({ stepLabel }: { stepLabel: string }) => {
     case 'スタイルフレーム作成':
       return (
         <div className="grid gap-4 sm:grid-cols-2">
-          {TONMANA.map((tm, i) => (
+          {DUMMY_TONMANA.map((tm, i) => (
             <div key={i} className="bg-card rounded-lg border border-border p-4">
               <p className="text-sm font-medium mb-2">トンマナ {i + 1}: {tm.name}</p>
               <div className="flex gap-2 mb-3">
@@ -375,9 +505,10 @@ const StepAccordionContent = ({ stepLabel }: { stepLabel: string }) => {
     case '静止画バナー作成': {
       const isVertical = stepLabel === '縦動画・リサイズ';
       const aspect = isVertical ? '9/16' : '16/9';
+      const displayPatterns = patterns.length > 0 ? patterns.slice(0, 18) : DUMMY_ALL_PATTERNS.slice(0, 18);
       return (
         <div className="grid gap-3 grid-cols-2 sm:grid-cols-3">
-          {ALL_PATTERNS.slice(0, 18).map((p) => (
+          {displayPatterns.map((p) => (
             <div key={p.id} className="text-center">
               <div className="bg-muted rounded-lg flex items-center justify-center" style={{ aspectRatio: aspect }}>
                 {stepLabel.includes('動画') ? <Play className="h-6 w-6 text-muted-foreground/40" /> : <Image className="h-6 w-6 text-muted-foreground/40" />}
@@ -402,20 +533,101 @@ const StepAccordionContent = ({ stepLabel }: { stepLabel: string }) => {
 /* ─── Main Component ─── */
 
 const GenerationResult = () => {
+  const { id: jobId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const [loading, setLoading] = useState(true);
+  const [job, setJob] = useState<any>(null);
+  const [realPatterns, setRealPatterns] = useState<any[]>([]);
+  const [realSteps, setRealSteps] = useState<any[]>([]);
+  const [useDummy, setUseDummy] = useState(false);
+
   const [filterScript, setFilterScript] = useState('all');
   const [filterTone, setFilterTone] = useState('all');
   const [selectedPattern, setSelectedPattern] = useState<PatternItem | null>(null);
   const [expandedStep, setExpandedStep] = useState<number>(0);
 
-  const filtered = ALL_PATTERNS.filter(p => {
-    if (filterScript !== 'all' && ALPHA[p.appealIdx * COPY_COUNT + p.copyIdx] !== filterScript) return false;
+  // Fetch data
+  useEffect(() => {
+    if (!jobId) { setUseDummy(true); setLoading(false); return; }
+
+    const fetchData = async () => {
+      setLoading(true);
+      const [jobRes, patternsRes, stepsRes] = await Promise.all([
+        supabase
+          .from('gen_jobs')
+          .select('*, projects(name, product_id, products(name, client_id, clients(name)))')
+          .eq('id', jobId)
+          .single(),
+        supabase.from('gen_patterns').select('*').eq('job_id', jobId).order('pattern_id'),
+        supabase.from('gen_steps').select('*').eq('job_id', jobId).order('step_number'),
+      ]);
+
+      if (jobRes.error || !jobRes.data) {
+        setUseDummy(true);
+      } else {
+        setJob(jobRes.data);
+        setRealSteps(stepsRes.data ?? []);
+        if (patternsRes.data && patternsRes.data.length > 0) {
+          setRealPatterns(patternsRes.data);
+          setUseDummy(false);
+        } else {
+          setUseDummy(true);
+        }
+      }
+      setLoading(false);
+    };
+    fetchData();
+  }, [jobId]);
+
+  // Convert real patterns to PatternItem[]
+  const patterns: PatternItem[] = useDummy
+    ? DUMMY_ALL_PATTERNS.map(p => ({ ...p }))
+    : realPatterns.map(p => ({
+        id: p.pattern_id,
+        appealIdx: p.appeal_axis_index ?? 0,
+        copyIdx: p.copy_index ?? 0,
+        toneIdx: p.tonmana_index ?? 0,
+        appeal: p.appeal_axis_text ?? '',
+        copy: p.copy_text ?? '',
+        tonmana: p.tonmana_name ?? '',
+        status: p.status ?? 'generated',
+        composition: p.composition,
+        narration_script: p.narration_script,
+      }));
+
+  // Derive unique appeals
+  const appealAxes = [...new Map(patterns.map(p => [p.appealIdx, p.appeal])).entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([idx, text]) => ({ idx, text }));
+
+  // Filters
+  const filtered = patterns.filter(p => {
+    if (filterScript !== 'all' && p.id.replace(/\d+$/, '') !== filterScript && p.id !== filterScript) return false;
     if (filterTone !== 'all' && String(p.toneIdx + 1) !== filterTone) return false;
     return true;
   });
 
-  const scriptLetters = Array.from(new Set(ALL_PATTERNS.map(p => ALPHA[p.appealIdx * COPY_COUNT + p.copyIdx])));
+  const uniquePatternPrefixes = [...new Set(patterns.map(p => p.id.replace(/\d+$/, '')))];
+  const uniqueTonmana = [...new Map(patterns.map(p => [p.toneIdx, p.tonmana])).entries()]
+    .sort((a, b) => a[0] - b[0]);
+
+  // Header info
+  const projectName = (job?.projects as any)?.name ?? 'EXPO 2026春';
+  const clientName = (job?.projects as any)?.products?.clients?.name ?? 'レバレジーズ';
+  const productName = (job?.projects as any)?.products?.name ?? 'LevTech Rookie';
+  const creativeType = job?.creative_type === 'banner' ? 'バナー' : `動画${job?.duration_seconds ?? 30}秒`;
+  const totalPatterns = job?.total_patterns ?? patterns.length;
+  const createdAt = job?.created_at ? new Date(job.created_at).toLocaleDateString('ja-JP') + ' ' + new Date(job.created_at).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '2026/03/16 15:30';
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-secondary" />
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -436,8 +648,8 @@ const GenerationResult = () => {
       {/* Header */}
       <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight font-display">生成結果 — EXPO 2026春</h1>
-          <p className="text-xs sm:text-sm text-secondary mt-1">動画30秒 / レバレジーズ / LevTech Rookie / パターン展開 / 合計18本 / 2026/03/16 15:30</p>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight font-display">生成結果 — {projectName}</h1>
+          <p className="text-xs sm:text-sm text-secondary mt-1">{creativeType} / {clientName} / {productName} / {projectName} / 合計{totalPatterns}本 / {createdAt}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => toast({ title: '一括ダウンロード完了' })}>
@@ -466,25 +678,22 @@ const GenerationResult = () => {
         <TabsContent value="all">
           <AnimatePresence mode="wait">
             <motion.div key="all" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-              {/* Filters */}
               <div className="flex flex-wrap gap-3 mb-6 mt-4">
                 <Select value={filterScript} onValueChange={setFilterScript}>
                   <SelectTrigger className="w-[140px] sm:w-[180px]"><SelectValue placeholder="台本パターン" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">全て</SelectItem>
-                    {scriptLetters.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                    {uniquePatternPrefixes.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <Select value={filterTone} onValueChange={setFilterTone}>
                   <SelectTrigger className="w-[160px] sm:w-[240px]"><SelectValue placeholder="トンマナ" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">全て</SelectItem>
-                    {TONMANA.map((t, i) => <SelectItem key={i} value={String(i + 1)}>{i + 1}: {t.name}</SelectItem>)}
+                    {uniqueTonmana.map(([idx, name]) => <SelectItem key={idx} value={String(idx + 1)}>{idx + 1}: {name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-
-              {/* Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filtered.map(item => (
                   <PatternCard key={item.id} item={item} onClick={() => setSelectedPattern(item)} />
@@ -499,18 +708,16 @@ const GenerationResult = () => {
           <AnimatePresence mode="wait">
             <motion.div key="appeal" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
               <div className="space-y-8 mt-4">
-                {APPEAL_AXES.map((ax, ai) => {
-                  const rangeStart = ALPHA[ai * COPY_COUNT];
-                  const rangeEnd = ALPHA[ai * COPY_COUNT + COPY_COUNT - 1];
-                  const patterns = ALL_PATTERNS.filter(p => p.appealIdx === ai);
+                {appealAxes.map(({ idx: ai, text: ax }) => {
+                  const axPatterns = patterns.filter(p => p.appealIdx === ai);
                   return (
                     <div key={ai}>
                       <h3 className="text-base font-semibold font-display mb-3">
                         訴求軸{ai + 1}: {ax}
-                        <span className="text-sm text-muted-foreground font-normal ml-2">（パターン {rangeStart}〜{rangeEnd}）</span>
+                        <span className="text-sm text-muted-foreground font-normal ml-2">（{axPatterns.length}パターン）</span>
                       </h3>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {patterns.map(item => (
+                        {axPatterns.map(item => (
                           <PatternCard key={item.id} item={item} onClick={() => setSelectedPattern(item)} />
                         ))}
                       </div>
@@ -542,7 +749,7 @@ const GenerationResult = () => {
                         transition={{ duration: 0.3 }}
                         className="p-4 border-x border-b border-border rounded-b-lg"
                       >
-                        <StepAccordionContent stepLabel={vs.label} />
+                        <StepAccordionContent stepLabel={vs.label} realSteps={realSteps} patterns={patterns} />
                       </motion.div>
                     </CollapsibleContent>
                   </Collapsible>
