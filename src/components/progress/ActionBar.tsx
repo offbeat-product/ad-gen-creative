@@ -34,6 +34,11 @@ interface Props {
   pipeline: PipelineStep[];
   completedIndexes: Set<number>;
   selectedPatternId?: string;
+  editing?: boolean;
+  onStartEdit?: () => void;
+  onSave?: () => void;
+  onCancel?: () => void;
+  onDownload?: () => void;
 }
 
 const ActionBar = ({ step, stepIndex, state, pipeline, completedIndexes, selectedPatternId }: Props) => {
