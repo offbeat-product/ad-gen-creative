@@ -229,18 +229,24 @@ const triggerWebhook = async (
   const url = WEBHOOK_URLS[nextStepKey];
   if (!url) return;
 
-  const { data: allSteps } = await supabase
+  const { data: allSteps, error: stepsError } = await supabase
     .from('gen_steps')
     .select('step_key, result')
     .eq('job_id', job.id);
 
+  console.log(`[Webhook] gen_steps query for job_id=${job.id}:`);
+  console.log(`[Webhook] error:`, stepsError);
+  console.log(`[Webhook] allSteps count:`, allSteps?.length ?? 0);
+  console.log(`[Webhook] allSteps keys:`, allSteps?.map((s: any) => `${s.step_key}(result=${s.result !== null})`));
+
   const getStepResult = (stepKey: string) => {
     const stepData = allSteps?.find((s: { step_key: string; result: unknown }) => s.step_key === stepKey);
+    console.log(`[Webhook] ${stepKey} raw result type=${typeof stepData?.result}:`, stepData?.result);
     const parsed = stepData?.result
       ? (typeof stepData.result === 'string' ? safeParse(stepData.result) : stepData.result)
       : null;
 
-    console.log(`DEBUG ${stepKey}Result:`, JSON.stringify(parsed));
+    console.log(`[Webhook] ${stepKey} parsed:`, JSON.stringify(parsed));
     return parsed;
   };
 
