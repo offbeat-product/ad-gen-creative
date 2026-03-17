@@ -186,6 +186,9 @@ const AudioPlayer = ({ label }: { label: string }) => (
 /* ─── Step-specific preview renderers ─── */
 
 const PreviewAppealAxis = ({ isVideo, state, genStepResult }: { isVideo: boolean; state: WizardState; genStepResult?: any }) => {
+  console.log('DEBUG PreviewPanel genStepResult:', genStepResult);
+  console.log('DEBUG PreviewPanel genStepResult?.appeal_axes:', genStepResult?.appeal_axes);
+  console.log('DEBUG PreviewPanel genStepResult type:', typeof genStepResult);
   // Try to use real data (new format with axis_type/axis_label/examples or old format with plain strings)
   const realAxes: any[] | null = (() => {
     try {
