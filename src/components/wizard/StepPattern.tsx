@@ -1,6 +1,6 @@
 import { FilePlus, GitBranch } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { type WizardState, referenceCreatives } from '@/data/wizard-data';
+import { type WizardState } from '@/data/wizard-data';
 
 interface Props {
   state: WizardState;
@@ -13,7 +13,7 @@ const StepPattern = ({ state, updateState }: Props) => {
     { id: 'variation' as const, icon: GitBranch, title: 'パターン展開', sub: '既存の勝ちクリエイティブをベースにバリエーション展開' },
   ];
 
-  const selectedRefs = referenceCreatives.filter(c => state.referenceIds.includes(c.id));
+  const hasRefs = state.referenceIds.length > 0;
 
   return (
     <div className="space-y-6">
@@ -41,15 +41,15 @@ const StepPattern = ({ state, updateState }: Props) => {
       {state.productionPattern === 'variation' && (
         <div className="space-y-3">
           <label className="text-sm font-medium">ベースにするクリエイティブ</label>
-          {selectedRefs.length > 0 ? (
+          {hasRefs ? (
             <select
               value={state.baseCreativeId ?? ''}
               onChange={e => updateState({ baseCreativeId: e.target.value || null })}
               className="w-full rounded-xl border bg-card px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">選択してください</option>
-              {selectedRefs.map(c => (
-                <option key={c.id} value={c.id}>{c.title} (CVR {c.cvr})</option>
+              {state.referenceIds.map(id => (
+                <option key={id} value={id}>{id}</option>
               ))}
             </select>
           ) : (
