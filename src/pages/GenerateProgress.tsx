@@ -820,7 +820,7 @@ const GenerateProgress = () => {
             pipeline={pipeline} selectedStepIndex={selectedStepIndex} completedIndexes={completedIndexes}
             allDone={allDone} total={total} state={state} waitingForApproval={waitingForApproval}
             effectiveAutoMode={effectiveAutoMode} genStepResult={selectedGenStepResult} appealAxesResult={appealAxesStepResult}
-            copyStepResult={copyStepResult}
+            copyStepResult={copyStepResult} compositionStepResult={compositionStepResult}
             jobId={jobId} onApprove={handleApprove} onRegenerate={handleRegenerate}
             onSwitchToAuto={switchToAuto} onNavigateDashboard={() => navigate('/')}
           />
