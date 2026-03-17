@@ -428,28 +428,38 @@ const GenerateProgress = () => {
 
       // ── Step mode: detect newly completed step → set waitingForApproval ──
       if (!isJobAutoMode) {
-        // Find the latest completed text step that has a pending next step
-        for (let i = TEXT_STEP_KEYS.length - 1; i >= 0; i--) {
+        let foundApproval = false;
+        // Iterate forward to find the first completed step whose next step is pending
+        for (let i = 0; i < TEXT_STEP_KEYS.length; i++) {
           const key = TEXT_STEP_KEYS[i];
           const gs = steps.find((s: any) => s.step_key === key);
           const pIdx = stepKeyToIndex.get(key);
           if (gs?.status === 'completed' && pIdx !== undefined) {
-            // Check if next text step is still pending
             const nextKey = TEXT_STEP_KEYS[i + 1];
             if (nextKey) {
               const nextGs = steps.find((s: any) => s.step_key === nextKey);
               if (nextGs?.status === 'pending') {
                 setWaitingForApproval(pIdx);
+                setSelectedStepIndex(pIdx); // Ensure selected matches waiting
+                foundApproval = true;
                 break;
               }
             } else {
               // Last text step (narration_script) completed → wait for approval to start dummy phase
               if (!dummyAnimationStartedRef.current) {
                 setWaitingForApproval(pIdx);
+                setSelectedStepIndex(pIdx);
+                foundApproval = true;
               }
               break;
             }
           }
+          // If this step is still processing or pending, stop looking
+          if (gs?.status === 'processing' || gs?.status === 'pending') break;
+        }
+        // If no approval needed (all triggered already), clear it
+        if (!foundApproval) {
+          setWaitingForApproval(-1);
         }
       }
 
