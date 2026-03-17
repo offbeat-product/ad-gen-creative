@@ -709,7 +709,7 @@ const PreviewPanel = ({
     } else {
       switch (selectedStepIndex) {
         case 0: return <PreviewAppealAxis isVideo={false} state={state} genStepResult={parsedResult} />;
-        case 1: return <PreviewCopy isVideo={false} state={state} genStepResult={parsedResult} />;
+        case 1: return <PreviewCopy isVideo={false} state={state} genStepResult={parsedResult} appealAxesResult={appealAxesResult} />;
         case 2: return <PreviewStoryboard isVideo={false} state={state} genStepResult={parsedResult} />;
         case 3: return <PreviewToneManner />;
         case 4: return <PreviewBannerImages total={total} state={state} />;
