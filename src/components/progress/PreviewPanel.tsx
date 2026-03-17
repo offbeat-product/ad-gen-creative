@@ -186,9 +186,6 @@ const AudioPlayer = ({ label }: { label: string }) => (
 /* ─── Step-specific preview renderers ─── */
 
 const PreviewAppealAxis = ({ isVideo, state, genStepResult }: { isVideo: boolean; state: WizardState; genStepResult?: any }) => {
-  console.log('DEBUG PreviewPanel genStepResult:', genStepResult);
-  console.log('DEBUG PreviewPanel genStepResult?.appeal_axes:', genStepResult?.appeal_axes);
-  console.log('DEBUG PreviewPanel genStepResult type:', typeof genStepResult);
   // Try to use real data (new format with axis_type/axis_label/examples or old format with plain strings)
   const realAxes: any[] | null = (() => {
     try {
@@ -285,7 +282,7 @@ const PreviewCopy = ({ isVideo, state, genStepResult }: { isVideo: boolean; stat
               {group.appeal_axis}
             </h4>
             <div className="space-y-2 pl-7">
-              {group.copies.map((copy, j) => (
+              {(group.copies ?? []).map((copy, j) => (
                 <div key={j} className="rounded-lg border p-3 text-sm flex items-center gap-3">
                   <Badge variant="outline" className="text-xs shrink-0 font-mono">
                     {getPatternLetter(i, j, copyCount)}
@@ -656,10 +653,12 @@ const PreviewPanel = ({
   onApprove, onRegenerate, onSwitchToAuto, onNavigateDashboard,
 }: Props) => {
   const parsedResult = (() => {
-    if (typeof genStepResult === 'string') {
-      try { return JSON.parse(genStepResult); } catch { return genStepResult; }
+    if (!genStepResult) return null;
+    try {
+      return typeof genStepResult === 'string' ? JSON.parse(genStepResult) : genStepResult;
+    } catch {
+      return null;
     }
-    return genStepResult;
   })();
   const isVideo = state.creativeType === 'video';
   const noSelection = selectedStepIndex === null || !completedIndexes.has(selectedStepIndex);
