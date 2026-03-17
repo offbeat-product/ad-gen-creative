@@ -857,6 +857,7 @@ const GenerateProgress = () => {
             copyStepResult={copyStepResult} compositionStepResult={compositionStepResult}
             jobId={jobId} onApprove={handleApprove} onRegenerate={handleRegenerate}
             onSwitchToAuto={switchToAuto} onNavigateDashboard={() => navigate('/')}
+            onResultUpdated={refreshGenSteps}
           />
         </div>
       </div>
