@@ -55,6 +55,7 @@ const StepPatternCount = ({ state, updateState, goBack }: Props) => {
       const { data, error } = await supabase.functions.invoke('create-gen-job', {
         body: {
           project_id: state.projectId,
+          product_id: state.productId,
           creative_type: state.creativeType,
           duration_seconds: state.creativeType === 'video' ? state.videoDuration : null,
           production_pattern: state.productionPattern === 'new' ? '新規制作' : 'パターン展開',

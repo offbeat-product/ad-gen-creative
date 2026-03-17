@@ -131,6 +131,14 @@ export const makeVideoPipeline = (s: WizardState): PipelineStep[] => {
   ];
 };
 
+/* ─── Webhook URLs ─── */
+
+const WEBHOOK_URLS: Record<string, string> = {
+  copy: 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step2',
+  composition: 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step3',
+  narration_script: 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step4',
+};
+
 /* ─── Confetti ─── */
 
 const Confetti = () => {
@@ -191,6 +199,60 @@ export interface GenStepRow {
   completed_at: string | null;
 }
 
+/* ─── Safe JSON parse helper ─── */
+
+const safeParse = (v: any) => {
+  if (!v) return null;
+  if (typeof v === 'object') return v;
+  try { return JSON.parse(v); } catch { return null; }
+};
+
+/* ─── Trigger next step webhook ─── */
+
+const triggerNextStep = async (
+  nextStepKey: string,
+  job: any,
+  steps: GenStepRow[],
+  meta: { clientName: string; productName: string; projectName: string },
+) => {
+  const url = WEBHOOK_URLS[nextStepKey];
+  if (!url) return;
+
+  const step1 = steps.find(s => s.step_key === 'appeal_axis');
+  const step2 = steps.find(s => s.step_key === 'copy');
+  const step3 = steps.find(s => s.step_key === 'composition');
+
+  const previousResults: Record<string, any> = {};
+  if (step1?.result) previousResults.appeal_axes = safeParse(step1.result)?.appeal_axes;
+  if (step2?.result) previousResults.copies = safeParse(step2.result)?.copies;
+  if (step3?.result) previousResults.compositions = safeParse(step3.result)?.compositions;
+
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        job_id: job.id,
+        creative_type: job.creative_type,
+        duration_seconds: job.duration_seconds,
+        num_appeal_axes: job.num_appeal_axes,
+        num_copies: job.num_copies,
+        num_tonmana: job.num_tonmana,
+        client_name: meta.clientName,
+        product_name: meta.productName,
+        project_name: meta.projectName,
+        previous_results: previousResults,
+      }),
+    });
+  } catch (e) {
+    console.error(`Failed to trigger ${nextStepKey}:`, e);
+  }
+};
+
+/* ─── Step order for auto-chaining ─── */
+
+const TEXT_STEP_ORDER = ['appeal_axis', 'copy', 'composition', 'narration_script'];
+
 /* ─── Main Component ─── */
 
 const GenerateProgress = () => {
@@ -203,18 +265,36 @@ const GenerateProgress = () => {
 
   const [jobData, setJobData] = useState<any>(null);
   const [stateReady, setStateReady] = useState(!!wizardState);
+  const [jobMeta, setJobMeta] = useState<{ clientName: string; productName: string; projectName: string }>({
+    clientName: '—', productName: '—', projectName: '—',
+  });
 
-  // If no wizardState, fetch from gen_jobs
+  // Fetch job with relational data for header
   useEffect(() => {
-    if (wizardState || !jobId) {
+    if (!jobId) { setStateReady(true); return; }
+
+    const fetchJob = async () => {
+      const { data } = await supabase
+        .from('gen_jobs')
+        .select('*, projects(name, products(name, clients(name)))')
+        .eq('id', jobId)
+        .single();
+
+      if (data) {
+        setJobData(data);
+        const proj = data.projects as any;
+        if (proj) {
+          setJobMeta({
+            clientName: proj.products?.clients?.name ?? '—',
+            productName: proj.products?.name ?? '—',
+            projectName: proj.name ?? '—',
+          });
+        }
+      }
       setStateReady(true);
-      return;
-    }
-    supabase.from('gen_jobs').select('*').eq('id', jobId).single().then(({ data }) => {
-      if (data) setJobData(data);
-      setStateReady(true);
-    });
-  }, [jobId, wizardState]);
+    };
+    fetchJob();
+  }, [jobId]);
 
   const state: WizardState = wizardState ?? (jobData ? buildStateFromJob(jobData) : {
     creativeType: 'video', videoDuration: 30, clientId: null, productId: null,
@@ -250,6 +330,9 @@ const GenerateProgress = () => {
   const [dummyPhaseStarted, setDummyPhaseStarted] = useState(false);
   const [errorMap, setErrorMap] = useState<Record<number, string>>({});
 
+  // Webhook dedup: track which steps we've already triggered
+  const triggeredStepsRef = useRef<Set<string>>(new Set());
+
   const effectiveAutoMode = isAutoMode || switchedToAuto;
 
   // Elapsed timer
@@ -258,11 +341,31 @@ const GenerateProgress = () => {
     return () => clearInterval(timerRef.current);
   }, [startTime]);
 
-  // ── Mode A: Supabase polling for text steps (when jobId exists) ──
+  // ── Auto-chain: trigger next webhook when a step completes (auto mode) ──
+  const checkAndTriggerNextStep = useCallback(async (steps: GenStepRow[]) => {
+    if (!jobData) return;
+
+    for (let i = 0; i < TEXT_STEP_ORDER.length - 1; i++) {
+      const currentKey = TEXT_STEP_ORDER[i];
+      const nextKey = TEXT_STEP_ORDER[i + 1];
+      const currentStep = steps.find(s => s.step_key === currentKey);
+      const nextStep = steps.find(s => s.step_key === nextKey);
+
+      if (
+        currentStep?.status === 'completed' &&
+        nextStep?.status === 'pending' &&
+        !triggeredStepsRef.current.has(nextKey)
+      ) {
+        triggeredStepsRef.current.add(nextKey);
+        await triggerNextStep(nextKey, jobData, steps, jobMeta);
+      }
+    }
+  }, [jobData, jobMeta]);
+
+  // ── Supabase polling for text steps ──
   useEffect(() => {
     if (!jobId || !stateReady) return;
 
-    // Initial poll immediately
     const doPoll = async () => {
       const { data: steps } = await supabase
         .from('gen_steps')
@@ -300,14 +403,36 @@ const GenerateProgress = () => {
       if (latestActive >= 0) setActiveIndex(latestActive);
       if (latestCompleted >= 0) setSelectedStepIndex(latestCompleted);
 
-      // Check if all text pipeline steps are completed
+      // Auto mode: trigger next step webhook
+      if (effectiveAutoMode) {
+        await checkAndTriggerNextStep(steps as GenStepRow[]);
+      }
+
+      // Check if all text pipeline steps completed
       const relevantSteps = steps.filter((gs: any) => textStepKeys.includes(gs.step_key));
       const allTextDone = relevantSteps.length > 0 && relevantSteps.every((gs: any) => gs.status === 'completed');
+
+      // In step mode, check if current step completed → set waiting for approval
+      if (!effectiveAutoMode) {
+        for (const gs of steps as GenStepRow[]) {
+          const pIdx = stepKeyToIndex.get(gs.step_key);
+          if (pIdx !== undefined && gs.status === 'completed' && !completedIndexes.has(pIdx)) {
+            // Newly completed text step in step mode → wait for approval
+            const nextIdx = TEXT_STEP_ORDER.indexOf(gs.step_key) + 1;
+            if (nextIdx < TEXT_STEP_ORDER.length) {
+              const nextStepData = steps.find((s: any) => s.step_key === TEXT_STEP_ORDER[nextIdx]);
+              if (nextStepData && nextStepData.status === 'pending') {
+                setWaitingForApproval(pIdx);
+              }
+            }
+          }
+        }
+      }
 
       return allTextDone;
     };
 
-    doPoll(); // immediate first poll
+    doPoll();
 
     const interval = setInterval(async () => {
       const allTextDone = await doPoll();
@@ -315,11 +440,9 @@ const GenerateProgress = () => {
         clearInterval(interval);
         if (!dummyPhaseStarted) {
           setDummyPhaseStarted(true);
-          // Start dummy animation for remaining (non-text) steps
           if (firstDummyIndex >= 0 && firstDummyIndex < pipeline.length) {
             setTimeout(() => setActiveIndex(firstDummyIndex), 500);
           } else {
-            // All steps are text, we're done
             setAllDone(true);
             setShowConfetti(true);
             clearInterval(timerRef.current);
@@ -330,18 +453,17 @@ const GenerateProgress = () => {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [jobId, stateReady, dummyPhaseStarted]);
+  }, [jobId, stateReady, dummyPhaseStarted, effectiveAutoMode, checkAndTriggerNextStep]);
 
   // ── Mode B: Full dummy animation (no jobId, legacy mode) ──
   useEffect(() => {
-    if (jobId) return; // Using real polling
+    if (jobId) return;
     if (!stateReady) return;
     const t = setTimeout(() => setActiveIndex(0), 500);
     return () => clearTimeout(t);
   }, [jobId, stateReady]);
 
   // ── Run dummy animation for current step ──
-  // Only runs for: (a) non-text steps after text phase, or (b) all steps in legacy mode
   useEffect(() => {
     if (!stateReady) return;
     if (activeIndex < 0 || activeIndex >= pipeline.length) return;
@@ -385,17 +507,35 @@ const GenerateProgress = () => {
     return () => clearTimeout(t);
   }, [activeIndex, effectiveAutoMode, completedIndexes, stateReady, jobId]);
 
-  const handleApprove = useCallback((idx: number) => {
+  // Handle approve: in step mode, trigger next webhook
+  const handleApprove = useCallback(async (idx: number) => {
     setWaitingForApproval(-1);
+
+    // If this is a text step with real data, trigger next webhook
+    if (jobId && jobData) {
+      const currentStepKey = pipeline[idx]?.stepKey;
+      const currentOrderIdx = TEXT_STEP_ORDER.indexOf(currentStepKey);
+      if (currentOrderIdx >= 0 && currentOrderIdx < TEXT_STEP_ORDER.length - 1) {
+        const nextKey = TEXT_STEP_ORDER[currentOrderIdx + 1];
+        if (!triggeredStepsRef.current.has(nextKey)) {
+          triggeredStepsRef.current.add(nextKey);
+          await triggerNextStep(nextKey, jobData, genStepsData, jobMeta);
+        }
+      }
+    }
+
     if (idx + 1 < pipeline.length) {
-      setTimeout(() => setActiveIndex(idx + 1), 300);
+      // For text steps with polling, don't advance activeIndex — polling will handle it
+      if (!jobId || pipeline[idx + 1]?.stepType !== 'text') {
+        setTimeout(() => setActiveIndex(idx + 1), 300);
+      }
     } else {
       setAllDone(true);
       setShowConfetti(true);
       clearInterval(timerRef.current);
       setTimeout(() => setShowConfetti(false), 3500);
     }
-  }, [pipeline.length]);
+  }, [pipeline, jobId, jobData, genStepsData, jobMeta]);
 
   const handleRegenerate = useCallback((idx: number) => {
     setCompletedIndexes(prev => { const s = new Set(prev); s.delete(idx); return s; });
@@ -405,12 +545,12 @@ const GenerateProgress = () => {
     setTimeout(() => setActiveIndex(idx), 100);
   }, []);
 
-  const switchToAuto = () => {
+  const switchToAuto = useCallback(() => {
     setSwitchedToAuto(true);
     if (waitingForApproval >= 0) {
       handleApprove(waitingForApproval);
     }
-  };
+  }, [waitingForApproval, handleApprove]);
 
   const handleStepClick = (idx: number) => {
     if (completedIndexes.has(idx)) {
@@ -428,13 +568,10 @@ const GenerateProgress = () => {
     return genStep?.result ?? null;
   })();
 
-  // Summary line
-  const client = { name: state.clientId ?? '—' };
-  const product = { name: state.productId ?? '—' };
-  const project = { name: state.projectId ?? '—' };
+  // Summary line with real names
   const typeLabel = state.creativeType === 'video' ? `動画${state.videoDuration}秒` : '静止画バナー';
   const patternLabel = state.productionPattern === 'new' ? '新規制作' : 'パターン展開';
-  const summaryLine = `${typeLabel} / ${client?.name ?? '—'} / ${product?.name ?? '—'} / ${project?.name ?? '—'} / ${patternLabel} / 合計${total}本`;
+  const summaryLine = `${typeLabel} / ${jobMeta.clientName} / ${jobMeta.productName} / ${jobMeta.projectName} / ${patternLabel} / 合計${total}本`;
 
   const completedCount = completedIndexes.size;
   const progressPct = Math.round((completedCount / pipeline.length) * 100);
