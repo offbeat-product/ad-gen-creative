@@ -25,6 +25,7 @@ interface Props {
   waitingForApproval: number;
   effectiveAutoMode: boolean;
   genStepResult?: any;
+  appealAxesResult?: any;
   jobId?: string | null;
   onApprove: (idx: number) => void;
   onRegenerate: (idx: number) => void;
