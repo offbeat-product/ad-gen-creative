@@ -4,11 +4,11 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const N8N_WEBHOOK_URL =
-  "https://offbeat-inc.app.n8n.cloud/webhook/adgen-generate";
+const STEP1_WEBHOOK_URL =
+  "https://offbeat-inc.app.n8n.cloud/webhook/adgen-step1";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -98,17 +98,17 @@ serve(async (req) => {
 
     if (stepsError) {
       console.error("gen_steps insert error:", stepsError);
-      // Job already created, return it anyway
     }
 
-    // 3. Fire-and-forget webhook to n8n
+    // 3. Fire-and-forget webhook to n8n Step 1 only
     try {
-      fetch(N8N_WEBHOOK_URL, {
+      fetch(STEP1_WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           job_id: job.id,
           project_id: body.project_id,
+          product_id: body.product_id,
           creative_type: body.creative_type,
           duration_seconds: body.duration_seconds,
           num_appeal_axes: body.num_appeal_axes,
@@ -118,12 +118,10 @@ serve(async (req) => {
           product_name: body.product_name,
           project_name: body.project_name,
           appeal_direction: "",
-          reference_info: "",
-          knowledge_data: "",
         }),
-      }).catch((e) => console.error("n8n webhook error:", e));
+      }).catch((e) => console.error("n8n step1 webhook error:", e));
     } catch (e) {
-      console.error("n8n webhook error:", e);
+      console.error("n8n step1 webhook error:", e);
     }
 
     return new Response(JSON.stringify({ job_id: job.id }), {
