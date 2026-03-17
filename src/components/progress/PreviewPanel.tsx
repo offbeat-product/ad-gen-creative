@@ -259,8 +259,10 @@ const PreviewAppealAxis = ({ isVideo, state, genStepResult }: { isVideo: boolean
 };
 
 const PreviewCopy = ({ isVideo, state, genStepResult }: { isVideo: boolean; state: WizardState; genStepResult?: any }) => {
-  // Try to use real data: { copies: [{ appeal_axis: string, copies: string[] }] }
-  const realData: Array<{ appeal_axis: string; copies: string[] }> | null = (() => {
+  const copyCount = state.copyPatterns;
+
+  // Real data: flat array of { pattern_id, appeal_axis_index, appeal_axis_text, copy_index, copy_text }
+  const realCopies: any[] | null = (() => {
     try {
       if (genStepResult?.copies && Array.isArray(genStepResult.copies)) {
         return genStepResult.copies;
@@ -269,25 +271,33 @@ const PreviewCopy = ({ isVideo, state, genStepResult }: { isVideo: boolean; stat
     return null;
   })();
 
-  const copyCount = state.copyPatterns;
+  if (realCopies && realCopies.length > 0) {
+    // Group by appeal_axis_text (or appeal_axis_index)
+    const grouped = realCopies.reduce((acc: Record<string, any[]>, copy: any) => {
+      const key = copy.appeal_axis_text ?? `訴求軸${copy.appeal_axis_index ?? '?'}`;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(copy);
+      return acc;
+    }, {} as Record<string, any[]>);
 
-  if (realData) {
+    const groups = Object.entries(grouped);
+
     return (
       <div className="space-y-6">
         <Badge className="bg-success-wash text-success text-xs">AI生成データ</Badge>
-        {realData.map((group, i) => (
+        {groups.map(([axisText, copies], i) => (
           <div key={i}>
             <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-secondary/10 text-secondary flex items-center justify-center text-xs font-bold">{i + 1}</span>
-              {group.appeal_axis}
+              {axisText}
             </h4>
             <div className="space-y-2 pl-7">
-              {(group.copies ?? []).map((copy, j) => (
+              {copies.map((copy: any, j: number) => (
                 <div key={j} className="rounded-lg border p-3 text-sm flex items-center gap-3">
                   <Badge variant="outline" className="text-xs shrink-0 font-mono">
-                    {getPatternLetter(i, j, copyCount)}
+                    {copy.pattern_id ?? getPatternLetter(i, j, copyCount)}
                   </Badge>
-                  <span>{copy}</span>
+                  <span>{copy.copy_text ?? copy.text ?? ''}</span>
                 </div>
               ))}
             </div>
