@@ -712,6 +712,16 @@ const GenerateProgress = () => {
     }
   }, [waitingForApproval, handleApprove]);
 
+  const refreshGenSteps = useCallback(async () => {
+    if (!jobId) return;
+    const { data: steps } = await supabase
+      .from('gen_steps')
+      .select('*')
+      .eq('job_id', jobId)
+      .order('step_number', { ascending: true });
+    if (steps) setGenStepsData(steps as GenStepRow[]);
+  }, [jobId]);
+
   const handleStepClick = (idx: number) => {
     if (completedIndexes.has(idx)) {
       userSelectedStepRef.current = idx;
