@@ -260,6 +260,8 @@ const triggerWebhook = async (
   console.log(`[Webhook] Parsed step3Result:`, step3Result);
   console.log(`[Webhook] previous_results:`, previousResults);
   console.log(`[Webhook] previous_results JSON:`, JSON.stringify(previousResults));
+
+  try {
     await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
