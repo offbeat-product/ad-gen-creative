@@ -207,9 +207,13 @@ const safeParse = (v: any) => {
   try { return JSON.parse(v); } catch { return null; }
 };
 
-/* ─── Trigger next step webhook ─── */
+/* ─── Text step keys (driven by Supabase only) ─── */
 
-const triggerNextStep = async (
+const TEXT_STEP_KEYS = ['appeal_axis', 'copy', 'composition', 'narration_script'];
+
+/* ─── Trigger a specific next step webhook ─── */
+
+const triggerWebhook = async (
   nextStepKey: string,
   job: any,
   steps: GenStepRow[],
@@ -244,14 +248,11 @@ const triggerNextStep = async (
         previous_results: previousResults,
       }),
     });
+    console.log(`[Webhook] Triggered ${nextStepKey}`);
   } catch (e) {
-    console.error(`Failed to trigger ${nextStepKey}:`, e);
+    console.error(`[Webhook] Failed to trigger ${nextStepKey}:`, e);
   }
 };
-
-/* ─── Step order for auto-chaining ─── */
-
-const TEXT_STEP_ORDER = ['appeal_axis', 'copy', 'composition', 'narration_script'];
 
 /* ─── Main Component ─── */
 
@@ -269,7 +270,7 @@ const GenerateProgress = () => {
     clientName: '—', productName: '—', projectName: '—',
   });
 
-  // Fetch job with relational data for header
+  // Fetch job with relational data
   useEffect(() => {
     if (!jobId) { setStateReady(true); return; }
 
@@ -305,10 +306,8 @@ const GenerateProgress = () => {
 
   const total = state.appealAxis * state.copyPatterns * state.tonePatterns;
   const pipeline = state.creativeType === 'video' ? makeVideoPipeline(state) : makeBannerPipeline(state);
-  const isAutoMode = state.generationMode === 'auto';
 
-  // Map text pipeline steps
-  const textStepKeys = pipeline.filter(s => s.stepType === 'text').map(s => s.stepKey);
+  // Map pipeline step keys to indexes
   const stepKeyToIndex = new Map(pipeline.map((p, i) => [p.stepKey, i]));
   const firstDummyIndex = pipeline.findIndex(s => s.stepType !== 'text');
 
@@ -330,10 +329,21 @@ const GenerateProgress = () => {
   const [dummyPhaseStarted, setDummyPhaseStarted] = useState(false);
   const [errorMap, setErrorMap] = useState<Record<number, string>>({});
 
-  // Webhook dedup: track which steps we've already triggered
-  const triggeredStepsRef = useRef<Set<string>>(new Set());
+  // ── Webhook dedup refs (per step) ──
+  const step2TriggeredRef = useRef(false);
+  const step3TriggeredRef = useRef(false);
+  const step4TriggeredRef = useRef(false);
+  const dummyAnimationStartedRef = useRef(false);
 
-  const effectiveAutoMode = isAutoMode || switchedToAuto;
+  // Reset dedup refs on jobId change
+  useEffect(() => {
+    step2TriggeredRef.current = false;
+    step3TriggeredRef.current = false;
+    step4TriggeredRef.current = false;
+    dummyAnimationStartedRef.current = false;
+  }, [jobId]);
+
+  const effectiveAutoMode = (jobData?.generation_mode === 'auto') || switchedToAuto;
 
   // Elapsed timer
   useEffect(() => {
@@ -341,32 +351,10 @@ const GenerateProgress = () => {
     return () => clearInterval(timerRef.current);
   }, [startTime]);
 
-  // ── Auto-chain: trigger next webhook when a step completes (auto mode) ──
-  const checkAndTriggerNextStep = useCallback(async (steps: GenStepRow[]) => {
-    if (!jobData) return;
-
-    for (let i = 0; i < TEXT_STEP_ORDER.length - 1; i++) {
-      const currentKey = TEXT_STEP_ORDER[i];
-      const nextKey = TEXT_STEP_ORDER[i + 1];
-      const currentStep = steps.find(s => s.step_key === currentKey);
-      const nextStep = steps.find(s => s.step_key === nextKey);
-
-      if (
-        currentStep?.status === 'completed' &&
-        nextStep?.status === 'pending' &&
-        !triggeredStepsRef.current.has(nextKey)
-      ) {
-        triggeredStepsRef.current.add(nextKey);
-        await triggerNextStep(nextKey, jobData, steps, jobMeta);
-      }
-    }
-  }, [jobData, jobMeta]);
-
-  // ── Supabase polling for text steps ──
+  // ── Supabase polling for gen_steps (text 4 steps are 100% data-driven) ──
   useEffect(() => {
     if (!jobId || !stateReady || !jobData) return;
 
-    // Use jobData.generation_mode directly to avoid stale state defaults
     const isJobAutoMode = (jobData.generation_mode === 'auto') || switchedToAuto;
 
     const doPoll = async () => {
@@ -380,10 +368,11 @@ const GenerateProgress = () => {
 
       setGenStepsData(steps as GenStepRow[]);
 
-      const newCompleted = new Set(completedIndexes);
+      // ── Update pipeline UI from gen_steps data ──
+      const newCompleted = new Set<number>();
       const newErrors: Record<number, string> = {};
-      let latestActive = -1;
-      let latestCompleted = -1;
+      let latestProcessing = -1;
+      let latestCompletedIdx = -1;
 
       steps.forEach((gs: any) => {
         const pipelineIdx = stepKeyToIndex.get(gs.step_key);
@@ -391,46 +380,84 @@ const GenerateProgress = () => {
 
         if (gs.status === 'completed') {
           newCompleted.add(pipelineIdx);
-          if (pipelineIdx > latestCompleted) latestCompleted = pipelineIdx;
+          if (pipelineIdx > latestCompletedIdx) latestCompletedIdx = pipelineIdx;
         }
         if (gs.status === 'processing') {
-          latestActive = pipelineIdx;
+          latestProcessing = pipelineIdx;
         }
         if (gs.status === 'error' && gs.error_message) {
           newErrors[pipelineIdx] = gs.error_message;
         }
       });
 
-      setCompletedIndexes(new Set(newCompleted));
+      // Merge with existing completed (dummy steps may already be marked)
+      setCompletedIndexes(prev => {
+        const merged = new Set(prev);
+        newCompleted.forEach(idx => merged.add(idx));
+        return merged;
+      });
       setErrorMap(newErrors);
-      if (latestActive >= 0) setActiveIndex(latestActive);
-      if (latestCompleted >= 0) setSelectedStepIndex(latestCompleted);
+      if (latestProcessing >= 0) setActiveIndex(latestProcessing);
+      if (latestCompletedIdx >= 0) setSelectedStepIndex(latestCompletedIdx);
 
-      // Auto mode ONLY: trigger next step webhook
+      // ── Auto mode: trigger next webhook when a step completes ──
       if (isJobAutoMode) {
-        await checkAndTriggerNextStep(steps as GenStepRow[]);
+        const step1 = steps.find((s: any) => s.step_key === 'appeal_axis');
+        const step2 = steps.find((s: any) => s.step_key === 'copy');
+        const step3 = steps.find((s: any) => s.step_key === 'composition');
+        const step4 = steps.find((s: any) => s.step_key === 'narration_script');
+
+        // Step1 completed & Step2 pending → trigger Step2
+        if (step1?.status === 'completed' && step2?.status === 'pending' && !step2TriggeredRef.current) {
+          step2TriggeredRef.current = true;
+          triggerWebhook('copy', jobData, steps as GenStepRow[], jobMeta);
+        }
+
+        // Step2 completed & Step3 pending → trigger Step3
+        if (step2?.status === 'completed' && step3?.status === 'pending' && !step3TriggeredRef.current) {
+          step3TriggeredRef.current = true;
+          triggerWebhook('composition', jobData, steps as GenStepRow[], jobMeta);
+        }
+
+        // Step3 completed & Step4 pending → trigger Step4
+        if (step3?.status === 'completed' && step4?.status === 'pending' && !step4TriggeredRef.current) {
+          step4TriggeredRef.current = true;
+          triggerWebhook('narration_script', jobData, steps as GenStepRow[], jobMeta);
+        }
       }
 
-      // Check if all text pipeline steps completed
-      const relevantSteps = steps.filter((gs: any) => textStepKeys.includes(gs.step_key));
-      const allTextDone = relevantSteps.length > 0 && relevantSteps.every((gs: any) => gs.status === 'completed');
-
-      // In step mode, check if current step completed → set waiting for approval
+      // ── Step mode: detect newly completed step → set waitingForApproval ──
       if (!isJobAutoMode) {
-        for (const gs of steps as GenStepRow[]) {
-          const pIdx = stepKeyToIndex.get(gs.step_key);
-          if (pIdx !== undefined && gs.status === 'completed' && !completedIndexes.has(pIdx)) {
-            // Newly completed text step in step mode → wait for approval
-            const nextIdx = TEXT_STEP_ORDER.indexOf(gs.step_key) + 1;
-            if (nextIdx < TEXT_STEP_ORDER.length) {
-              const nextStepData = steps.find((s: any) => s.step_key === TEXT_STEP_ORDER[nextIdx]);
-              if (nextStepData && nextStepData.status === 'pending') {
+        // Find the latest completed text step that has a pending next step
+        for (let i = TEXT_STEP_KEYS.length - 1; i >= 0; i--) {
+          const key = TEXT_STEP_KEYS[i];
+          const gs = steps.find((s: any) => s.step_key === key);
+          const pIdx = stepKeyToIndex.get(key);
+          if (gs?.status === 'completed' && pIdx !== undefined) {
+            // Check if next text step is still pending
+            const nextKey = TEXT_STEP_KEYS[i + 1];
+            if (nextKey) {
+              const nextGs = steps.find((s: any) => s.step_key === nextKey);
+              if (nextGs?.status === 'pending') {
+                setWaitingForApproval(pIdx);
+                break;
+              }
+            } else {
+              // Last text step (narration_script) completed → wait for approval to start dummy phase
+              if (!dummyAnimationStartedRef.current) {
                 setWaitingForApproval(pIdx);
               }
+              break;
             }
           }
         }
       }
+
+      // ── Check if all text steps completed ──
+      const allTextDone = TEXT_STEP_KEYS.every(key => {
+        const gs = steps.find((s: any) => s.step_key === key);
+        return gs?.status === 'completed';
+      });
 
       return allTextDone;
     };
@@ -439,10 +466,12 @@ const GenerateProgress = () => {
 
     const interval = setInterval(async () => {
       const allTextDone = await doPoll();
-      if (allTextDone) {
-        clearInterval(interval);
-        if (!dummyPhaseStarted) {
+      if (allTextDone && !dummyAnimationStartedRef.current) {
+        // In auto mode, start dummy animations immediately
+        if (isJobAutoMode) {
+          dummyAnimationStartedRef.current = true;
           setDummyPhaseStarted(true);
+          clearInterval(interval);
           if (firstDummyIndex >= 0 && firstDummyIndex < pipeline.length) {
             setTimeout(() => setActiveIndex(firstDummyIndex), 500);
           } else {
@@ -452,13 +481,14 @@ const GenerateProgress = () => {
             setTimeout(() => setShowConfetti(false), 3500);
           }
         }
+        // In step mode, keep polling but don't start dummy yet (wait for approval)
       }
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [jobId, stateReady, jobData, dummyPhaseStarted, switchedToAuto, checkAndTriggerNextStep]);
+  }, [jobId, stateReady, jobData, switchedToAuto, jobMeta]);
 
-  // ── Mode B: Full dummy animation (no jobId, legacy mode) ──
+  // ── Mode B: Full dummy animation (no jobId, legacy/demo mode) ──
   useEffect(() => {
     if (jobId) return;
     if (!stateReady) return;
@@ -466,13 +496,13 @@ const GenerateProgress = () => {
     return () => clearTimeout(t);
   }, [jobId, stateReady]);
 
-  // ── Run dummy animation for current step ──
+  // ── Run dummy animation for current step (NON-TEXT steps only when jobId exists) ──
   useEffect(() => {
     if (!stateReady) return;
     if (activeIndex < 0 || activeIndex >= pipeline.length) return;
     if (completedIndexes.has(activeIndex)) return;
 
-    // If we have a jobId, only animate non-text steps
+    // If we have a jobId, NEVER animate text steps — they are driven by Supabase data only
     if (jobId && pipeline[activeIndex].stepType === 'text') return;
 
     const step = pipeline[activeIndex];
@@ -510,35 +540,59 @@ const GenerateProgress = () => {
     return () => clearTimeout(t);
   }, [activeIndex, effectiveAutoMode, completedIndexes, stateReady, jobId]);
 
-  // Handle approve: in step mode, trigger next webhook
+  // ── Handle approve: trigger next webhook (step mode) or advance dummy ──
   const handleApprove = useCallback(async (idx: number) => {
     setWaitingForApproval(-1);
 
-    // If this is a text step with real data, trigger next webhook
-    if (jobId && jobData) {
-      const currentStepKey = pipeline[idx]?.stepKey;
-      const currentOrderIdx = TEXT_STEP_ORDER.indexOf(currentStepKey);
-      if (currentOrderIdx >= 0 && currentOrderIdx < TEXT_STEP_ORDER.length - 1) {
-        const nextKey = TEXT_STEP_ORDER[currentOrderIdx + 1];
-        if (!triggeredStepsRef.current.has(nextKey)) {
-          triggeredStepsRef.current.add(nextKey);
-          await triggerNextStep(nextKey, jobData, genStepsData, jobMeta);
+    const currentStepKey = pipeline[idx]?.stepKey;
+    const isTextStep = TEXT_STEP_KEYS.includes(currentStepKey);
+
+    if (jobId && jobData && isTextStep) {
+      const currentOrderIdx = TEXT_STEP_KEYS.indexOf(currentStepKey);
+
+      if (currentOrderIdx >= 0 && currentOrderIdx < TEXT_STEP_KEYS.length - 1) {
+        // Trigger the next text step webhook
+        const nextKey = TEXT_STEP_KEYS[currentOrderIdx + 1];
+        const refMap: Record<string, React.MutableRefObject<boolean>> = {
+          copy: step2TriggeredRef,
+          composition: step3TriggeredRef,
+          narration_script: step4TriggeredRef,
+        };
+        const ref = refMap[nextKey];
+        if (ref && !ref.current) {
+          ref.current = true;
+          await triggerWebhook(nextKey, jobData, genStepsData, jobMeta);
         }
+        // Don't advance activeIndex — polling will detect the next step's processing/completed status
+        return;
+      }
+
+      if (currentOrderIdx === TEXT_STEP_KEYS.length - 1) {
+        // Last text step approved → start dummy animations
+        dummyAnimationStartedRef.current = true;
+        setDummyPhaseStarted(true);
+        if (firstDummyIndex >= 0 && firstDummyIndex < pipeline.length) {
+          setTimeout(() => setActiveIndex(firstDummyIndex), 300);
+        } else {
+          setAllDone(true);
+          setShowConfetti(true);
+          clearInterval(timerRef.current);
+          setTimeout(() => setShowConfetti(false), 3500);
+        }
+        return;
       }
     }
 
+    // Non-text step: advance to next dummy step
     if (idx + 1 < pipeline.length) {
-      // For text steps with polling, don't advance activeIndex — polling will handle it
-      if (!jobId || pipeline[idx + 1]?.stepType !== 'text') {
-        setTimeout(() => setActiveIndex(idx + 1), 300);
-      }
+      setTimeout(() => setActiveIndex(idx + 1), 300);
     } else {
       setAllDone(true);
       setShowConfetti(true);
       clearInterval(timerRef.current);
       setTimeout(() => setShowConfetti(false), 3500);
     }
-  }, [pipeline, jobId, jobData, genStepsData, jobMeta]);
+  }, [pipeline, jobId, jobData, genStepsData, jobMeta, firstDummyIndex]);
 
   const handleRegenerate = useCallback((idx: number) => {
     setCompletedIndexes(prev => { const s = new Set(prev); s.delete(idx); return s; });
