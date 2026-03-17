@@ -364,7 +364,10 @@ const GenerateProgress = () => {
 
   // ── Supabase polling for text steps ──
   useEffect(() => {
-    if (!jobId || !stateReady) return;
+    if (!jobId || !stateReady || !jobData) return;
+
+    // Use jobData.generation_mode directly to avoid stale state defaults
+    const isJobAutoMode = (jobData.generation_mode === 'auto') || switchedToAuto;
 
     const doPoll = async () => {
       const { data: steps } = await supabase
@@ -403,8 +406,8 @@ const GenerateProgress = () => {
       if (latestActive >= 0) setActiveIndex(latestActive);
       if (latestCompleted >= 0) setSelectedStepIndex(latestCompleted);
 
-      // Auto mode: trigger next step webhook
-      if (effectiveAutoMode) {
+      // Auto mode ONLY: trigger next step webhook
+      if (isJobAutoMode) {
         await checkAndTriggerNextStep(steps as GenStepRow[]);
       }
 
@@ -413,7 +416,7 @@ const GenerateProgress = () => {
       const allTextDone = relevantSteps.length > 0 && relevantSteps.every((gs: any) => gs.status === 'completed');
 
       // In step mode, check if current step completed → set waiting for approval
-      if (!effectiveAutoMode) {
+      if (!isJobAutoMode) {
         for (const gs of steps as GenStepRow[]) {
           const pIdx = stepKeyToIndex.get(gs.step_key);
           if (pIdx !== undefined && gs.status === 'completed' && !completedIndexes.has(pIdx)) {
@@ -453,7 +456,7 @@ const GenerateProgress = () => {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [jobId, stateReady, dummyPhaseStarted, effectiveAutoMode, checkAndTriggerNextStep]);
+  }, [jobId, stateReady, jobData, dummyPhaseStarted, switchedToAuto, checkAndTriggerNextStep]);
 
   // ── Mode B: Full dummy animation (no jobId, legacy mode) ──
   useEffect(() => {
