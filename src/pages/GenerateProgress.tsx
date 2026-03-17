@@ -799,7 +799,7 @@ const GenerateProgress = () => {
           <PreviewPanel
             pipeline={pipeline} selectedStepIndex={selectedStepIndex} completedIndexes={completedIndexes}
             allDone={allDone} total={total} state={state} waitingForApproval={waitingForApproval}
-            effectiveAutoMode={effectiveAutoMode} genStepResult={selectedGenStepResult}
+            effectiveAutoMode={effectiveAutoMode} genStepResult={selectedGenStepResult} appealAxesResult={appealAxesStepResult}
             jobId={jobId} onApprove={handleApprove} onRegenerate={handleRegenerate}
             onSwitchToAuto={switchToAuto} onNavigateDashboard={() => navigate('/')}
           />
