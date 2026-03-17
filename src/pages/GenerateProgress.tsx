@@ -361,7 +361,7 @@ const GenerateProgress = () => {
 
   const state: WizardState = wizardState ?? (jobData ? buildStateFromJob(jobData) : {
     creativeType: 'video', videoDuration: 30, clientId: null, productId: null,
-    projectId: null, referenceIds: [], referenceUrls: [], productionPattern: 'new',
+    projectId: null, referenceIds: [], referenceFileNames: {}, referenceUrls: [], productionPattern: 'new',
     baseCreativeId: null, productionCount: 18, appealAxis: 3, copyPatterns: 3, tonePatterns: 2,
     generationMode: 'auto',
   });
