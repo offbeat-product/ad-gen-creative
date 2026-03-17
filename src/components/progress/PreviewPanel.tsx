@@ -667,12 +667,12 @@ const PreviewPanel = ({
 
           <Separator />
 
-          {!effectiveAutoMode && isWaitingApproval && (
-            <div className="px-6 py-3 flex items-center gap-3 border-b border-border">
-              <Button variant="brand" onClick={() => onApprove(selectedStepIndex)}>
+          {showApprovalBar && (
+            <div className="sticky bottom-0 px-6 py-3 flex items-center gap-3 border-t border-border bg-background">
+              <Button variant="brand" onClick={() => onApprove(waitingForApproval)}>
                 承認して次へ進む
               </Button>
-              <Button variant="outline" onClick={() => onRegenerate(selectedStepIndex)}>
+              <Button variant="outline" onClick={() => onRegenerate(waitingForApproval)}>
                 <RefreshCw className="h-3.5 w-3.5 mr-1" />この工程を再生成
               </Button>
               <button onClick={onSwitchToAuto} className="text-sm text-secondary hover:underline ml-auto">
