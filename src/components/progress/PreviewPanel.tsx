@@ -587,7 +587,10 @@ const PreviewPanel = ({
   const isVideo = state.creativeType === 'video';
   const noSelection = selectedStepIndex === null || !completedIndexes.has(selectedStepIndex);
 
-  if (noSelection && !allDone) return <EmptyState />;
+  // Show approval button if waiting, even if a different step is selected
+  const showApprovalBar = !effectiveAutoMode && waitingForApproval >= 0;
+
+  if (noSelection && !allDone && !showApprovalBar) return <EmptyState />;
 
   const step = selectedStepIndex !== null ? pipeline[selectedStepIndex] : null;
   const isWaitingApproval = selectedStepIndex !== null && waitingForApproval === selectedStepIndex;
