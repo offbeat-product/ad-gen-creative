@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, FileText, UserPlus, CalendarIcon, Image, Video, X } from 'lucide-react';
+import { Sparkles, FileText, UserPlus, CalendarIcon, Image, Video, X, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -12,8 +12,10 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, ChevronRight } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 
-/* ─── Types & Data ─── */
+/* ─── Types ─── */
 interface HistoryRow {
   id: string;
   date: string;
@@ -27,32 +29,10 @@ interface HistoryRow {
   status: '完了' | '生成中' | '一部依頼中';
 }
 
-const historyData: HistoryRow[] = [
-  { id: 'r1', date: '03/16 15:30', client: 'レバレジーズ', product: 'LevTech Rookie', project: 'EXPO 2026春', type: '動画30秒', patterns: 'A〜I × 2', total: '18本', totalNum: 18, status: '完了' },
-  { id: 'r2', date: '03/16 14:00', client: 'Belmis', product: '着圧レギンス', project: '春キャンペーン', type: '静止画', patterns: 'A〜F × 3', total: '18本', totalNum: 18, status: '完了' },
-  { id: 'r3', date: '03/15 16:45', client: 'コミックシーモア', product: 'コミックシーモア', project: '新刊プロモ', type: '動画15秒', patterns: 'A〜D × 1', total: '4本', totalNum: 4, status: '完了' },
-  { id: 'r4', date: '03/15 11:20', client: 'レバレジーズ', product: 'LevTech Rookie', project: '通年リクルーティング', type: '静止画', patterns: 'A〜C × 4', total: '12本', totalNum: 12, status: '完了' },
-  { id: 'r5', date: '03/14 09:00', client: 'TMD AGA', product: 'AGA治療', project: '春の抜け毛対策', type: '動画30秒', patterns: 'A〜C × 3', total: '9本', totalNum: 9, status: '完了' },
-  { id: 'r6', date: '03/13 17:30', client: 'Belmis', product: '着圧レギンス', project: 'インスタ施策', type: '静止画', patterns: 'A〜D × 2', total: '8本', totalNum: 8, status: '完了' },
-  { id: 'r7', date: '03/13 10:00', client: 'レバレジーズ', product: 'ハタラクティブ', project: '未経験者訴求', type: '動画30秒', patterns: 'A〜F × 2', total: '12本', totalNum: 12, status: '一部依頼中' },
-  { id: 'r8', date: '03/12 15:00', client: 'コミックシーモア', product: 'コミックシーモア', project: '週末限定セール', type: '静止画', patterns: 'A〜C × 3', total: '9本', totalNum: 9, status: '完了' },
-  { id: 'r9', date: '03/12 09:30', client: 'TMD AGA', product: 'FAGA治療', project: '女性向け訴求', type: '動画15秒', patterns: 'A〜C × 2', total: '6本', totalNum: 6, status: '完了' },
-  { id: 'r10', date: '03/11 16:00', client: 'レバレジーズ', product: 'レバテックキャリア', project: '年収UP訴求', type: '動画30秒', patterns: 'A〜I × 2', total: '18本', totalNum: 18, status: '完了' },
-  { id: 'r11', date: '03/11 11:00', client: 'Belmis', product: '着圧レギンス', project: 'YouTube施策', type: '動画60秒', patterns: 'A〜D × 2', total: '8本', totalNum: 8, status: '完了' },
-  { id: 'r12', date: '03/10 14:00', client: 'TMD AGA', product: 'AGA治療', project: 'リスティング素材', type: '静止画', patterns: 'A〜F × 2', total: '12本', totalNum: 12, status: '完了' },
-];
-
 const statusConfig: Record<string, { className: string; pulse?: boolean }> = {
   '完了': { className: 'bg-success-wash text-success' },
   '生成中': { className: 'bg-secondary-wash text-secondary', pulse: true },
   '一部依頼中': { className: 'bg-warning-wash text-warning' },
-};
-
-const clientIndustry: Record<string, { label: string; className: string }> = {
-  'レバレジーズ': { label: '人材・IT', className: 'bg-primary-wash text-primary' },
-  'Belmis': { label: 'D2C・美容', className: 'bg-secondary-wash text-secondary' },
-  'コミックシーモア': { label: 'エンタメ', className: 'bg-success-wash text-success' },
-  'TMD AGA': { label: '医療', className: 'bg-warning-wash text-warning' },
 };
 
 const PAGE_SIZE = 10;
@@ -60,6 +40,37 @@ const PAGE_SIZE = 10;
 const fadeUp = {
   initial: { opacity: 0, y: 10 },
   animate: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+};
+
+/* ─── Map gen_jobs row to HistoryRow ─── */
+const mapJobToRow = (job: any): HistoryRow => {
+  const createdAt = job.created_at ? new Date(job.created_at) : new Date();
+  const clientName = job.projects?.products?.clients?.name ?? '—';
+  const productName = job.projects?.products?.name ?? '—';
+  const projectName = job.projects?.name ?? '—';
+  const isVideo = job.creative_type === 'video';
+  const typeLabel = isVideo ? `動画${job.duration_seconds ?? 30}秒` : '静止画';
+  const axes = job.num_appeal_axes ?? 3;
+  const copies = job.num_copies ?? 3;
+  const tones = job.num_tonmana ?? 2;
+  const totalPatterns = job.total_patterns ?? axes * copies * tones;
+
+  let statusLabel: HistoryRow['status'] = '生成中';
+  if (job.status === 'completed') statusLabel = '完了';
+  else if (job.status === 'processing' || job.status === 'pending') statusLabel = '生成中';
+
+  return {
+    id: job.id,
+    date: format(createdAt, 'MM/dd HH:mm'),
+    client: clientName,
+    product: productName,
+    project: projectName,
+    type: typeLabel,
+    patterns: `${axes * copies}パターン × ${tones}`,
+    total: `${totalPatterns}本`,
+    totalNum: totalPatterns,
+    status: statusLabel,
+  };
 };
 
 /* ─── Reusable sub-components ─── */
@@ -144,15 +155,15 @@ function MiniTable({ rows, columns, navigate }: { rows: HistoryRow[]; columns: s
 
 /* ─── Grouped Views ─── */
 
-function GroupedByClient({ navigate }: { navigate: (path: string) => void }) {
+function GroupedByClient({ data, navigate }: { data: HistoryRow[]; navigate: (path: string) => void }) {
   const groups = useMemo(() => {
     const map = new Map<string, HistoryRow[]>();
-    historyData.forEach(r => {
+    data.forEach(r => {
       if (!map.has(r.client)) map.set(r.client, []);
       map.get(r.client)!.push(r);
     });
     return Array.from(map.entries());
-  }, []);
+  }, [data]);
 
   const [expanded, setExpanded] = useState<string | null>(groups[0]?.[0] ?? null);
   const columns = ['日時', '商材', '案件', 'タイプ', 'パターン数', '合計本数', 'ステータス'];
@@ -161,13 +172,11 @@ function GroupedByClient({ navigate }: { navigate: (path: string) => void }) {
     <div className="space-y-2 mt-4">
       {groups.map(([client, rows]) => {
         const totalItems = rows.reduce((s, r) => s + r.totalNum, 0);
-        const ind = clientIndustry[client];
         return (
           <Collapsible key={client} open={expanded === client} onOpenChange={() => setExpanded(expanded === client ? null : client)}>
             <CollapsibleTrigger className="w-full flex items-center gap-3 p-4 rounded-xl border border-border hover:bg-accent/50 transition-colors">
               {expanded === client ? <ChevronDown className="h-4 w-4 shrink-0" /> : <ChevronRight className="h-4 w-4 shrink-0" />}
               <span className="font-semibold">{client}</span>
-              {ind && <Badge className={cn('text-xs', ind.className)}>{ind.label}</Badge>}
               <span className="ml-auto text-sm text-muted-foreground">{rows.length}件 / 合計{totalItems}本</span>
             </CollapsibleTrigger>
             <CollapsibleContent>
@@ -182,15 +191,15 @@ function GroupedByClient({ navigate }: { navigate: (path: string) => void }) {
   );
 }
 
-function GroupedByProduct({ navigate }: { navigate: (path: string) => void }) {
+function GroupedByProduct({ data, navigate }: { data: HistoryRow[]; navigate: (path: string) => void }) {
   const groups = useMemo(() => {
     const map = new Map<string, { client: string; rows: HistoryRow[] }>();
-    historyData.forEach(r => {
+    data.forEach(r => {
       if (!map.has(r.product)) map.set(r.product, { client: r.client, rows: [] });
       map.get(r.product)!.rows.push(r);
     });
     return Array.from(map.entries());
-  }, []);
+  }, [data]);
 
   const [expanded, setExpanded] = useState<string | null>(groups[0]?.[0] ?? null);
   const columns = ['日時', '案件', 'タイプ', 'パターン数', '合計本数', 'ステータス'];
@@ -219,15 +228,15 @@ function GroupedByProduct({ navigate }: { navigate: (path: string) => void }) {
   );
 }
 
-function GroupedByProject({ navigate }: { navigate: (path: string) => void }) {
+function GroupedByProject({ data, navigate }: { data: HistoryRow[]; navigate: (path: string) => void }) {
   const groups = useMemo(() => {
     const map = new Map<string, { client: string; product: string; rows: HistoryRow[] }>();
-    historyData.forEach(r => {
+    data.forEach(r => {
       if (!map.has(r.project)) map.set(r.project, { client: r.client, product: r.product, rows: [] });
       map.get(r.project)!.rows.push(r);
     });
     return Array.from(map.entries());
-  }, []);
+  }, [data]);
 
   const [expanded, setExpanded] = useState<string | null>(groups[0]?.[0] ?? null);
   const columns = ['日時', 'タイプ', 'パターン数', '合計本数', 'ステータス'];
@@ -256,17 +265,17 @@ function GroupedByProject({ navigate }: { navigate: (path: string) => void }) {
   );
 }
 
-function GroupedByType({ navigate }: { navigate: (path: string) => void }) {
+function GroupedByType({ data, navigate }: { data: HistoryRow[]; navigate: (path: string) => void }) {
   const groups = useMemo(() => {
     const order = ['静止画', '動画15秒', '動画30秒', '動画60秒'];
     const map = new Map<string, HistoryRow[]>();
     order.forEach(t => map.set(t, []));
-    historyData.forEach(r => {
+    data.forEach(r => {
       if (!map.has(r.type)) map.set(r.type, []);
       map.get(r.type)!.push(r);
     });
     return Array.from(map.entries()).filter(([, rows]) => rows.length > 0);
-  }, []);
+  }, [data]);
 
   const columns = ['日時', 'クライアント', '商材', '案件', 'パターン数', '合計本数', 'ステータス'];
 
@@ -303,16 +312,73 @@ function GroupedByType({ navigate }: { navigate: (path: string) => void }) {
   );
 }
 
+/* ─── Empty State ─── */
+
+function EmptyHistory({ navigate }: { navigate: (path: string) => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <Sparkles className="h-16 w-16 text-secondary/30 mb-4" />
+      <h2 className="text-xl font-bold font-display mb-2">まだ生成履歴がありません</h2>
+      <p className="text-sm text-muted-foreground mb-6">新規生成を開始してクリエイティブを作成しましょう。</p>
+      <Button variant="brand" onClick={() => navigate('/generate')}>
+        <Sparkles className="h-4 w-4 mr-2" />
+        新規生成を開始する
+      </Button>
+    </div>
+  );
+}
+
 /* ─── Main Component ─── */
 
 const HistoryPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [historyData, setHistoryData] = useState<HistoryRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [clientFilter, setClientFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFrom, setDateFrom] = useState<Date>();
   const [dateTo, setDateTo] = useState<Date>();
   const [page, setPage] = useState(1);
+
+  // Fetch gen_jobs from Supabase
+  useEffect(() => {
+    if (!user) return;
+    const fetchJobs = async () => {
+      setLoading(true);
+      const { data: jobs, error } = await supabase
+        .from('gen_jobs')
+        .select(`
+          *,
+          projects (
+            name,
+            products (
+              name,
+              clients (
+                name
+              )
+            )
+          )
+        `)
+        .eq('created_by', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Failed to fetch gen_jobs:', error);
+        setHistoryData([]);
+      } else {
+        setHistoryData((jobs ?? []).map(mapJobToRow));
+      }
+      setLoading(false);
+    };
+    fetchJobs();
+  }, [user]);
+
+  // Unique client names for filter
+  const clientNames = useMemo(() => Array.from(new Set(historyData.map(r => r.client).filter(c => c !== '—'))), [historyData]);
+  const typeNames = useMemo(() => Array.from(new Set(historyData.map(r => r.type))), [historyData]);
 
   const filtered = useMemo(() => {
     return historyData.filter(r => {
@@ -321,7 +387,7 @@ const HistoryPage = () => {
       if (statusFilter !== 'all' && r.status !== statusFilter) return false;
       return true;
     });
-  }, [clientFilter, typeFilter, statusFilter]);
+  }, [historyData, clientFilter, typeFilter, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -338,15 +404,32 @@ const HistoryPage = () => {
   const totalCreatives = historyData.reduce((sum, r) => sum + r.totalNum, 0);
   const allColumns = ['日時', 'クライアント', '商材', '案件', 'タイプ', 'パターン数', '合計本数', 'ステータス', 'アクション'];
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-8 w-8 text-secondary animate-spin" />
+      </div>
+    );
+  }
+
+  if (historyData.length === 0) {
+    return (
+      <motion.div className="max-w-7xl mx-auto space-y-6" initial="initial" animate="animate">
+        <motion.h1 variants={fadeUp} className="text-2xl font-bold tracking-tight font-display">生成履歴</motion.h1>
+        <EmptyHistory navigate={navigate} />
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div className="max-w-7xl mx-auto space-y-6" initial="initial" animate="animate">
       <motion.h1 variants={fadeUp} className="text-2xl font-bold tracking-tight font-display">生成履歴</motion.h1>
 
       {/* Summary cards */}
       <motion.div variants={fadeUp} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <SummaryCard icon={Sparkles} iconColor="text-secondary" label="今月の生成ジョブ数" value={`${historyData.length}件`} borderColor="border-secondary" />
+        <SummaryCard icon={Sparkles} iconColor="text-secondary" label="生成ジョブ数" value={`${historyData.length}件`} borderColor="border-secondary" />
         <SummaryCard icon={FileText} iconColor="text-primary" label="合計クリエイティブ数" value={`${totalCreatives}本`} borderColor="border-primary" />
-        <SummaryCard icon={UserPlus} iconColor="text-warning" label="プロ依頼中" value="2件" borderColor="border-warning" />
+        <SummaryCard icon={UserPlus} iconColor="text-warning" label="生成中" value={`${historyData.filter(r => r.status === '生成中').length}件`} borderColor="border-warning" />
       </motion.div>
 
       {/* Grouping Tabs */}
@@ -372,20 +455,14 @@ const HistoryPage = () => {
                     <SelectTrigger className="w-[140px] sm:w-[180px]"><SelectValue placeholder="クライアント" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">全て</SelectItem>
-                      <SelectItem value="レバレジーズ">レバレジーズ</SelectItem>
-                      <SelectItem value="Belmis">Belmis</SelectItem>
-                      <SelectItem value="コミックシーモア">コミックシーモア</SelectItem>
-                      <SelectItem value="TMD AGA">TMD AGA</SelectItem>
+                      {clientNames.map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                   <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setPage(1); }}>
                     <SelectTrigger className="w-[160px]"><SelectValue placeholder="タイプ" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">全て</SelectItem>
-                      <SelectItem value="静止画">静止画バナー</SelectItem>
-                      <SelectItem value="動画15秒">動画15秒</SelectItem>
-                      <SelectItem value="動画30秒">動画30秒</SelectItem>
-                      <SelectItem value="動画60秒">動画60秒</SelectItem>
+                      {typeNames.map(name => <SelectItem key={name} value={name}>{name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                   <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
@@ -394,7 +471,6 @@ const HistoryPage = () => {
                       <SelectItem value="all">全て</SelectItem>
                       <SelectItem value="完了">完了</SelectItem>
                       <SelectItem value="生成中">生成中</SelectItem>
-                      <SelectItem value="一部依頼中">一部依頼中</SelectItem>
                     </SelectContent>
                   </Select>
 
@@ -447,38 +523,34 @@ const HistoryPage = () => {
             </AnimatePresence>
           </TabsContent>
 
-          {/* Tab 2: By Client */}
           <TabsContent value="client">
             <AnimatePresence mode="wait">
               <motion.div key="client" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-                <GroupedByClient navigate={navigate} />
+                <GroupedByClient data={historyData} navigate={navigate} />
               </motion.div>
             </AnimatePresence>
           </TabsContent>
 
-          {/* Tab 3: By Product */}
           <TabsContent value="product">
             <AnimatePresence mode="wait">
               <motion.div key="product" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-                <GroupedByProduct navigate={navigate} />
+                <GroupedByProduct data={historyData} navigate={navigate} />
               </motion.div>
             </AnimatePresence>
           </TabsContent>
 
-          {/* Tab 4: By Project */}
           <TabsContent value="project">
             <AnimatePresence mode="wait">
               <motion.div key="project" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-                <GroupedByProject navigate={navigate} />
+                <GroupedByProject data={historyData} navigate={navigate} />
               </motion.div>
             </AnimatePresence>
           </TabsContent>
 
-          {/* Tab 5: By Type */}
           <TabsContent value="type">
             <AnimatePresence mode="wait">
               <motion.div key="type" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-                <GroupedByType navigate={navigate} />
+                <GroupedByType data={historyData} navigate={navigate} />
               </motion.div>
             </AnimatePresence>
           </TabsContent>

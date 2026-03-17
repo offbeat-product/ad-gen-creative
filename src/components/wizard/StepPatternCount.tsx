@@ -1,10 +1,13 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Target, Type, Palette, Sparkles, ListChecks } from 'lucide-react';
+import { Target, Type, Palette, Sparkles, ListChecks, Loader2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { type WizardState } from '@/data/wizard-data';
 import { useClients, useProducts, useProjects } from '@/hooks/use-supabase-data';
 import { Slider } from '@/components/ui/slider';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface Props {
   state: WizardState;
@@ -16,12 +19,13 @@ const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
 
 const StepPatternCount = ({ state, updateState, goBack }: Props) => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isGenerating, setIsGenerating] = useState(false);
   const total = state.appealAxis * state.copyPatterns * state.tonePatterns;
   const scriptCount = state.appealAxis * state.copyPatterns;
   const firstLetter = ALPHA[0];
   const lastLetter = ALPHA[Math.min(scriptCount - 1, 25)];
 
-  // Generate pattern ID preview string
   const allIds: string[] = [];
   for (let s = 0; s < scriptCount; s++) {
     for (let t = 1; t <= state.tonePatterns; t++) {
@@ -45,8 +49,41 @@ const StepPatternCount = ({ state, updateState, goBack }: Props) => {
     { icon: Palette, label: 'トンマナ', sub: 'デザインスタイル・色調のバリエーション数', key: 'tonePatterns' as const, value: state.tonePatterns },
   ];
 
-  const handleGenerate = () => {
-    navigate('/generate/progress', { state: { wizardState: state } });
+  const handleGenerate = async () => {
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-gen-job', {
+        body: {
+          project_id: state.projectId,
+          creative_type: state.creativeType,
+          duration_seconds: state.creativeType === 'video' ? state.videoDuration : null,
+          production_pattern: state.productionPattern === 'new' ? '新規制作' : 'パターン展開',
+          num_appeal_axes: state.appealAxis,
+          num_copies: state.copyPatterns,
+          num_tonmana: state.tonePatterns,
+          total_patterns: total,
+          generation_mode: state.generationMode,
+          client_name: client?.name ?? '',
+          product_name: product?.name ?? '',
+          project_name: project?.name ?? '',
+        },
+      });
+
+      if (error) throw error;
+
+      navigate(`/generate/progress?job_id=${data.job_id}`, {
+        state: { wizardState: state },
+      });
+    } catch (err) {
+      console.error('Failed to create gen job:', err);
+      toast({
+        title: 'エラー',
+        description: '生成ジョブの作成に失敗しました。もう一度お試しください。',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -160,10 +197,25 @@ const StepPatternCount = ({ state, updateState, goBack }: Props) => {
         </button>
         <button
           onClick={handleGenerate}
-          className="inline-flex items-center gap-2 rounded-xl brand-gradient-bg text-primary-foreground px-8 py-4 text-xl font-bold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all animate-pulse-subtle"
+          disabled={isGenerating}
+          className={cn(
+            "inline-flex items-center gap-2 rounded-xl brand-gradient-bg text-primary-foreground px-8 py-4 text-xl font-bold shadow-lg transition-all",
+            isGenerating
+              ? "opacity-70 cursor-not-allowed"
+              : "hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] animate-pulse-subtle"
+          )}
         >
-          <Sparkles className="h-5 w-5" />
-          生成を開始する
+          {isGenerating ? (
+            <>
+              <Loader2 className="h-5 w-5 animate-spin" />
+              生成準備中...
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-5 w-5" />
+              生成を開始する
+            </>
+          )}
         </button>
       </div>
       <p className="text-xs text-muted-foreground text-center">生成には約2〜5分かかります</p>
