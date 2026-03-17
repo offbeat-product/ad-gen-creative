@@ -362,7 +362,7 @@ const GenerateProgress = () => {
         .from('gen_steps')
         .select('*')
         .eq('job_id', jobId)
-        .order('step_number');
+        .order('step_number', { ascending: true });
 
       if (!steps || steps.length === 0) return false;
 
