@@ -26,6 +26,7 @@ interface Props {
   effectiveAutoMode: boolean;
   genStepResult?: any;
   appealAxesResult?: any;
+  copyStepResult?: any;
   jobId?: string | null;
   onApprove: (idx: number) => void;
   onRegenerate: (idx: number) => void;
@@ -355,7 +356,39 @@ const PreviewCopy = ({ isVideo, state, genStepResult, appealAxesResult }: { isVi
   );
 };
 
-const PreviewStoryboard = ({ isVideo, state, genStepResult }: { isVideo: boolean; state: WizardState; genStepResult?: any }) => {
+const PatternHeader = ({ patternId, copyStepResult, appealAxesResult }: { patternId: string; copyStepResult?: any; appealAxesResult?: any }) => {
+  if (!copyStepResult?.copies) return null;
+  const copies: any[] = copyStepResult.copies;
+  const matchingCopy = copies.find((c: any) => c.pattern_id === patternId);
+  if (!matchingCopy) return null;
+
+  // Get axis info from appealAxesResult
+  const axesLookup: Record<number, { axis_type: string; axis_label: string }> = {};
+  if (appealAxesResult?.appeal_axes && Array.isArray(appealAxesResult.appeal_axes)) {
+    for (const ax of appealAxesResult.appeal_axes) {
+      if (ax.index != null) axesLookup[ax.index] = { axis_type: ax.axis_type, axis_label: ax.axis_label };
+    }
+  }
+  const axInfo = axesLookup[matchingCopy.appeal_axis_index];
+  const axisDisplay = axInfo
+    ? `${matchingCopy.appeal_axis_text ?? ''}（${axInfo.axis_type}）`
+    : matchingCopy.appeal_axis_text ?? '';
+
+  return (
+    <div className="bg-muted/50 rounded-lg p-3 mb-4 space-y-1 text-sm">
+      <div className="flex gap-2">
+        <span className="text-muted-foreground shrink-0 w-14">訴求軸:</span>
+        <span className="font-medium">{axisDisplay}</span>
+      </div>
+      <div className="flex gap-2">
+        <span className="text-muted-foreground shrink-0 w-14">コピー:</span>
+        <span className="font-medium">{matchingCopy.copy_text ?? ''}</span>
+      </div>
+    </div>
+  );
+};
+
+const PreviewStoryboard = ({ isVideo, state, genStepResult, copyStepResult, appealAxesResult }: { isVideo: boolean; state: WizardState; genStepResult?: any; copyStepResult?: any; appealAxesResult?: any }) => {
   const copyCount = state.copyPatterns;
   const scriptCount = state.appealAxis * copyCount;
   const tabKeys = Array.from({ length: Math.min(scriptCount, 9) }, (_, i) => ALPHA[i]);
@@ -386,16 +419,17 @@ const PreviewStoryboard = ({ isVideo, state, genStepResult }: { isVideo: boolean
             return (
               <TabsContent key={letter} value={letter}>
                 <div className="space-y-3 mt-3">
+                  <PatternHeader patternId={letter} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} />
                   {scenes.map((scene: any, j: number) => (
                     <div key={j} className="border rounded-lg p-3">
                       <div className="flex items-center gap-2 mb-2">
-                        {scene.time && <Badge variant="outline" className="text-xs">{scene.time}</Badge>}
-                        <Badge className="bg-secondary text-secondary-foreground text-xs">【{scene.type ?? `シーン${j+1}`}】</Badge>
+                        {(scene.time_range || scene.time) && <Badge variant="outline" className="text-xs">{scene.time_range ?? scene.time}</Badge>}
+                        <Badge className="bg-secondary text-secondary-foreground text-xs">【{scene.part ?? scene.type ?? `シーン${j+1}`}】</Badge>
                       </div>
                       <div className="space-y-1 text-sm">
                         {scene.telop && <div className="flex gap-2"><span className="text-muted-foreground w-16 shrink-0">テロップ:</span><span>{scene.telop}</span></div>}
                         {scene.visual && <div className="flex gap-2"><span className="text-muted-foreground w-16 shrink-0">映像:</span><span>{scene.visual}</span></div>}
-                        {scene.na && <div className="flex gap-2"><span className="text-muted-foreground w-16 shrink-0">NA:</span><span>{scene.na}</span></div>}
+                        {(scene.narration || scene.na) && <div className="flex gap-2"><span className="text-muted-foreground w-16 shrink-0">NA:</span><span>{scene.narration ?? scene.na}</span></div>}
                         {scene.content && <p className="text-muted-foreground">{scene.content}</p>}
                       </div>
                     </div>
@@ -474,7 +508,7 @@ const PreviewStoryboard = ({ isVideo, state, genStepResult }: { isVideo: boolean
   );
 };
 
-const PreviewNAScript = ({ state, genStepResult }: { state: WizardState; genStepResult?: any }) => {
+const PreviewNAScript = ({ state, genStepResult, copyStepResult, appealAxesResult }: { state: WizardState; genStepResult?: any; copyStepResult?: any; appealAxesResult?: any }) => {
   const copyCount = state.copyPatterns;
   const scriptCount = state.appealAxis * copyCount;
   const tabKeys = Array.from({ length: Math.min(scriptCount, 9) }, (_, i) => ALPHA[i]);
@@ -505,9 +539,12 @@ const PreviewNAScript = ({ state, genStepResult }: { state: WizardState; genStep
             const charCount = narration?.char_count ?? script.replace(/[\s\n]/g, '').length;
             return (
               <TabsContent key={letter} value={letter}>
-                <div className="bg-muted rounded-lg p-4 mt-3">
-                  <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed">{script}</pre>
-                  <p className="text-xs text-muted-foreground mt-3">{charCount}文字 / {state.videoDuration}秒尺</p>
+                <div className="mt-3">
+                  <PatternHeader patternId={letter} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} />
+                  <div className="bg-muted rounded-lg p-4">
+                    <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed">{script}</pre>
+                    <p className="text-xs text-muted-foreground mt-3">{charCount}文字 / {state.videoDuration}秒尺</p>
+                  </div>
                 </div>
               </TabsContent>
             );
@@ -681,7 +718,7 @@ const PreviewToneManner = () => (
 
 const PreviewPanel = ({
   pipeline, selectedStepIndex, completedIndexes, allDone, total, state,
-  waitingForApproval, effectiveAutoMode, genStepResult, appealAxesResult, jobId,
+  waitingForApproval, effectiveAutoMode, genStepResult, appealAxesResult, copyStepResult, jobId,
   onApprove, onRegenerate, onSwitchToAuto, onNavigateDashboard,
 }: Props) => {
   const parsedResult = (() => {
@@ -710,8 +747,8 @@ const PreviewPanel = ({
       switch (selectedStepIndex) {
         case 0: return <PreviewAppealAxis isVideo state={state} genStepResult={parsedResult} />;
         case 1: return <PreviewCopy isVideo state={state} genStepResult={parsedResult} appealAxesResult={appealAxesResult} />;
-        case 2: return <PreviewStoryboard isVideo state={state} genStepResult={parsedResult} />;
-        case 3: return <PreviewNAScript state={state} genStepResult={parsedResult} />;
+        case 2: return <PreviewStoryboard isVideo state={state} genStepResult={parsedResult} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} />;
+        case 3: return <PreviewNAScript state={state} genStepResult={parsedResult} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} />;
         case 4: return <PreviewNarration />;
         case 5: return <PreviewBGM />;
         case 6: return <PreviewVCon />;
@@ -725,7 +762,7 @@ const PreviewPanel = ({
       switch (selectedStepIndex) {
         case 0: return <PreviewAppealAxis isVideo={false} state={state} genStepResult={parsedResult} />;
         case 1: return <PreviewCopy isVideo={false} state={state} genStepResult={parsedResult} appealAxesResult={appealAxesResult} />;
-        case 2: return <PreviewStoryboard isVideo={false} state={state} genStepResult={parsedResult} />;
+        case 2: return <PreviewStoryboard isVideo={false} state={state} genStepResult={parsedResult} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} />;
         case 3: return <PreviewToneManner />;
         case 4: return <PreviewBannerImages total={total} state={state} />;
         default: return null;
