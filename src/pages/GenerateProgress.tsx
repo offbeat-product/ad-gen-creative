@@ -199,12 +199,19 @@ export interface GenStepRow {
   completed_at: string | null;
 }
 
-/* ─── Safe JSON parse helper ─── */
+/* ─── Safe JSON parse helper (handles double-encoded strings) ─── */
 
-const safeParse = (v: any) => {
+const safeParse = (v: any): any => {
   if (!v) return null;
   if (typeof v === 'object') return v;
-  try { return JSON.parse(v); } catch { return null; }
+  try {
+    const parsed = JSON.parse(v);
+    // Handle double-encoded: if result is still a string after first parse, parse again
+    if (typeof parsed === 'string') {
+      try { return JSON.parse(parsed); } catch { return parsed; }
+    }
+    return parsed;
+  } catch { return null; }
 };
 
 /* ─── Text step keys (driven by Supabase only) ─── */
