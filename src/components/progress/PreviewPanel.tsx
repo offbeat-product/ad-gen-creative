@@ -1,16 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, Image, Play, Music as MusicIcon, Pause,
-  Check, X,
+  Check, X, Plus, Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RefreshCw } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import type { PipelineStep } from '@/pages/GenerateProgress';
 import type { WizardState } from '@/data/wizard-data';
 import ActionBar from './ActionBar';
@@ -33,6 +37,7 @@ interface Props {
   onRegenerate: (idx: number) => void;
   onSwitchToAuto: () => void;
   onNavigateDashboard: () => void;
+  onResultUpdated?: () => void;
 }
 
 /* ─── Pattern naming helpers ─── */
@@ -188,8 +193,10 @@ const AudioPlayer = ({ label }: { label: string }) => (
 
 /* ─── Step-specific preview renderers ─── */
 
-const PreviewAppealAxis = ({ isVideo, state, genStepResult }: { isVideo: boolean; state: WizardState; genStepResult?: any }) => {
-  // Try to use real data (new format with axis_type/axis_label/examples or old format with plain strings)
+const PreviewAppealAxis = ({ isVideo, state, genStepResult, editing, editData, setEditData }: {
+  isVideo: boolean; state: WizardState; genStepResult?: any;
+  editing?: boolean; editData?: any; setEditData?: (d: any) => void;
+}) => {
   const realAxes: any[] | null = (() => {
     try {
       if (genStepResult?.appeal_axes && Array.isArray(genStepResult.appeal_axes)) {
@@ -200,10 +207,81 @@ const PreviewAppealAxis = ({ isVideo, state, genStepResult }: { isVideo: boolean
   })();
 
   const copyCount = state.copyPatterns;
-
-  // Check if new format (objects with axis_type)
   const isNewFormat = realAxes && realAxes.length > 0 && typeof realAxes[0] === 'object' && realAxes[0].axis_type;
 
+  // ── Editing mode ──
+  if (editing && editData?.appeal_axes && setEditData) {
+    const updateAxis = (i: number, field: string, value: any) => {
+      const newAxes = [...editData.appeal_axes];
+      newAxes[i] = { ...newAxes[i], [field]: value };
+      setEditData({ ...editData, appeal_axes: newAxes });
+    };
+    const updateExample = (axisIdx: number, exIdx: number, value: string) => {
+      const newAxes = [...editData.appeal_axes];
+      const newExamples = [...(newAxes[axisIdx].examples || [])];
+      newExamples[exIdx] = value;
+      newAxes[axisIdx] = { ...newAxes[axisIdx], examples: newExamples };
+      setEditData({ ...editData, appeal_axes: newAxes });
+    };
+    const addExample = (axisIdx: number) => {
+      const newAxes = [...editData.appeal_axes];
+      newAxes[axisIdx] = { ...newAxes[axisIdx], examples: [...(newAxes[axisIdx].examples || []), ''] };
+      setEditData({ ...editData, appeal_axes: newAxes });
+    };
+    const removeExample = (axisIdx: number, exIdx: number) => {
+      const newAxes = [...editData.appeal_axes];
+      const newExamples = [...(newAxes[axisIdx].examples || [])];
+      newExamples.splice(exIdx, 1);
+      newAxes[axisIdx] = { ...newAxes[axisIdx], examples: newExamples };
+      setEditData({ ...editData, appeal_axes: newAxes });
+    };
+
+    return (
+      <div className="space-y-3">
+        {editData.appeal_axes.map((axis: any, i: number) => (
+          <div key={i} className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-secondary/10 text-secondary flex items-center justify-center text-sm font-bold shrink-0">{axis.index ?? i + 1}</div>
+              <span className="text-sm font-semibold">訴求軸{i + 1}</span>
+              <Badge variant="outline" className="text-xs shrink-0 ml-auto">パターン {getPatternRange(i, copyCount)}</Badge>
+            </div>
+            <div className="space-y-2 pl-10">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground w-20 shrink-0">タイプ:</span>
+                <Input value={axis.axis_type ?? ''} onChange={e => updateAxis(i, 'axis_type', e.target.value)} className="h-8 text-sm" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground w-20 shrink-0">ラベル:</span>
+                <Input value={axis.axis_label ?? ''} onChange={e => updateAxis(i, 'axis_label', e.target.value)} className="h-8 text-sm" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground w-20 shrink-0">テキスト:</span>
+                <Input value={axis.text ?? ''} onChange={e => updateAxis(i, 'text', e.target.value)} className="h-8 text-sm" />
+              </div>
+              {axis.examples && (
+                <div className="space-y-1">
+                  <span className="text-xs text-muted-foreground">例文:</span>
+                  {axis.examples.map((ex: string, j: number) => (
+                    <div key={j} className="flex items-center gap-1">
+                      <Input value={ex} onChange={e => updateExample(i, j, e.target.value)} className="h-8 text-sm flex-1" />
+                      <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => removeExample(i, j)}>
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => addExample(i)}>
+                    <Plus className="h-3 w-3 mr-1" />例文を追加
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // ── Display mode (existing logic) ──
   if (isNewFormat && realAxes) {
     return (
       <div className="space-y-3">
@@ -234,42 +312,33 @@ const PreviewAppealAxis = ({ isVideo, state, genStepResult }: { isVideo: boolean
     );
   }
 
-  // Old format (plain strings) or fallback dummy
   const axes: string[] = realAxes
     ? realAxes.map((a: any) => (typeof a === 'string' ? a : a.text ?? JSON.stringify(a)))
     : (isVideo ? APPEAL_AXES_VIDEO : APPEAL_AXES_BANNER);
 
   return (
     <div className="space-y-3">
-      {realAxes && (
-        <Badge className="bg-success-wash text-success text-xs mb-2">AI生成データ</Badge>
-      )}
+      {realAxes && <Badge className="bg-success-wash text-success text-xs mb-2">AI生成データ</Badge>}
       {axes.map((axis, i) => (
         <div key={i} className="rounded-lg border p-4 flex items-start gap-3">
-          <div className="w-8 h-8 rounded-full bg-secondary/10 text-secondary flex items-center justify-center text-sm font-bold shrink-0">
-            {i + 1}
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium">{axis}</p>
-          </div>
-          <Badge variant="outline" className="text-xs shrink-0">
-            パターン {getPatternRange(i, copyCount)}
-          </Badge>
+          <div className="w-8 h-8 rounded-full bg-secondary/10 text-secondary flex items-center justify-center text-sm font-bold shrink-0">{i + 1}</div>
+          <div className="flex-1"><p className="text-sm font-medium">{axis}</p></div>
+          <Badge variant="outline" className="text-xs shrink-0">パターン {getPatternRange(i, copyCount)}</Badge>
         </div>
       ))}
     </div>
   );
 };
 
-const PreviewCopy = ({ isVideo, state, genStepResult, appealAxesResult }: { isVideo: boolean; state: WizardState; genStepResult?: any; appealAxesResult?: any }) => {
+const PreviewCopy = ({ isVideo, state, genStepResult, appealAxesResult, editing, editData, setEditData }: {
+  isVideo: boolean; state: WizardState; genStepResult?: any; appealAxesResult?: any;
+  editing?: boolean; editData?: any; setEditData?: (d: any) => void;
+}) => {
   const copyCount = state.copyPatterns;
 
-  // Parse appealAxesResult to get axis_type/axis_label lookup
   const parsedAxesResult = (() => {
     if (!appealAxesResult) return null;
-    try {
-      return typeof appealAxesResult === 'string' ? JSON.parse(appealAxesResult) : appealAxesResult;
-    } catch { return null; }
+    try { return typeof appealAxesResult === 'string' ? JSON.parse(appealAxesResult) : appealAxesResult; } catch { return null; }
   })();
   const axesLookup: Record<number, { axis_type: string; axis_label: string }> = {};
   if (parsedAxesResult?.appeal_axes && Array.isArray(parsedAxesResult.appeal_axes)) {
@@ -278,18 +347,63 @@ const PreviewCopy = ({ isVideo, state, genStepResult, appealAxesResult }: { isVi
     }
   }
 
-  // Real data: flat array of { pattern_id, appeal_axis_index, appeal_axis_text, copy_index, copy_text }
   const realCopies: any[] | null = (() => {
     try {
-      if (genStepResult?.copies && Array.isArray(genStepResult.copies)) {
-        return genStepResult.copies;
-      }
+      if (genStepResult?.copies && Array.isArray(genStepResult.copies)) return genStepResult.copies;
     } catch {}
     return null;
   })();
 
+  // ── Editing mode ──
+  if (editing && editData?.copies && setEditData) {
+    const updateCopyText = (patternId: string, value: string) => {
+      const newCopies = editData.copies.map((c: any) =>
+        c.pattern_id === patternId ? { ...c, copy_text: value } : c
+      );
+      setEditData({ ...editData, copies: newCopies });
+    };
+
+    const grouped = editData.copies.reduce((acc: Record<string, { axisIndex: number; copies: any[] }>, copy: any) => {
+      const idx = copy.appeal_axis_index ?? 0;
+      const key = String(idx);
+      if (!acc[key]) acc[key] = { axisIndex: idx, copies: [] };
+      acc[key].copies.push(copy);
+      return acc;
+    }, {} as Record<string, { axisIndex: number; copies: any[] }>);
+    const groups = Object.values(grouped);
+
+    return (
+      <div className="space-y-6">
+        {groups.map((group: { axisIndex: number; copies: any[] }, i: number) => {
+          const axInfo = axesLookup[group.axisIndex];
+          const heading = axInfo ? `${axInfo.axis_type}（${axInfo.axis_label}）` : group.copies[0]?.appeal_axis_text ?? `訴求軸${group.axisIndex}`;
+          return (
+            <div key={i}>
+              <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-secondary/10 text-secondary flex items-center justify-center text-xs font-bold">{i + 1}</span>
+                {heading}
+              </h4>
+              <div className="space-y-2 pl-7">
+                {group.copies.map((copy: any, j: number) => (
+                  <div key={j} className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 space-y-2">
+                    <Badge variant="outline" className="text-xs font-mono">{copy.pattern_id ?? getPatternLetter(i, j, copyCount)}</Badge>
+                    <Textarea
+                      value={copy.copy_text ?? ''}
+                      onChange={e => updateCopyText(copy.pattern_id, e.target.value)}
+                      className="text-sm min-h-[60px]"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  // ── Display mode (existing) ──
   if (realCopies && realCopies.length > 0) {
-    // Group by appeal_axis_index
     const grouped = realCopies.reduce((acc: Record<string, { axisIndex: number; copies: any[] }>, copy: any) => {
       const idx = copy.appeal_axis_index ?? 0;
       const key = String(idx);
@@ -297,7 +411,6 @@ const PreviewCopy = ({ isVideo, state, genStepResult, appealAxesResult }: { isVi
       acc[key].copies.push(copy);
       return acc;
     }, {} as Record<string, { axisIndex: number; copies: any[] }>);
-
     const groups = Object.values(grouped);
 
     return (
@@ -305,33 +418,28 @@ const PreviewCopy = ({ isVideo, state, genStepResult, appealAxesResult }: { isVi
         <Badge className="bg-success-wash text-success text-xs">AI生成データ</Badge>
         {groups.map((group: { axisIndex: number; copies: any[] }, i: number) => {
           const axInfo = axesLookup[group.axisIndex];
-          const heading = axInfo
-            ? `${axInfo.axis_type}（${axInfo.axis_label}）`
-            : group.copies[0]?.appeal_axis_text ?? `訴求軸${group.axisIndex}`;
+          const heading = axInfo ? `${axInfo.axis_type}（${axInfo.axis_label}）` : group.copies[0]?.appeal_axis_text ?? `訴求軸${group.axisIndex}`;
           return (
             <div key={i}>
               <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
                 <span className="w-5 h-5 rounded-full bg-secondary/10 text-secondary flex items-center justify-center text-xs font-bold">{i + 1}</span>
                 {heading}
               </h4>
-            <div className="space-y-2 pl-7">
-              {group.copies.map((copy: any, j: number) => (
-                <div key={j} className="rounded-lg border p-3 text-sm flex items-center gap-3">
-                  <Badge variant="outline" className="text-xs shrink-0 font-mono">
-                    {copy.pattern_id ?? getPatternLetter(i, j, copyCount)}
-                  </Badge>
-                  <span>{copy.copy_text ?? copy.text ?? ''}</span>
-                </div>
-              ))}
+              <div className="space-y-2 pl-7">
+                {group.copies.map((copy: any, j: number) => (
+                  <div key={j} className="rounded-lg border p-3 text-sm flex items-center gap-3">
+                    <Badge variant="outline" className="text-xs shrink-0 font-mono">{copy.pattern_id ?? getPatternLetter(i, j, copyCount)}</Badge>
+                    <span>{copy.copy_text ?? copy.text ?? ''}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
           );
         })}
       </div>
     );
   }
 
-  // Fallback to dummy
   const axes = isVideo ? APPEAL_AXES_VIDEO : APPEAL_AXES_BANNER;
   return (
     <div className="space-y-6">
@@ -344,9 +452,7 @@ const PreviewCopy = ({ isVideo, state, genStepResult, appealAxesResult }: { isVi
           <div className="space-y-2 pl-7">
             {(COPY_DATA[axis] ?? []).map((copy, j) => (
               <div key={j} className="rounded-lg border p-3 text-sm flex items-center gap-3">
-                <Badge variant="outline" className="text-xs shrink-0 font-mono">
-                  {getPatternLetter(i, j, copyCount)}
-                </Badge>
+                <Badge variant="outline" className="text-xs shrink-0 font-mono">{getPatternLetter(i, j, copyCount)}</Badge>
                 <span>{copy}</span>
               </div>
             ))}
@@ -363,7 +469,6 @@ const PatternHeader = ({ patternId, copyStepResult, appealAxesResult }: { patter
   const matchingCopy = copies.find((c: any) => c.pattern_id === patternId);
   if (!matchingCopy) return null;
 
-  // Get axis info from appealAxesResult
   const axesLookup: Record<number, { axis_type: string; axis_label: string }> = {};
   if (appealAxesResult?.appeal_axes && Array.isArray(appealAxesResult.appeal_axes)) {
     for (const ax of appealAxesResult.appeal_axes) {
@@ -389,21 +494,81 @@ const PatternHeader = ({ patternId, copyStepResult, appealAxesResult }: { patter
   );
 };
 
-const PreviewStoryboard = ({ isVideo, state, genStepResult, copyStepResult, appealAxesResult }: { isVideo: boolean; state: WizardState; genStepResult?: any; copyStepResult?: any; appealAxesResult?: any }) => {
+const PreviewStoryboard = ({ isVideo, state, genStepResult, copyStepResult, appealAxesResult, editing, editData, setEditData }: {
+  isVideo: boolean; state: WizardState; genStepResult?: any; copyStepResult?: any; appealAxesResult?: any;
+  editing?: boolean; editData?: any; setEditData?: (d: any) => void;
+}) => {
   const copyCount = state.copyPatterns;
   const scriptCount = state.appealAxis * copyCount;
   const tabKeys = Array.from({ length: Math.min(scriptCount, 9) }, (_, i) => ALPHA[i]);
 
-  // Try real data: { compositions: [{ pattern: string, scenes: [...] }] }
   const realCompositions: any[] | null = (() => {
     try {
-      if (genStepResult?.compositions && Array.isArray(genStepResult.compositions)) {
-        return genStepResult.compositions;
-      }
+      if (genStepResult?.compositions && Array.isArray(genStepResult.compositions)) return genStepResult.compositions;
     } catch {}
     return null;
   })();
 
+  // ── Editing mode ──
+  if (editing && editData?.compositions && setEditData) {
+    const updateScene = (compIdx: number, sceneIdx: number, field: string, value: string) => {
+      const newComps = editData.compositions.map((c: any, ci: number) => {
+        if (ci !== compIdx) return c;
+        const newScenes = c.scenes.map((s: any, si: number) =>
+          si === sceneIdx ? { ...s, [field]: value } : s
+        );
+        return { ...c, scenes: newScenes };
+      });
+      setEditData({ ...editData, compositions: newComps });
+    };
+
+    return (
+      <div className="space-y-4">
+        <Tabs defaultValue={tabKeys[0]}>
+          <TabsList className="w-full flex-wrap h-auto gap-1">
+            {tabKeys.map((letter) => (
+              <TabsTrigger key={letter} value={letter} className="text-xs font-mono">{letter}</TabsTrigger>
+            ))}
+          </TabsList>
+          {tabKeys.map((letter, tabIdx) => {
+            const comp = editData.compositions[tabIdx];
+            const scenes = comp?.scenes ?? [];
+            return (
+              <TabsContent key={letter} value={letter}>
+                <div className="space-y-3 mt-3">
+                  <PatternHeader patternId={letter} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} />
+                  {scenes.map((scene: any, j: number) => (
+                    <div key={j} className="border border-yellow-200 bg-yellow-50 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center gap-2 mb-2">
+                        {(scene.time_range || scene.time) && <Badge variant="outline" className="text-xs">{scene.time_range ?? scene.time}</Badge>}
+                        <Badge className="bg-secondary text-secondary-foreground text-xs">【{scene.part ?? scene.type ?? `シーン${j+1}`}】</Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground w-16 shrink-0">テロップ:</span>
+                        <Input value={scene.telop ?? ''} onChange={e => updateScene(tabIdx, j, 'telop', e.target.value)} className="h-8 text-sm" />
+                      </div>
+                      <div className="flex gap-2">
+                        <span className="text-xs text-muted-foreground w-16 shrink-0 pt-1">映像:</span>
+                        <Textarea value={scene.visual ?? ''} onChange={e => updateScene(tabIdx, j, 'visual', e.target.value)} className="text-sm min-h-[60px]" />
+                      </div>
+                      {(scene.narration !== undefined || scene.na !== undefined) && (
+                        <div className="flex gap-2">
+                          <span className="text-xs text-muted-foreground w-16 shrink-0 pt-1">NA:</span>
+                          <Textarea value={scene.narration ?? scene.na ?? ''} onChange={e => updateScene(tabIdx, j, 'narration', e.target.value)} className="text-sm min-h-[60px]" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </TabsContent>
+            );
+          })}
+        </Tabs>
+      </div>
+    );
+  }
+
+  // ── Display mode (existing) ──
   if (realCompositions) {
     return (
       <div className="space-y-4">
@@ -509,22 +674,21 @@ const PreviewStoryboard = ({ isVideo, state, genStepResult, copyStepResult, appe
   );
 };
 
-const PreviewNAScript = ({ state, genStepResult, copyStepResult, appealAxesResult, compositionStepResult }: { state: WizardState; genStepResult?: any; copyStepResult?: any; appealAxesResult?: any; compositionStepResult?: any }) => {
+const PreviewNAScript = ({ state, genStepResult, copyStepResult, appealAxesResult, compositionStepResult, editing, editData, setEditData }: {
+  state: WizardState; genStepResult?: any; copyStepResult?: any; appealAxesResult?: any; compositionStepResult?: any;
+  editing?: boolean; editData?: any; setEditData?: (d: any) => void;
+}) => {
   const copyCount = state.copyPatterns;
   const scriptCount = state.appealAxis * copyCount;
   const tabKeys = Array.from({ length: Math.min(scriptCount, 9) }, (_, i) => ALPHA[i]);
 
-  // Try real data
   const realNarrations: any[] | null = (() => {
     try {
-      if (genStepResult?.narrations && Array.isArray(genStepResult.narrations)) {
-        return genStepResult.narrations;
-      }
+      if (genStepResult?.narrations && Array.isArray(genStepResult.narrations)) return genStepResult.narrations;
     } catch {}
     return null;
   })();
 
-  // Build composition lookup by pattern_id
   const compositionByPattern: Record<string, any> = {};
   if (compositionStepResult?.compositions && Array.isArray(compositionStepResult.compositions)) {
     for (const comp of compositionStepResult.compositions) {
@@ -532,15 +696,28 @@ const PreviewNAScript = ({ state, genStepResult, copyStepResult, appealAxesResul
     }
   }
 
-  if (realNarrations && realNarrations.length > 0) {
-    const narrationByPattern: Record<string, any> = {};
-    for (const n of realNarrations) {
-      if (n.pattern_id) narrationByPattern[n.pattern_id] = n;
+  // ── Editing mode ──
+  if (editing && editData?.narrations && setEditData) {
+    const narrationByPattern: Record<string, { narration: any; idx: number }> = {};
+    for (let i = 0; i < editData.narrations.length; i++) {
+      const n = editData.narrations[i];
+      if (n.pattern_id) narrationByPattern[n.pattern_id] = { narration: n, idx: i };
     }
+
+    const updateSection = (narrIdx: number, secIdx: number, value: string) => {
+      const newNarrations = editData.narrations.map((n: any, ni: number) => {
+        if (ni !== narrIdx) return n;
+        const newSections = n.sections.map((s: any, si: number) =>
+          si === secIdx ? { ...s, text: value } : s
+        );
+        const totalChars = newSections.reduce((sum: number, s: any) => sum + (s.text?.length ?? 0), 0);
+        return { ...n, sections: newSections, char_count: totalChars };
+      });
+      setEditData({ ...editData, narrations: newNarrations });
+    };
 
     return (
       <div className="space-y-4">
-        <Badge className="bg-success-wash text-success text-xs">AI生成データ</Badge>
         <Tabs defaultValue={tabKeys[0]}>
           <TabsList className="w-full flex-wrap h-auto gap-1">
             {tabKeys.map((letter) => (
@@ -548,18 +725,19 @@ const PreviewNAScript = ({ state, genStepResult, copyStepResult, appealAxesResul
             ))}
           </TabsList>
           {tabKeys.map((letter, tabIdx) => {
-            const narration = narrationByPattern[letter] ?? realNarrations[tabIdx];
-            console.log('DEBUG narration data:', narration);
-            const naSections: any[] = narration?.sections ?? [];
-            const charCount = narration?.char_count ?? 0;
+            const narrData = narrationByPattern[letter] ?? { narration: editData.narrations[tabIdx], idx: tabIdx };
+            const narration = narrData.narration;
+            const narrIdx = narrData.idx;
+            const sections: any[] = narration?.sections ?? [];
+            const charCount = narration?.char_count ?? sections.reduce((s: number, sec: any) => s + (sec.text?.length ?? 0), 0);
             const composition = compositionByPattern[letter];
             const compScenes: any[] = composition?.scenes ?? [];
+
             return (
               <TabsContent key={letter} value={letter}>
                 <div className="mt-3 space-y-4">
                   <PatternHeader patternId={letter} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} />
 
-                  {/* 構成案・字コンテ */}
                   {compScenes.length > 0 && (
                     <div>
                       <p className="text-sm font-bold mb-2">━━ 構成案・字コンテ ━━</p>
@@ -580,7 +758,83 @@ const PreviewNAScript = ({ state, genStepResult, copyStepResult, appealAxesResul
                     </div>
                   )}
 
-                  {/* NA原稿 */}
+                  <div>
+                    <p className="text-sm font-bold mb-2">━━ NA原稿 ━━</p>
+                    <div className="space-y-2">
+                      {sections.map((sec: any, j: number) => (
+                        <div key={j} className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            {sec.time_range && <Badge variant="outline" className="text-xs">{sec.time_range}</Badge>}
+                            <Badge className="bg-secondary text-secondary-foreground text-xs">【{sec.part}】</Badge>
+                          </div>
+                          <Textarea
+                            value={sec.text ?? ''}
+                            onChange={e => updateSection(narrIdx, j, e.target.value)}
+                            className="text-sm min-h-[80px]"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <Separator />
+                  <p className="text-xs text-muted-foreground">合計: {charCount}文字 / {state.videoDuration}秒尺</p>
+                </div>
+              </TabsContent>
+            );
+          })}
+        </Tabs>
+      </div>
+    );
+  }
+
+  // ── Display mode (existing) ──
+  if (realNarrations && realNarrations.length > 0) {
+    const narrationByPattern: Record<string, any> = {};
+    for (const n of realNarrations) {
+      if (n.pattern_id) narrationByPattern[n.pattern_id] = n;
+    }
+
+    return (
+      <div className="space-y-4">
+        <Badge className="bg-success-wash text-success text-xs">AI生成データ</Badge>
+        <Tabs defaultValue={tabKeys[0]}>
+          <TabsList className="w-full flex-wrap h-auto gap-1">
+            {tabKeys.map((letter) => (
+              <TabsTrigger key={letter} value={letter} className="text-xs font-mono">{letter}</TabsTrigger>
+            ))}
+          </TabsList>
+          {tabKeys.map((letter, tabIdx) => {
+            const narration = narrationByPattern[letter] ?? realNarrations[tabIdx];
+            const naSections: any[] = narration?.sections ?? [];
+            const charCount = narration?.char_count ?? 0;
+            const composition = compositionByPattern[letter];
+            const compScenes: any[] = composition?.scenes ?? [];
+            return (
+              <TabsContent key={letter} value={letter}>
+                <div className="mt-3 space-y-4">
+                  <PatternHeader patternId={letter} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} />
+
+                  {compScenes.length > 0 && (
+                    <div>
+                      <p className="text-sm font-bold mb-2">━━ 構成案・字コンテ ━━</p>
+                      <div className="space-y-2">
+                        {compScenes.map((scene: any, j: number) => (
+                          <div key={j} className="bg-muted/50 rounded-lg p-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              {scene.time_range && <Badge variant="outline" className="text-xs">{scene.time_range}</Badge>}
+                              <Badge className="bg-secondary text-secondary-foreground text-xs">【{scene.part ?? scene.type}】</Badge>
+                            </div>
+                            <div className="space-y-1 text-sm">
+                              {scene.telop && <div className="flex gap-2"><span className="text-muted-foreground w-16 shrink-0">テロップ:</span><span>{scene.telop}</span></div>}
+                              {scene.visual && <div className="flex gap-2"><span className="text-muted-foreground w-16 shrink-0">映像:</span><span>{scene.visual}</span></div>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <div>
                     <p className="text-sm font-bold mb-2">━━ NA原稿 ━━</p>
                     <div className="space-y-2">
@@ -758,13 +1012,139 @@ const PreviewToneManner = () => (
   </div>
 );
 
+/* ─── Download text generators ─── */
+
+const generateDownloadText = (
+  stepKey: string,
+  result: any,
+  state: WizardState,
+  appealAxesResult?: any,
+  copyStepResult?: any,
+  compositionStepResult?: any,
+): string => {
+  if (!result) return '';
+
+  const buildAxesLookup = (src?: any) => {
+    const lookup: Record<number, any> = {};
+    if (src?.appeal_axes) {
+      for (const ax of src.appeal_axes) {
+        if (ax.index != null) lookup[ax.index] = ax;
+      }
+    }
+    return lookup;
+  };
+
+  const buildCopiesLookup = (src?: any) => {
+    const lookup: Record<string, any> = {};
+    if (src?.copies) {
+      for (const c of src.copies) {
+        if (c.pattern_id) lookup[c.pattern_id] = c;
+      }
+    }
+    return lookup;
+  };
+
+  switch (stepKey) {
+    case 'appeal_axis': {
+      const axes = result.appeal_axes ?? [];
+      let text = '=== 訴求軸一覧 ===\n\n';
+      axes.forEach((axis: any, i: number) => {
+        text += `【訴求軸${axis.index ?? i + 1}】${axis.axis_type ?? ''}（${axis.axis_label ?? ''}）\n`;
+        if (axis.text) text += `${axis.text}\n`;
+        if (axis.examples?.length) text += `例）${axis.examples.map((e: string) => `「${e}」`).join('')}\n`;
+        text += '\n';
+      });
+      return text;
+    }
+    case 'copy': {
+      const copies = result.copies ?? [];
+      const axesLookup = buildAxesLookup(appealAxesResult);
+      const grouped: Record<number, any[]> = {};
+      copies.forEach((c: any) => {
+        const idx = c.appeal_axis_index ?? 0;
+        if (!grouped[idx]) grouped[idx] = [];
+        grouped[idx].push(c);
+      });
+      let text = '=== コピー一覧 ===\n\n';
+      Object.entries(grouped).forEach(([idxStr, groupCopies]) => {
+        const idx = parseInt(idxStr);
+        const ax = axesLookup[idx];
+        const heading = ax ? `${ax.axis_type}（${ax.axis_label}）` : groupCopies[0]?.appeal_axis_text ?? `訴求軸${idx}`;
+        text += `--- 訴求軸${idx}: ${heading} ---\n`;
+        groupCopies.forEach((c: any) => { text += `${c.pattern_id}: ${c.copy_text ?? ''}\n`; });
+        text += '\n';
+      });
+      return text;
+    }
+    case 'composition': {
+      const compositions = result.compositions ?? [];
+      const copiesLookup = buildCopiesLookup(copyStepResult);
+      const axesLookup = buildAxesLookup(appealAxesResult);
+      let text = '=== 構成案・字コンテ ===\n\n';
+      compositions.forEach((comp: any, i: number) => {
+        const pid = comp.pattern_id ?? ALPHA[i];
+        text += `--- パターン${pid} ---\n`;
+        const copy = copiesLookup[pid];
+        if (copy) {
+          const ax = axesLookup[copy.appeal_axis_index];
+          text += `訴求軸: ${copy.appeal_axis_text ?? ''}${ax ? `（${ax.axis_type}）` : ''}\n`;
+          text += `コピー: ${copy.copy_text ?? ''}\n\n`;
+        }
+        (comp.scenes ?? []).forEach((scene: any) => {
+          text += `【${scene.part ?? scene.type}】${scene.time_range ?? scene.time ?? ''}\n`;
+          if (scene.telop) text += `テロップ: ${scene.telop}\n`;
+          if (scene.visual) text += `映像: ${scene.visual}\n`;
+          if (scene.narration || scene.na) text += `NA: ${scene.narration ?? scene.na}\n`;
+          text += '\n';
+        });
+        text += '\n';
+      });
+      return text;
+    }
+    case 'narration_script': {
+      const narrations = result.narrations ?? [];
+      const copiesLookup = buildCopiesLookup(copyStepResult);
+      const axesLookup = buildAxesLookup(appealAxesResult);
+      let text = '=== NA原稿 ===\n\n';
+      narrations.forEach((narr: any, i: number) => {
+        const pid = narr.pattern_id ?? ALPHA[i];
+        text += `--- パターン${pid} ---\n`;
+        const copy = copiesLookup[pid];
+        if (copy) {
+          const ax = axesLookup[copy.appeal_axis_index];
+          text += `訴求軸: ${copy.appeal_axis_text ?? ''}${ax ? `（${ax.axis_type}）` : ''}\n`;
+          text += `コピー: ${copy.copy_text ?? ''}\n\n`;
+        }
+        (narr.sections ?? []).forEach((sec: any) => {
+          text += `【${sec.part}】${sec.time_range ?? ''}\n`;
+          text += `${sec.text ?? ''}\n\n`;
+        });
+        text += `合計: ${narr.char_count ?? 0}文字 / ${state.videoDuration}秒尺\n\n`;
+      });
+      return text;
+    }
+    default:
+      return JSON.stringify(result, null, 2);
+  }
+};
+
 /* ─── Preview Panel ─── */
 
 const PreviewPanel = ({
   pipeline, selectedStepIndex, completedIndexes, allDone, total, state,
   waitingForApproval, effectiveAutoMode, genStepResult, appealAxesResult, copyStepResult, compositionStepResult, jobId,
-  onApprove, onRegenerate, onSwitchToAuto, onNavigateDashboard,
+  onApprove, onRegenerate, onSwitchToAuto, onNavigateDashboard, onResultUpdated,
 }: Props) => {
+  const { toast } = useToast();
+  const [editing, setEditing] = useState(false);
+  const [editData, setEditData] = useState<any>(null);
+
+  // Reset editing when step changes
+  useEffect(() => {
+    setEditing(false);
+    setEditData(null);
+  }, [selectedStepIndex]);
+
   const parsedResult = (() => {
     if (!genStepResult) return null;
     try {
@@ -775,24 +1155,68 @@ const PreviewPanel = ({
   })();
   const isVideo = state.creativeType === 'video';
   const noSelection = selectedStepIndex === null || !completedIndexes.has(selectedStepIndex);
-
-  // Show approval button if waiting, even if a different step is selected
   const showApprovalBar = !effectiveAutoMode && waitingForApproval >= 0;
 
   if (noSelection && !allDone && !showApprovalBar) return <EmptyState />;
 
   const step = selectedStepIndex !== null ? pipeline[selectedStepIndex] : null;
-  const isWaitingApproval = selectedStepIndex !== null && waitingForApproval === selectedStepIndex;
+
+  const startEdit = () => {
+    if (!parsedResult) return;
+    setEditData(JSON.parse(JSON.stringify(parsedResult)));
+    setEditing(true);
+  };
+
+  const handleSave = async () => {
+    if (!jobId || !step || !editData) return;
+    const { error } = await supabase
+      .from('gen_steps')
+      .update({ result: editData })
+      .eq('job_id', jobId)
+      .eq('step_key', step.stepKey);
+    if (error) {
+      toast({ title: '保存に失敗しました', variant: 'destructive' });
+    } else {
+      toast({ title: '変更を保存しました' });
+      setEditing(false);
+      setEditData(null);
+      onResultUpdated?.();
+    }
+  };
+
+  const handleCancel = () => {
+    setEditing(false);
+    setEditData(null);
+  };
+
+  const handleDownload = () => {
+    if (!step) return;
+    const data = editing ? editData : parsedResult;
+    if (!data) {
+      toast({ title: 'ダウンロードするデータがありません' });
+      return;
+    }
+    const content = generateDownloadText(step.stepKey, data, state, appealAxesResult, copyStepResult, compositionStepResult);
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${jobId ?? 'draft'}_${step.stepKey}_${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: 'ダウンロード完了' });
+  };
 
   const renderPreview = () => {
     if (!step || selectedStepIndex === null) return null;
+    const displayData = editing ? editData : parsedResult;
 
     if (isVideo) {
       switch (selectedStepIndex) {
-        case 0: return <PreviewAppealAxis isVideo state={state} genStepResult={parsedResult} />;
-        case 1: return <PreviewCopy isVideo state={state} genStepResult={parsedResult} appealAxesResult={appealAxesResult} />;
-        case 2: return <PreviewStoryboard isVideo state={state} genStepResult={parsedResult} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} />;
-        case 3: return <PreviewNAScript state={state} genStepResult={parsedResult} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} compositionStepResult={compositionStepResult} />;
+        case 0: return <PreviewAppealAxis isVideo state={state} genStepResult={displayData} editing={editing} editData={editData} setEditData={setEditData} />;
+        case 1: return <PreviewCopy isVideo state={state} genStepResult={displayData} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />;
+        case 2: return <PreviewStoryboard isVideo state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />;
+        case 3: return <PreviewNAScript state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} compositionStepResult={compositionStepResult} editing={editing} editData={editData} setEditData={setEditData} />;
         case 4: return <PreviewNarration />;
         case 5: return <PreviewBGM />;
         case 6: return <PreviewVCon />;
@@ -804,9 +1228,9 @@ const PreviewPanel = ({
       }
     } else {
       switch (selectedStepIndex) {
-        case 0: return <PreviewAppealAxis isVideo={false} state={state} genStepResult={parsedResult} />;
-        case 1: return <PreviewCopy isVideo={false} state={state} genStepResult={parsedResult} appealAxesResult={appealAxesResult} />;
-        case 2: return <PreviewStoryboard isVideo={false} state={state} genStepResult={parsedResult} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} />;
+        case 0: return <PreviewAppealAxis isVideo={false} state={state} genStepResult={displayData} editing={editing} editData={editData} setEditData={setEditData} />;
+        case 1: return <PreviewCopy isVideo={false} state={state} genStepResult={displayData} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />;
+        case 2: return <PreviewStoryboard isVideo={false} state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />;
         case 3: return <PreviewToneManner />;
         case 4: return <PreviewBannerImages total={total} state={state} />;
         default: return null;
@@ -826,14 +1250,16 @@ const PreviewPanel = ({
               <h2 className="text-lg font-bold font-display">{step.label}</h2>
               <Badge className={cn(
                 'ml-auto',
-                completedIndexes.has(selectedStepIndex)
-                  ? 'bg-success text-success-foreground'
-                  : 'bg-secondary text-secondary-foreground',
+                editing
+                  ? 'bg-yellow-100 text-yellow-800'
+                  : completedIndexes.has(selectedStepIndex)
+                    ? 'bg-success text-success-foreground'
+                    : 'bg-secondary text-secondary-foreground',
               )}>
-                {completedIndexes.has(selectedStepIndex) ? '完了' : '実行中'}
+                {editing ? '編集中' : completedIndexes.has(selectedStepIndex) ? '完了' : '実行中'}
               </Badge>
             </div>
-            {step.completedText && completedIndexes.has(selectedStepIndex) && (
+            {step.completedText && completedIndexes.has(selectedStepIndex) && !editing && (
               <p className="text-sm text-muted-foreground mt-1">{step.completedText}</p>
             )}
           </div>
@@ -843,7 +1269,7 @@ const PreviewPanel = ({
           <div className="flex-1 overflow-y-auto px-6 py-4">
             <AnimatePresence mode="wait">
               <motion.div
-                key={selectedStepIndex}
+                key={`${selectedStepIndex}-${editing}`}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
@@ -856,7 +1282,7 @@ const PreviewPanel = ({
 
           <Separator />
 
-          {showApprovalBar && (
+          {showApprovalBar && !editing && (
             <div className="sticky bottom-0 px-6 py-3 flex items-center gap-3 border-t border-border bg-background">
               <Button variant="brand" onClick={() => onApprove(waitingForApproval)}>
                 承認して次へ進む
@@ -870,7 +1296,18 @@ const PreviewPanel = ({
             </div>
           )}
 
-          <ActionBar step={step} stepIndex={selectedStepIndex} state={state} pipeline={pipeline} completedIndexes={completedIndexes} />
+          <ActionBar
+            step={step}
+            stepIndex={selectedStepIndex}
+            state={state}
+            pipeline={pipeline}
+            completedIndexes={completedIndexes}
+            editing={editing}
+            onStartEdit={startEdit}
+            onSave={handleSave}
+            onCancel={handleCancel}
+            onDownload={handleDownload}
+          />
         </>
       )}
     </div>

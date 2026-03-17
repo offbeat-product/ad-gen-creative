@@ -34,16 +34,20 @@ interface Props {
   pipeline: PipelineStep[];
   completedIndexes: Set<number>;
   selectedPatternId?: string;
+  editing?: boolean;
+  onStartEdit?: () => void;
+  onSave?: () => void;
+  onCancel?: () => void;
+  onDownload?: () => void;
 }
 
-const ActionBar = ({ step, stepIndex, state, pipeline, completedIndexes, selectedPatternId }: Props) => {
+const ActionBar = ({ step, stepIndex, state, pipeline, completedIndexes, selectedPatternId, editing, onStartEdit, onSave, onCancel, onDownload }: Props) => {
   const { toast } = useToast();
   const [adCheckOpen, setAdCheckOpen] = useState(false);
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [adCheckLoading, setAdCheckLoading] = useState(false);
   const [creatorLoading, setCreatorLoading] = useState(false);
-  const [editing, setEditing] = useState(false);
   const [deliveryDate, setDeliveryDate] = useState<Date>();
   const [priority, setPriority] = useState('normal');
   const [storyboardOpen, setStoryboardOpen] = useState(false);
@@ -141,7 +145,7 @@ const ActionBar = ({ step, stepIndex, state, pipeline, completedIndexes, selecte
   };
 
   const handleDownload = () => {
-    toast({ title: 'ダウンロード完了' });
+    onDownload?.();
   };
 
   const handleCopyLink = () => {
@@ -153,16 +157,16 @@ const ActionBar = ({ step, stepIndex, state, pipeline, completedIndexes, selecte
     <>
       <div className="px-6 py-3 flex items-center gap-2 flex-wrap">
         {isText && !editing && (
-          <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+          <Button variant="outline" size="sm" onClick={onStartEdit}>
             <Pencil className="h-3.5 w-3.5 mr-1" />編集
           </Button>
         )}
         {isText && editing && (
           <>
-            <Button variant="outline" size="sm" onClick={() => setEditing(false)}>
+            <Button variant="outline" size="sm" onClick={onSave} className="border-green-300 text-green-700 hover:bg-green-50">
               <Check className="h-3.5 w-3.5 mr-1" />保存
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setEditing(false)}>
+            <Button variant="outline" size="sm" onClick={onCancel}>
               <X className="h-3.5 w-3.5 mr-1" />キャンセル
             </Button>
           </>
