@@ -5,6 +5,7 @@ export interface WizardState {
   productId: string | null;
   projectId: string | null;
   referenceIds: string[];
+  referenceFileNames: Record<string, string>;
   referenceUrls: string[];
   productionPattern: 'new' | 'variation' | null;
   baseCreativeId: string | null;
