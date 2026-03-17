@@ -531,7 +531,7 @@ const GenerateProgress = () => {
               const nextGs = steps.find((s: any) => s.step_key === nextKey);
               if (nextGs?.status === 'pending') {
                 setWaitingForApproval(pIdx);
-                setSelectedStepIndex(pIdx); // Ensure selected matches waiting
+                if (userSelectedStepRef.current === null) setSelectedStepIndex(pIdx);
                 foundApproval = true;
                 break;
               }
