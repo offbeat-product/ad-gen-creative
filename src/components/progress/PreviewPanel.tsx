@@ -25,6 +25,7 @@ interface Props {
   waitingForApproval: number;
   effectiveAutoMode: boolean;
   genStepResult?: any;
+  appealAxesResult?: any;
   jobId?: string | null;
   onApprove: (idx: number) => void;
   onRegenerate: (idx: number) => void;
@@ -258,13 +259,22 @@ const PreviewAppealAxis = ({ isVideo, state, genStepResult }: { isVideo: boolean
   );
 };
 
-const PreviewCopy = ({ isVideo, state, genStepResult }: { isVideo: boolean; state: WizardState; genStepResult?: any }) => {
-  console.log('DEBUG COPY parsedResult:', genStepResult);
-  console.log('DEBUG COPY parsedResult type:', typeof genStepResult);
-  console.log('DEBUG COPY copies:', genStepResult?.copies);
-  console.log('DEBUG COPY copies type:', typeof genStepResult?.copies);
-  console.log('DEBUG COPY first copy:', genStepResult?.copies?.[0]);
+const PreviewCopy = ({ isVideo, state, genStepResult, appealAxesResult }: { isVideo: boolean; state: WizardState; genStepResult?: any; appealAxesResult?: any }) => {
   const copyCount = state.copyPatterns;
+
+  // Parse appealAxesResult to get axis_type/axis_label lookup
+  const parsedAxesResult = (() => {
+    if (!appealAxesResult) return null;
+    try {
+      return typeof appealAxesResult === 'string' ? JSON.parse(appealAxesResult) : appealAxesResult;
+    } catch { return null; }
+  })();
+  const axesLookup: Record<number, { axis_type: string; axis_label: string }> = {};
+  if (parsedAxesResult?.appeal_axes && Array.isArray(parsedAxesResult.appeal_axes)) {
+    for (const ax of parsedAxesResult.appeal_axes) {
+      if (ax.index != null) axesLookup[ax.index] = { axis_type: ax.axis_type, axis_label: ax.axis_label };
+    }
+  }
 
   // Real data: flat array of { pattern_id, appeal_axis_index, appeal_axis_text, copy_index, copy_text }
   const realCopies: any[] | null = (() => {
@@ -277,27 +287,33 @@ const PreviewCopy = ({ isVideo, state, genStepResult }: { isVideo: boolean; stat
   })();
 
   if (realCopies && realCopies.length > 0) {
-    // Group by appeal_axis_text (or appeal_axis_index)
-    const grouped = realCopies.reduce((acc: Record<string, any[]>, copy: any) => {
-      const key = copy.appeal_axis_text ?? `訴求軸${copy.appeal_axis_index ?? '?'}`;
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(copy);
+    // Group by appeal_axis_index
+    const grouped = realCopies.reduce((acc: Record<string, { axisIndex: number; copies: any[] }>, copy: any) => {
+      const idx = copy.appeal_axis_index ?? 0;
+      const key = String(idx);
+      if (!acc[key]) acc[key] = { axisIndex: idx, copies: [] };
+      acc[key].copies.push(copy);
       return acc;
-    }, {} as Record<string, any[]>);
+    }, {} as Record<string, { axisIndex: number; copies: any[] }>);
 
-    const groups = Object.entries(grouped);
+    const groups = Object.values(grouped);
 
     return (
       <div className="space-y-6">
         <Badge className="bg-success-wash text-success text-xs">AI生成データ</Badge>
-        {groups.map(([axisText, copies]: [string, any[]], i: number) => (
-          <div key={i}>
-            <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-secondary/10 text-secondary flex items-center justify-center text-xs font-bold">{i + 1}</span>
-              {axisText}
-            </h4>
+        {groups.map((group: { axisIndex: number; copies: any[] }, i: number) => {
+          const axInfo = axesLookup[group.axisIndex];
+          const heading = axInfo
+            ? `${axInfo.axis_type}（${axInfo.axis_label}）`
+            : group.copies[0]?.appeal_axis_text ?? `訴求軸${group.axisIndex}`;
+          return (
+            <div key={i}>
+              <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-secondary/10 text-secondary flex items-center justify-center text-xs font-bold">{i + 1}</span>
+                {heading}
+              </h4>
             <div className="space-y-2 pl-7">
-              {copies.map((copy: any, j: number) => (
+              {group.copies.map((copy: any, j: number) => (
                 <div key={j} className="rounded-lg border p-3 text-sm flex items-center gap-3">
                   <Badge variant="outline" className="text-xs shrink-0 font-mono">
                     {copy.pattern_id ?? getPatternLetter(i, j, copyCount)}
@@ -307,7 +323,8 @@ const PreviewCopy = ({ isVideo, state, genStepResult }: { isVideo: boolean; stat
               ))}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     );
   }
@@ -664,7 +681,7 @@ const PreviewToneManner = () => (
 
 const PreviewPanel = ({
   pipeline, selectedStepIndex, completedIndexes, allDone, total, state,
-  waitingForApproval, effectiveAutoMode, genStepResult, jobId,
+  waitingForApproval, effectiveAutoMode, genStepResult, appealAxesResult, jobId,
   onApprove, onRegenerate, onSwitchToAuto, onNavigateDashboard,
 }: Props) => {
   const parsedResult = (() => {
@@ -692,7 +709,7 @@ const PreviewPanel = ({
     if (isVideo) {
       switch (selectedStepIndex) {
         case 0: return <PreviewAppealAxis isVideo state={state} genStepResult={parsedResult} />;
-        case 1: return <PreviewCopy isVideo state={state} genStepResult={parsedResult} />;
+        case 1: return <PreviewCopy isVideo state={state} genStepResult={parsedResult} appealAxesResult={appealAxesResult} />;
         case 2: return <PreviewStoryboard isVideo state={state} genStepResult={parsedResult} />;
         case 3: return <PreviewNAScript state={state} genStepResult={parsedResult} />;
         case 4: return <PreviewNarration />;
@@ -707,7 +724,7 @@ const PreviewPanel = ({
     } else {
       switch (selectedStepIndex) {
         case 0: return <PreviewAppealAxis isVideo={false} state={state} genStepResult={parsedResult} />;
-        case 1: return <PreviewCopy isVideo={false} state={state} genStepResult={parsedResult} />;
+        case 1: return <PreviewCopy isVideo={false} state={state} genStepResult={parsedResult} appealAxesResult={appealAxesResult} />;
         case 2: return <PreviewStoryboard isVideo={false} state={state} genStepResult={parsedResult} />;
         case 3: return <PreviewToneManner />;
         case 4: return <PreviewBannerImages total={total} state={state} />;
