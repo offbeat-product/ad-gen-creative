@@ -186,8 +186,8 @@ const AudioPlayer = ({ label }: { label: string }) => (
 /* ─── Step-specific preview renderers ─── */
 
 const PreviewAppealAxis = ({ isVideo, state, genStepResult }: { isVideo: boolean; state: WizardState; genStepResult?: any }) => {
-  // Try to use real data
-  const realAxes: string[] | null = (() => {
+  // Try to use real data (new format with axis_type/axis_label/examples or old format with plain strings)
+  const realAxes: any[] | null = (() => {
     try {
       if (genStepResult?.appeal_axes && Array.isArray(genStepResult.appeal_axes)) {
         return genStepResult.appeal_axes;
@@ -196,8 +196,45 @@ const PreviewAppealAxis = ({ isVideo, state, genStepResult }: { isVideo: boolean
     return null;
   })();
 
-  const axes = realAxes ?? (isVideo ? APPEAL_AXES_VIDEO : APPEAL_AXES_BANNER);
   const copyCount = state.copyPatterns;
+
+  // Check if new format (objects with axis_type)
+  const isNewFormat = realAxes && realAxes.length > 0 && typeof realAxes[0] === 'object' && realAxes[0].axis_type;
+
+  if (isNewFormat && realAxes) {
+    return (
+      <div className="space-y-3">
+        <Badge className="bg-success-wash text-success text-xs mb-2">AI生成データ</Badge>
+        {realAxes.map((axis: any, i: number) => (
+          <div key={i} className="rounded-lg border p-4 flex items-start gap-3">
+            <div className="w-8 h-8 rounded-full bg-secondary/10 text-secondary flex items-center justify-center text-sm font-bold shrink-0">
+              {axis.index ?? i + 1}
+            </div>
+            <div className="flex-1 min-w-0 space-y-1">
+              <p className="text-sm font-semibold">
+                {axis.axis_type}
+                {axis.axis_label && <span className="text-muted-foreground font-normal">（{axis.axis_label}）</span>}
+              </p>
+              {axis.text && <p className="text-sm">{axis.text}</p>}
+              {axis.examples && Array.isArray(axis.examples) && axis.examples.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {axis.examples.map((ex: string) => `「${ex}」`).join('')}
+                </p>
+              )}
+            </div>
+            <Badge variant="outline" className="text-xs shrink-0">
+              パターン {getPatternRange(i, copyCount)}
+            </Badge>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Old format (plain strings) or fallback dummy
+  const axes: string[] = realAxes
+    ? realAxes.map((a: any) => (typeof a === 'string' ? a : a.text ?? JSON.stringify(a)))
+    : (isVideo ? APPEAL_AXES_VIDEO : APPEAL_AXES_BANNER);
 
   return (
     <div className="space-y-3">
