@@ -508,7 +508,7 @@ const PreviewStoryboard = ({ isVideo, state, genStepResult, copyStepResult, appe
   );
 };
 
-const PreviewNAScript = ({ state, genStepResult }: { state: WizardState; genStepResult?: any }) => {
+const PreviewNAScript = ({ state, genStepResult, copyStepResult, appealAxesResult }: { state: WizardState; genStepResult?: any; copyStepResult?: any; appealAxesResult?: any }) => {
   const copyCount = state.copyPatterns;
   const scriptCount = state.appealAxis * copyCount;
   const tabKeys = Array.from({ length: Math.min(scriptCount, 9) }, (_, i) => ALPHA[i]);
@@ -539,9 +539,12 @@ const PreviewNAScript = ({ state, genStepResult }: { state: WizardState; genStep
             const charCount = narration?.char_count ?? script.replace(/[\s\n]/g, '').length;
             return (
               <TabsContent key={letter} value={letter}>
-                <div className="bg-muted rounded-lg p-4 mt-3">
-                  <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed">{script}</pre>
-                  <p className="text-xs text-muted-foreground mt-3">{charCount}文字 / {state.videoDuration}秒尺</p>
+                <div className="mt-3">
+                  <PatternHeader patternId={letter} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} />
+                  <div className="bg-muted rounded-lg p-4">
+                    <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed">{script}</pre>
+                    <p className="text-xs text-muted-foreground mt-3">{charCount}文字 / {state.videoDuration}秒尺</p>
+                  </div>
                 </div>
               </TabsContent>
             );
