@@ -399,14 +399,22 @@ const GenerateProgress = () => {
         }
       });
 
-      // Merge with existing completed (dummy steps may already be marked)
+      // Text 4 steps are always rebuilt from DB only; only dummy-step completions are preserved locally
       setCompletedIndexes(prev => {
-        const merged = new Set(prev);
-        newCompleted.forEach(idx => merged.add(idx));
-        return merged;
+        const next = new Set<number>();
+        prev.forEach(idx => {
+          const step = pipeline[idx];
+          if (step && !TEXT_STEP_KEYS.includes(step.stepKey)) next.add(idx);
+        });
+        newCompleted.forEach(idx => next.add(idx));
+        return next;
       });
       setErrorMap(newErrors);
-      if (latestProcessing >= 0) setActiveIndex(latestProcessing);
+      if (latestProcessing >= 0) {
+        setActiveIndex(latestProcessing);
+      } else if (!dummyAnimationStartedRef.current) {
+        setActiveIndex(-1);
+      }
       if (latestCompletedIdx >= 0) setSelectedStepIndex(latestCompletedIdx);
 
       // ── Auto mode: trigger next webhook when a step completes ──
