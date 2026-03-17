@@ -216,20 +216,36 @@ const TEXT_STEP_KEYS = ['appeal_axis', 'copy', 'composition', 'narration_script'
 const triggerWebhook = async (
   nextStepKey: string,
   job: any,
-  steps: GenStepRow[],
+  _steps: GenStepRow[],
   meta: { clientName: string; productName: string; projectName: string },
 ) => {
   const url = WEBHOOK_URLS[nextStepKey];
   if (!url) return;
 
+  // Always fetch fresh steps from DB to avoid stale state
+  const { data: freshSteps } = await supabase
+    .from('gen_steps')
+    .select('*')
+    .eq('job_id', job.id)
+    .order('step_number', { ascending: true });
+
+  const steps = (freshSteps ?? _steps) as GenStepRow[];
+
   const step1 = steps.find(s => s.step_key === 'appeal_axis');
   const step2 = steps.find(s => s.step_key === 'copy');
   const step3 = steps.find(s => s.step_key === 'composition');
 
+  const step1Result = safeParse(step1?.result);
+  const step2Result = safeParse(step2?.result);
+  const step3Result = safeParse(step3?.result);
+
   const previousResults: Record<string, any> = {};
-  if (step1?.result) previousResults.appeal_axes = safeParse(step1.result)?.appeal_axes;
-  if (step2?.result) previousResults.copies = safeParse(step2.result)?.copies;
-  if (step3?.result) previousResults.compositions = safeParse(step3.result)?.compositions;
+  if (step1Result?.appeal_axes) previousResults.appeal_axes = step1Result.appeal_axes;
+  if (step2Result?.copies) previousResults.copies = step2Result.copies;
+  if (step3Result?.compositions) previousResults.compositions = step3Result.compositions;
+
+  console.log(`[Webhook] Calling ${nextStepKey} with previous_results:`, JSON.stringify(previousResults, null, 2));
+  console.log(`[Webhook] Raw results - step1:`, step1?.result, `step2:`, step2?.result, `step3:`, step3?.result);
 
   try {
     await fetch(url, {
@@ -248,7 +264,7 @@ const triggerWebhook = async (
         previous_results: previousResults,
       }),
     });
-    console.log(`[Webhook] Triggered ${nextStepKey}`);
+    console.log(`[Webhook] Triggered ${nextStepKey} successfully`);
   } catch (e) {
     console.error(`[Webhook] Failed to trigger ${nextStepKey}:`, e);
   }
