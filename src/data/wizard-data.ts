@@ -23,6 +23,7 @@ export const initialWizardState: WizardState = {
   productId: null,
   projectId: null,
   referenceIds: [],
+  referenceFileNames: {},
   referenceUrls: [],
   productionPattern: null,
   baseCreativeId: null,

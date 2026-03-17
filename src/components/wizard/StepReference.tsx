@@ -132,7 +132,7 @@ const StepReference = ({ state, updateState }: Props) => {
               return (
                 <button
                   key={c.id}
-                  onClick={() => toggleRef(c.id)}
+                  onClick={() => toggleRef(c.id, c.file_name)}
                   className={cn(
                     "relative rounded-xl border p-3 text-left transition-all",
                     selected

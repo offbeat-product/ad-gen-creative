@@ -49,7 +49,7 @@ const StepPattern = ({ state, updateState }: Props) => {
             >
               <option value="">選択してください</option>
               {state.referenceIds.map(id => (
-                <option key={id} value={id}>{id}</option>
+                <option key={id} value={id}>{state.referenceFileNames[id] || id}</option>
               ))}
             </select>
           ) : (
