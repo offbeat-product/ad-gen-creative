@@ -251,10 +251,15 @@ const triggerWebhook = async (
   if (step2Result?.copies) previousResults.copies = step2Result.copies;
   if (step3Result?.compositions) previousResults.compositions = step3Result.compositions;
 
-  console.log(`[Webhook] Calling ${nextStepKey} with previous_results:`, JSON.stringify(previousResults, null, 2));
-  console.log(`[Webhook] Raw results - step1:`, step1?.result, `step2:`, step2?.result, `step3:`, step3?.result);
-
-  try {
+  console.log(`[Webhook] Calling ${nextStepKey}`);
+  console.log(`[Webhook] Raw step1.result type=${typeof step1?.result}:`, step1?.result);
+  console.log(`[Webhook] Raw step2.result type=${typeof step2?.result}:`, step2?.result);
+  console.log(`[Webhook] Raw step3.result type=${typeof step3?.result}:`, step3?.result);
+  console.log(`[Webhook] Parsed step1Result:`, step1Result);
+  console.log(`[Webhook] Parsed step2Result:`, step2Result);
+  console.log(`[Webhook] Parsed step3Result:`, step3Result);
+  console.log(`[Webhook] previous_results:`, previousResults);
+  console.log(`[Webhook] previous_results JSON:`, JSON.stringify(previousResults));
     await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
