@@ -656,10 +656,12 @@ const PreviewPanel = ({
   onApprove, onRegenerate, onSwitchToAuto, onNavigateDashboard,
 }: Props) => {
   const parsedResult = (() => {
-    if (typeof genStepResult === 'string') {
-      try { return JSON.parse(genStepResult); } catch { return genStepResult; }
+    if (!genStepResult) return null;
+    try {
+      return typeof genStepResult === 'string' ? JSON.parse(genStepResult) : genStepResult;
+    } catch {
+      return null;
     }
-    return genStepResult;
   })();
   const isVideo = state.creativeType === 'video';
   const noSelection = selectedStepIndex === null || !completedIndexes.has(selectedStepIndex);
