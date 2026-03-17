@@ -174,6 +174,7 @@ const buildStateFromJob = (job: any): WizardState => ({
   productId: null,
   projectId: job.project_id,
   referenceIds: [],
+  referenceFileNames: {},
   referenceUrls: [],
   productionPattern: job.production_pattern === '新規制作' ? 'new' : 'variation',
   baseCreativeId: null,
