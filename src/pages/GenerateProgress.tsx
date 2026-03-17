@@ -477,7 +477,19 @@ const GenerateProgress = () => {
       } else if (!dummyAnimationStartedRef.current) {
         setActiveIndex(-1);
       }
-      if (latestCompletedIdx >= 0) setSelectedStepIndex(latestCompletedIdx);
+      // Only auto-update selected step if user hasn't manually selected one,
+      // or if a NEW step just completed (reset user selection on new completion)
+      if (latestCompletedIdx >= 0) {
+        if (latestCompletedIdx > lastAutoCompletedRef.current) {
+          // A new step just completed — auto-navigate and clear user selection
+          lastAutoCompletedRef.current = latestCompletedIdx;
+          userSelectedStepRef.current = null;
+          setSelectedStepIndex(latestCompletedIdx);
+        } else if (userSelectedStepRef.current === null) {
+          // No user selection active — follow auto
+          setSelectedStepIndex(latestCompletedIdx);
+        }
+      }
 
       // ── Auto mode: trigger next webhook when a step completes ──
       if (isJobAutoMode) {
