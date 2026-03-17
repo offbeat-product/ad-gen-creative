@@ -259,6 +259,11 @@ const PreviewAppealAxis = ({ isVideo, state, genStepResult }: { isVideo: boolean
 };
 
 const PreviewCopy = ({ isVideo, state, genStepResult }: { isVideo: boolean; state: WizardState; genStepResult?: any }) => {
+  console.log('DEBUG COPY parsedResult:', genStepResult);
+  console.log('DEBUG COPY parsedResult type:', typeof genStepResult);
+  console.log('DEBUG COPY copies:', genStepResult?.copies);
+  console.log('DEBUG COPY copies type:', typeof genStepResult?.copies);
+  console.log('DEBUG COPY first copy:', genStepResult?.copies?.[0]);
   const copyCount = state.copyPatterns;
 
   // Real data: flat array of { pattern_id, appeal_axis_index, appeal_axis_text, copy_index, copy_text }
