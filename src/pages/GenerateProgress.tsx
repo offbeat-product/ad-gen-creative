@@ -335,12 +335,21 @@ const GenerateProgress = () => {
   const step4TriggeredRef = useRef(false);
   const dummyAnimationStartedRef = useRef(false);
 
-  // Reset dedup refs on jobId change
+  // Reset dedup refs and UI state on jobId change
   useEffect(() => {
     step2TriggeredRef.current = false;
     step3TriggeredRef.current = false;
     step4TriggeredRef.current = false;
     dummyAnimationStartedRef.current = false;
+    setActiveIndex(-1);
+    setCompletedIndexes(new Set());
+    setWaitingForApproval(-1);
+    setCountUpValues({});
+    setAllDone(false);
+    setShowConfetti(false);
+    setSelectedStepIndex(null);
+    setErrorMap({});
+    setDummyPhaseStarted(false);
   }, [jobId]);
 
   const effectiveAutoMode = (jobData?.generation_mode === 'auto') || switchedToAuto;
@@ -390,14 +399,22 @@ const GenerateProgress = () => {
         }
       });
 
-      // Merge with existing completed (dummy steps may already be marked)
+      // Text 4 steps are always rebuilt from DB only; only dummy-step completions are preserved locally
       setCompletedIndexes(prev => {
-        const merged = new Set(prev);
-        newCompleted.forEach(idx => merged.add(idx));
-        return merged;
+        const next = new Set<number>();
+        prev.forEach(idx => {
+          const step = pipeline[idx];
+          if (step && !TEXT_STEP_KEYS.includes(step.stepKey)) next.add(idx);
+        });
+        newCompleted.forEach(idx => next.add(idx));
+        return next;
       });
       setErrorMap(newErrors);
-      if (latestProcessing >= 0) setActiveIndex(latestProcessing);
+      if (latestProcessing >= 0) {
+        setActiveIndex(latestProcessing);
+      } else if (!dummyAnimationStartedRef.current) {
+        setActiveIndex(-1);
+      }
       if (latestCompletedIdx >= 0) setSelectedStepIndex(latestCompletedIdx);
 
       // ── Auto mode: trigger next webhook when a step completes ──
