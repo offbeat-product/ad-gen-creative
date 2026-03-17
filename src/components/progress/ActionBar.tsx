@@ -41,14 +41,13 @@ interface Props {
   onDownload?: () => void;
 }
 
-const ActionBar = ({ step, stepIndex, state, pipeline, completedIndexes, selectedPatternId }: Props) => {
+const ActionBar = ({ step, stepIndex, state, pipeline, completedIndexes, selectedPatternId, editing, onStartEdit, onSave, onCancel, onDownload }: Props) => {
   const { toast } = useToast();
   const [adCheckOpen, setAdCheckOpen] = useState(false);
   const [creatorOpen, setCreatorOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [adCheckLoading, setAdCheckLoading] = useState(false);
   const [creatorLoading, setCreatorLoading] = useState(false);
-  const [editing, setEditing] = useState(false);
   const [deliveryDate, setDeliveryDate] = useState<Date>();
   const [priority, setPriority] = useState('normal');
   const [storyboardOpen, setStoryboardOpen] = useState(false);
