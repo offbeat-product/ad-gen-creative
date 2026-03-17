@@ -218,7 +218,7 @@ const PreviewAppealAxis = ({ isVideo, state, genStepResult }: { isVideo: boolean
               {axis.text && <p className="text-sm">{axis.text}</p>}
               {axis.examples && Array.isArray(axis.examples) && axis.examples.length > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  {axis.examples.map((ex: string) => `「${ex}」`).join('')}
+                  例）{axis.examples.map((ex: string) => `「${ex}」`).join('')}
                 </p>
               )}
             </div>
