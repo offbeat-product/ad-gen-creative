@@ -747,8 +747,8 @@ const PreviewPanel = ({
       switch (selectedStepIndex) {
         case 0: return <PreviewAppealAxis isVideo state={state} genStepResult={parsedResult} />;
         case 1: return <PreviewCopy isVideo state={state} genStepResult={parsedResult} appealAxesResult={appealAxesResult} />;
-        case 2: return <PreviewStoryboard isVideo state={state} genStepResult={parsedResult} />;
-        case 3: return <PreviewNAScript state={state} genStepResult={parsedResult} />;
+        case 2: return <PreviewStoryboard isVideo state={state} genStepResult={parsedResult} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} />;
+        case 3: return <PreviewNAScript state={state} genStepResult={parsedResult} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} />;
         case 4: return <PreviewNarration />;
         case 5: return <PreviewBGM />;
         case 6: return <PreviewVCon />;
