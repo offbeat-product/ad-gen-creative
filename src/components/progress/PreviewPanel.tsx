@@ -523,7 +523,13 @@ const PreviewNAScript = ({ state, genStepResult, copyStepResult, appealAxesResul
     return null;
   })();
 
-  if (realNarrations && realNarrations.length > 1) {
+  if (realNarrations && realNarrations.length > 0) {
+    // Match narrations to tabs by pattern_id
+    const narrationByPattern: Record<string, any> = {};
+    for (const n of realNarrations) {
+      if (n.pattern_id) narrationByPattern[n.pattern_id] = n;
+    }
+
     return (
       <div className="space-y-4">
         <Badge className="bg-success-wash text-success text-xs">AI生成データ</Badge>
@@ -534,36 +540,37 @@ const PreviewNAScript = ({ state, genStepResult, copyStepResult, appealAxesResul
             ))}
           </TabsList>
           {tabKeys.map((letter, tabIdx) => {
-            const narration = realNarrations[tabIdx];
-            const script = narration?.script ?? '';
-            const charCount = narration?.char_count ?? script.replace(/[\s\n]/g, '').length;
+            const narration = narrationByPattern[letter] ?? realNarrations[tabIdx];
+            console.log('DEBUG narration data:', narration);
+            const sections: any[] = narration?.sections ?? [];
+            const charCount = narration?.char_count ?? 0;
             return (
               <TabsContent key={letter} value={letter}>
                 <div className="mt-3">
                   <PatternHeader patternId={letter} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} />
-                  <div className="bg-muted rounded-lg p-4">
-                    <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed">{script}</pre>
-                    <p className="text-xs text-muted-foreground mt-3">{charCount}文字 / {state.videoDuration}秒尺</p>
+                  <div className="space-y-3">
+                    {sections.map((sec: any, j: number) => (
+                      <div key={j} className="border rounded-lg p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          {sec.time_range && <Badge variant="outline" className="text-xs">{sec.time_range}</Badge>}
+                          <Badge className="bg-secondary text-secondary-foreground text-xs">【{sec.part}】</Badge>
+                        </div>
+                        <p className="text-sm leading-relaxed">{sec.text}</p>
+                      </div>
+                    ))}
+                    {sections.length === 0 && narration?.full_script && (
+                      <div className="bg-muted rounded-lg p-4">
+                        <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed">{narration.full_script}</pre>
+                      </div>
+                    )}
                   </div>
+                  <Separator className="my-3" />
+                  <p className="text-xs text-muted-foreground">合計: {charCount}文字 / {state.videoDuration}秒尺</p>
                 </div>
               </TabsContent>
             );
           })}
         </Tabs>
-      </div>
-    );
-  }
-
-  if (realNarrations && realNarrations.length === 1) {
-    const narration = realNarrations[0];
-    return (
-      <div className="space-y-3">
-        <Badge className="bg-success-wash text-success text-xs">AI生成データ</Badge>
-        <div className="bg-muted rounded-lg p-4">
-          {narration.pattern && <p className="text-xs font-medium text-secondary mb-2">パターン {narration.pattern}</p>}
-          <pre className="text-sm whitespace-pre-wrap font-sans leading-relaxed">{narration.script}</pre>
-          {narration.char_count && <p className="text-xs text-muted-foreground mt-2">{narration.char_count}文字 / {state.videoDuration}秒尺</p>}
-        </div>
       </div>
     );
   }
