@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Sparkles, History, Settings, X, ExternalLink } from 'lucide-react';
+import { LayoutDashboard, Sparkles, History, Settings, X, ExternalLink, Infinity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -17,10 +17,10 @@ const navItems = [
 ];
 
 const productLinks = [
-  { label: 'AdLoop', url: 'https://adloop-portal.lovable.app/', active: true },
-  { label: 'Ad Brain', url: 'https://ad-brain.lovable.app/', active: true },
-  { label: 'Ad Check', url: 'https://ad-check.lovable.app/', active: true },
-  { label: 'Ad Ops', url: null, active: false },
+  { label: 'AdLoop', url: 'https://adloop-portal.lovable.app/', active: true, color: 'text-violet-500' },
+  { label: 'Ad Gen', url: null, active: true, color: 'text-sky-500', current: true },
+  { label: 'Ad Check', url: 'https://ad-check.lovable.app/', active: true, color: 'text-blue-500' },
+  { label: 'Ad Ops', url: null, active: false, color: 'text-gray-400' },
 ];
 
 const Sidebar = ({ open, onClose }: SidebarProps) => {
