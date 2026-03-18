@@ -18,7 +18,7 @@ const navItems = [
 
 const productLinks = [
   { label: 'AdLoop', url: 'https://adloop-portal.lovable.app/', active: true, color: 'text-violet-500' },
-  { label: 'Ad Gen', url: null, active: true, color: 'text-sky-500', current: true },
+  { label: 'Ad Brain', url: 'https://ad-brain.lovable.app/', active: true, color: 'text-sky-500' },
   { label: 'Ad Check', url: 'https://ad-check.lovable.app/', active: true, color: 'text-blue-500' },
   { label: 'Ad Ops', url: null, active: false, color: 'text-gray-400' },
 ];
@@ -76,18 +76,6 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
           <div className="space-y-0.5">
             {productLinks.map((p) => {
               const icon = <Infinity className={cn("h-4 w-4 shrink-0", p.color)} />;
-
-              if (p.current) {
-                return (
-                  <span
-                    key={p.label}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold text-foreground bg-accent cursor-default"
-                  >
-                    {icon}
-                    {p.label}
-                  </span>
-                );
-              }
 
               if (p.active && p.url) {
                 return (
