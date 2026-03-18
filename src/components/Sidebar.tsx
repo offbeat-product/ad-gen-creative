@@ -77,18 +77,6 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
             {productLinks.map((p) => {
               const icon = <Infinity className={cn("h-4 w-4 shrink-0", p.color)} />;
 
-              if (p.current) {
-                return (
-                  <span
-                    key={p.label}
-                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-semibold text-foreground bg-accent cursor-default"
-                  >
-                    {icon}
-                    {p.label}
-                  </span>
-                );
-              }
-
               if (p.active && p.url) {
                 return (
                   <a
