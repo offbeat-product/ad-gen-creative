@@ -1436,7 +1436,15 @@ const PreviewPanel = ({
 
           {showApprovalBar && !editing && (
             <div className="sticky bottom-0 px-6 py-3 flex items-center gap-3 border-t border-border bg-background">
-              <Button variant="brand" onClick={() => onApprove(waitingForApproval)}>
+              <Button variant="brand" onClick={() => {
+                // If narration step, show voice selection dialog
+                const currentStep = pipeline[waitingForApproval];
+                if (currentStep?.stepKey === 'narration') {
+                  setVoiceApprovalOpen(true);
+                } else {
+                  onApprove(waitingForApproval);
+                }
+              }}>
                 承認して次へ進む
               </Button>
               <Button variant="outline" onClick={() => onRegenerate(waitingForApproval)}>
@@ -1447,6 +1455,64 @@ const PreviewPanel = ({
               </button>
             </div>
           )}
+
+          {/* Voice selection dialog for narration approval */}
+          <Dialog open={voiceApprovalOpen} onOpenChange={setVoiceApprovalOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>どちらのボイスで進めますか？</DialogTitle>
+                <DialogDescription>選んだボイスが最終ナレーションとして使用されます。</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 py-4">
+                {(['a', 'b'] as const).map((v) => {
+                  const gender = selectedGender ?? 'male';
+                  const voiceName = v === 'a'
+                    ? VOICE_NAMES[gender]?.a ?? 'ボイスA'
+                    : VOICE_NAMES[gender]?.b ?? 'ボイスB';
+                  return (
+                    <button
+                      key={v}
+                      onClick={() => setChosenVoice(v)}
+                      className={cn(
+                        'w-full rounded-xl p-4 border-2 text-left transition-all',
+                        chosenVoice === v
+                          ? 'border-secondary bg-secondary/5'
+                          : 'border-border hover:border-muted-foreground/30',
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          'w-5 h-5 rounded-full border-2 flex items-center justify-center',
+                          chosenVoice === v ? 'border-secondary' : 'border-muted-foreground/40',
+                        )}>
+                          {chosenVoice === v && <div className="w-2.5 h-2.5 rounded-full brand-gradient-bg" />}
+                        </div>
+                        <span className="text-sm font-semibold">
+                          {v === 'a' ? '🔵' : '⚪'} {voiceName}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setVoiceApprovalOpen(false)}>キャンセル</Button>
+                <Button variant="brand" onClick={async () => {
+                  // Update gen_patterns selected_voice
+                  if (jobId) {
+                    await supabase
+                      .from('gen_patterns')
+                      .update({ selected_voice: chosenVoice })
+                      .eq('job_id', jobId);
+                  }
+                  setVoiceApprovalOpen(false);
+                  onApprove(waitingForApproval);
+                }}>
+                  この声で決定
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           <ActionBar
             step={step}
