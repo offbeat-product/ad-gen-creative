@@ -491,6 +491,9 @@ const HistoryPage = () => {
           gen_steps (
             step_key,
             status
+          ),
+          gen_patterns (
+            narration_audio_url
           )
         `)
         .eq('created_by', user.id)
