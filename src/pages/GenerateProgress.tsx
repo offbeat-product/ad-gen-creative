@@ -427,6 +427,8 @@ const GenerateProgress = () => {
     setVoiceSelectionPending(false);
     setVoiceGenerating(false);
     setNarrationAudioMap({});
+    setNarrationAudioMapB({});
+    setSelectedGender('male');
   }, [jobId]);
 
   const effectiveAutoMode = (jobData?.generation_mode === 'auto') || switchedToAuto;
