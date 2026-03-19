@@ -1109,7 +1109,8 @@ const GenerateProgress = () => {
             onSwitchToAuto={switchToAuto} onNavigateDashboard={() => navigate('/')}
             onResultUpdated={refreshGenSteps}
             voiceSelectionPending={voiceSelectionPending} voiceGenerating={voiceGenerating}
-            narrationAudioMap={narrationAudioMap} onTriggerNarrationAudio={triggerNarrationAudio}
+            narrationAudioMap={narrationAudioMap} narrationAudioMapB={narrationAudioMapB} selectedGender={selectedGender}
+            onTriggerNarrationAudio={triggerNarrationAudio}
           />
         </div>
       </div>
