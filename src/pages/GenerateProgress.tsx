@@ -666,7 +666,7 @@ const GenerateProgress = () => {
     }, step.demoSeconds * 1000);
 
     return () => clearTimeout(t);
-  }, [activeIndex, effectiveAutoMode, completedIndexes, stateReady, jobId]);
+  }, [activeIndex, effectiveAutoMode, completedIndexes, stateReady, jobId, voiceGenerating]);
 
   // ── Handle approve: trigger next webhook (step mode) or advance dummy ──
   const handleApprove = useCallback(async (idx: number) => {
