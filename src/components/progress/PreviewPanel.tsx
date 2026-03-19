@@ -1344,7 +1344,7 @@ const PreviewPanel = ({
         case 1: return <PreviewCopy isVideo state={state} genStepResult={displayData} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />;
         case 2: return <PreviewStoryboard isVideo state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />;
         case 3: return <PreviewNAScript state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} compositionStepResult={compositionStepResult} editing={editing} editData={editData} setEditData={setEditData} />;
-        case 4: return <PreviewNarration state={state} narrationAudioMap={narrationAudioMap} genStepResult={genStepResult} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} compositionStepResult={compositionStepResult} />;
+        case 4: return <PreviewNarration state={state} narrationAudioMap={narrationAudioMap} genStepResult={narrationScriptResult} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} compositionStepResult={compositionStepResult} />;
         case 5: return <PreviewBGM />;
         case 6: return <PreviewVCon />;
         case 7: return <PreviewStyleFrames />;
