@@ -104,7 +104,7 @@ const mapJobToRow = (job: any): HistoryRow => {
   const axes = job.num_appeal_axes ?? 3;
   const copies = job.num_copies ?? 3;
   const tones = job.num_tonmana ?? 2;
-  const totalPatterns = job.total_patterns ?? axes * copies * tones;
+  const totalPatterns = job.total_patterns || axes * copies * tones;
 
   const steps = (job.gen_steps ?? []) as Array<{ step_key: string; status: string }>;
   const progress = getJobProgress(steps);
