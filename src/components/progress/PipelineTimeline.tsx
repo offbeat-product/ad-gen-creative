@@ -26,7 +26,7 @@ const PipelineTimeline = ({
   pipeline, activeIndex, completedIndexes, selectedStepIndex,
   countUpValues, total, progressPct, completedCount,
   elapsedStr, remainStr, allDone, effectiveAutoMode,
-  errorMap = {}, onStepClick, onSwitchToAuto,
+  errorMap = {}, narrationProgress, onStepClick, onSwitchToAuto,
 }: Props) => {
   return (
     <div className="space-y-4">
