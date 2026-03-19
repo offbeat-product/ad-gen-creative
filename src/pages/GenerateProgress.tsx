@@ -400,6 +400,8 @@ const GenerateProgress = () => {
   const [voiceSelectionPending, setVoiceSelectionPending] = useState(false);
   const [voiceGenerating, setVoiceGenerating] = useState(false);
   const [narrationAudioMap, setNarrationAudioMap] = useState<Record<string, string | null>>({});
+  const [narrationAudioMapB, setNarrationAudioMapB] = useState<Record<string, string | null>>({});
+  const [selectedGender, setSelectedGender] = useState<'male' | 'female'>('male');
 
   // ── Webhook dedup refs (per step) ──
   const step2TriggeredRef = useRef(false);
@@ -425,6 +427,8 @@ const GenerateProgress = () => {
     setVoiceSelectionPending(false);
     setVoiceGenerating(false);
     setNarrationAudioMap({});
+    setNarrationAudioMapB({});
+    setSelectedGender('male');
   }, [jobId]);
 
   const effectiveAutoMode = (jobData?.generation_mode === 'auto') || switchedToAuto;
@@ -904,10 +908,11 @@ const GenerateProgress = () => {
   }, [jobId]);
 
   // ── WF5: Trigger narration audio generation ──
-  const triggerNarrationAudio = useCallback(async (voiceId: string) => {
+  const triggerNarrationAudio = useCallback(async (voiceIdA: string, voiceIdB: string, gender: 'male' | 'female') => {
     if (!jobId) return;
     setVoiceGenerating(true);
     setVoiceSelectionPending(false);
+    setSelectedGender(gender);
 
     // Set narration step as active
     const narrationIdx = stepKeyToIndex.get('narration');
@@ -919,27 +924,30 @@ const GenerateProgress = () => {
       const response = await fetch(WF5_WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ job_id: jobId, voice_id: voiceId }),
+        body: JSON.stringify({ job_id: jobId, voice_id_a: voiceIdA, voice_id_b: voiceIdB }),
       });
       console.log('[WF5] Response status:', response.status);
 
-      // Start polling gen_patterns for narration_audio_url
+      // Start polling gen_patterns for narration_audio_url and narration_audio_url_b
       const pollAudio = async () => {
         const { data: patterns } = await supabase
           .from('gen_patterns')
-          .select('id, pattern_id, narration_audio_url')
+          .select('id, pattern_id, narration_audio_url, narration_audio_url_b')
           .eq('job_id', jobId)
           .order('pattern_id', { ascending: true });
 
         if (!patterns) return false;
 
-        const audioMap: Record<string, string | null> = {};
+        const audioMapA: Record<string, string | null> = {};
+        const audioMapB: Record<string, string | null> = {};
         let allDone = true;
         for (const p of patterns) {
-          audioMap[p.pattern_id] = p.narration_audio_url;
-          if (!p.narration_audio_url) allDone = false;
+          audioMapA[p.pattern_id] = p.narration_audio_url;
+          audioMapB[p.pattern_id] = p.narration_audio_url_b;
+          if (!p.narration_audio_url || !p.narration_audio_url_b) allDone = false;
         }
-        setNarrationAudioMap(audioMap);
+        setNarrationAudioMap(audioMapA);
+        setNarrationAudioMapB(audioMapB);
         return allDone;
       };
 
@@ -1101,7 +1109,8 @@ const GenerateProgress = () => {
             onSwitchToAuto={switchToAuto} onNavigateDashboard={() => navigate('/')}
             onResultUpdated={refreshGenSteps}
             voiceSelectionPending={voiceSelectionPending} voiceGenerating={voiceGenerating}
-            narrationAudioMap={narrationAudioMap} onTriggerNarrationAudio={triggerNarrationAudio}
+            narrationAudioMap={narrationAudioMap} narrationAudioMapB={narrationAudioMapB} selectedGender={selectedGender}
+            onTriggerNarrationAudio={triggerNarrationAudio}
           />
         </div>
       </div>
@@ -1127,7 +1136,8 @@ const GenerateProgress = () => {
             onSwitchToAuto={switchToAuto} onNavigateDashboard={() => navigate('/')}
             onResultUpdated={refreshGenSteps}
             voiceSelectionPending={voiceSelectionPending} voiceGenerating={voiceGenerating}
-            narrationAudioMap={narrationAudioMap} onTriggerNarrationAudio={triggerNarrationAudio}
+            narrationAudioMap={narrationAudioMap} narrationAudioMapB={narrationAudioMapB} selectedGender={selectedGender}
+            onTriggerNarrationAudio={triggerNarrationAudio}
           />
         </div>
       </div>

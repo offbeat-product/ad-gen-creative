@@ -488,8 +488,10 @@ export type Database = {
           id: string
           job_id: string | null
           narration_audio_url: string | null
+          narration_audio_url_b: string | null
           narration_script: string | null
           pattern_id: string
+          selected_voice: string | null
           status: string | null
           tonmana_index: number | null
           tonmana_name: string | null
@@ -504,8 +506,10 @@ export type Database = {
           id?: string
           job_id?: string | null
           narration_audio_url?: string | null
+          narration_audio_url_b?: string | null
           narration_script?: string | null
           pattern_id: string
+          selected_voice?: string | null
           status?: string | null
           tonmana_index?: number | null
           tonmana_name?: string | null
@@ -520,8 +524,10 @@ export type Database = {
           id?: string
           job_id?: string | null
           narration_audio_url?: string | null
+          narration_audio_url_b?: string | null
           narration_script?: string | null
           pattern_id?: string
+          selected_voice?: string | null
           status?: string | null
           tonmana_index?: number | null
           tonmana_name?: string | null

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -12,6 +12,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from '@/components/ui/dialog';
 import { RefreshCw, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,6 +23,8 @@ import type { WizardState } from '@/data/wizard-data';
 import ActionBar from './ActionBar';
 import VoiceSelector from './VoiceSelector';
 import NarrationAudioPlayer from './NarrationAudioPlayer';
+
+
 
 interface Props {
   pipeline: PipelineStep[];
@@ -39,12 +44,14 @@ interface Props {
   voiceSelectionPending?: boolean;
   voiceGenerating?: boolean;
   narrationAudioMap?: Record<string, string | null>;
+  narrationAudioMapB?: Record<string, string | null>;
+  selectedGender?: 'male' | 'female';
   onApprove: (idx: number) => void;
   onRegenerate: (idx: number) => void;
   onSwitchToAuto: () => void;
   onNavigateDashboard: () => void;
   onResultUpdated?: () => void;
-  onTriggerNarrationAudio?: (voiceId: string) => void;
+  onTriggerNarrationAudio?: (voiceIdA: string, voiceIdB: string, gender: 'male' | 'female') => void;
 }
 
 /* ─── Pattern naming helpers ─── */
@@ -883,9 +890,16 @@ const PreviewNAScript = ({ state, genStepResult, copyStepResult, appealAxesResul
   );
 };
 
-const PreviewNarration = ({ state, narrationAudioMap, jobId }: {
+const VOICE_NAMES: Record<string, Record<string, string>> = {
+  male: { a: '男性ボイス A', b: '男性ボイス B' },
+  female: { a: '女性ボイス A', b: '女性ボイス B' },
+};
+
+const PreviewNarration = ({ state, narrationAudioMap, narrationAudioMapB, selectedGender, jobId }: {
   state: WizardState;
   narrationAudioMap?: Record<string, string | null>;
+  narrationAudioMapB?: Record<string, string | null>;
+  selectedGender?: 'male' | 'female';
   jobId?: string | null;
 }) => {
   const [genPatterns, setGenPatterns] = useState<Array<{
@@ -894,6 +908,7 @@ const PreviewNarration = ({ state, narrationAudioMap, jobId }: {
     copy_text: string | null;
     narration_script: string | null;
     narration_audio_url: string | null;
+    narration_audio_url_b: string | null;
   }>>([]);
 
   useEffect(() => {
@@ -901,21 +916,24 @@ const PreviewNarration = ({ state, narrationAudioMap, jobId }: {
     const fetchPatterns = async () => {
       const { data } = await supabase
         .from('gen_patterns')
-        .select('pattern_id, appeal_axis_text, copy_text, narration_script, narration_audio_url')
+        .select('pattern_id, appeal_axis_text, copy_text, narration_script, narration_audio_url, narration_audio_url_b')
         .eq('job_id', jobId)
         .order('pattern_id', { ascending: true });
       if (data) setGenPatterns(data);
     };
     fetchPatterns();
-  }, [jobId, narrationAudioMap]);
+  }, [jobId, narrationAudioMap, narrationAudioMapB]);
 
-  // Merge narrationAudioMap into genPatterns (polling may have newer URLs)
   const patternsWithAudio = genPatterns.map(p => ({
     ...p,
     narration_audio_url: narrationAudioMap?.[p.pattern_id] ?? p.narration_audio_url,
+    narration_audio_url_b: narrationAudioMapB?.[p.pattern_id] ?? p.narration_audio_url_b,
   }));
 
   const hasPatterns = patternsWithAudio.length > 0;
+  const gender = selectedGender ?? 'male';
+  const voiceNameA = VOICE_NAMES[gender]?.a ?? 'ボイスA';
+  const voiceNameB = VOICE_NAMES[gender]?.b ?? 'ボイスB';
 
   if (!hasPatterns) {
     return (
@@ -954,14 +972,29 @@ const PreviewNarration = ({ state, narrationAudioMap, jobId }: {
                 )}
               </div>
 
-              {/* Audio Player */}
-              {p.narration_audio_url ? (
-                <NarrationAudioPlayer audioUrl={p.narration_audio_url} patternName={`パターン${p.pattern_id}`} />
-              ) : (
-                <div className="bg-muted rounded-lg p-4 text-center">
-                  <p className="text-sm text-muted-foreground">音声未生成</p>
-                </div>
-              )}
+              {/* Voice A */}
+              <div>
+                <p className="text-xs font-semibold text-secondary mb-1">🔵 {voiceNameA}</p>
+                {p.narration_audio_url ? (
+                  <NarrationAudioPlayer audioUrl={p.narration_audio_url} patternName={`パターン${p.pattern_id}_A`} />
+                ) : (
+                  <div className="bg-muted rounded-lg p-4 text-center">
+                    <p className="text-sm text-muted-foreground">音声未生成</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Voice B */}
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground mb-1">⚪ {voiceNameB}</p>
+                {p.narration_audio_url_b ? (
+                  <NarrationAudioPlayer audioUrl={p.narration_audio_url_b} patternName={`パターン${p.pattern_id}_B`} />
+                ) : (
+                  <div className="bg-muted rounded-lg p-4 text-center">
+                    <p className="text-sm text-muted-foreground">音声未生成</p>
+                  </div>
+                )}
+              </div>
             </div>
           </TabsContent>
         ))}
@@ -1220,12 +1253,14 @@ const generateDownloadText = (
 const PreviewPanel = ({
   pipeline, selectedStepIndex, completedIndexes, allDone, total, state,
   waitingForApproval, effectiveAutoMode, genStepResult, appealAxesResult, copyStepResult, compositionStepResult, narrationScriptResult, jobId,
-  voiceSelectionPending, voiceGenerating, narrationAudioMap,
+  voiceSelectionPending, voiceGenerating, narrationAudioMap, narrationAudioMapB, selectedGender,
   onApprove, onRegenerate, onSwitchToAuto, onNavigateDashboard, onResultUpdated, onTriggerNarrationAudio,
 }: Props) => {
   const { toast } = useToast();
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState<any>(null);
+  const [voiceApprovalOpen, setVoiceApprovalOpen] = useState(false);
+  const [chosenVoice, setChosenVoice] = useState<'a' | 'b'>('a');
 
   // Reset editing when step changes
   useEffect(() => {
@@ -1334,7 +1369,7 @@ const PreviewPanel = ({
         case 1: return <PreviewCopy isVideo state={state} genStepResult={displayData} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />;
         case 2: return <PreviewStoryboard isVideo state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />;
         case 3: return <PreviewNAScript state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} compositionStepResult={compositionStepResult} editing={editing} editData={editData} setEditData={setEditData} />;
-        case 4: return <PreviewNarration state={state} narrationAudioMap={narrationAudioMap} jobId={jobId} />;
+        case 4: return <PreviewNarration state={state} narrationAudioMap={narrationAudioMap} narrationAudioMapB={narrationAudioMapB} selectedGender={selectedGender} jobId={jobId} />;
         case 5: return <PreviewBGM />;
         case 6: return <PreviewVCon />;
         case 7: return <PreviewStyleFrames />;
@@ -1401,7 +1436,15 @@ const PreviewPanel = ({
 
           {showApprovalBar && !editing && (
             <div className="sticky bottom-0 px-6 py-3 flex items-center gap-3 border-t border-border bg-background">
-              <Button variant="brand" onClick={() => onApprove(waitingForApproval)}>
+              <Button variant="brand" onClick={() => {
+                // If narration step, show voice selection dialog
+                const currentStep = pipeline[waitingForApproval];
+                if (currentStep?.stepKey === 'narration') {
+                  setVoiceApprovalOpen(true);
+                } else {
+                  onApprove(waitingForApproval);
+                }
+              }}>
                 承認して次へ進む
               </Button>
               <Button variant="outline" onClick={() => onRegenerate(waitingForApproval)}>
@@ -1412,6 +1455,64 @@ const PreviewPanel = ({
               </button>
             </div>
           )}
+
+          {/* Voice selection dialog for narration approval */}
+          <Dialog open={voiceApprovalOpen} onOpenChange={setVoiceApprovalOpen}>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>どちらのボイスで進めますか？</DialogTitle>
+                <DialogDescription>選んだボイスが最終ナレーションとして使用されます。</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3 py-4">
+                {(['a', 'b'] as const).map((v) => {
+                  const gender = selectedGender ?? 'male';
+                  const voiceName = v === 'a'
+                    ? VOICE_NAMES[gender]?.a ?? 'ボイスA'
+                    : VOICE_NAMES[gender]?.b ?? 'ボイスB';
+                  return (
+                    <button
+                      key={v}
+                      onClick={() => setChosenVoice(v)}
+                      className={cn(
+                        'w-full rounded-xl p-4 border-2 text-left transition-all',
+                        chosenVoice === v
+                          ? 'border-secondary bg-secondary/5'
+                          : 'border-border hover:border-muted-foreground/30',
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          'w-5 h-5 rounded-full border-2 flex items-center justify-center',
+                          chosenVoice === v ? 'border-secondary' : 'border-muted-foreground/40',
+                        )}>
+                          {chosenVoice === v && <div className="w-2.5 h-2.5 rounded-full brand-gradient-bg" />}
+                        </div>
+                        <span className="text-sm font-semibold">
+                          {v === 'a' ? '🔵' : '⚪'} {voiceName}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setVoiceApprovalOpen(false)}>キャンセル</Button>
+                <Button variant="brand" onClick={async () => {
+                  // Update gen_patterns selected_voice
+                  if (jobId) {
+                    await supabase
+                      .from('gen_patterns')
+                      .update({ selected_voice: chosenVoice })
+                      .eq('job_id', jobId);
+                  }
+                  setVoiceApprovalOpen(false);
+                  onApprove(waitingForApproval);
+                }}>
+                  この声で決定
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           <ActionBar
             step={step}
