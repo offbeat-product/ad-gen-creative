@@ -395,6 +395,11 @@ const GenerateProgress = () => {
   const [dummyPhaseStarted, setDummyPhaseStarted] = useState(false);
   const [errorMap, setErrorMap] = useState<Record<number, string>>({});
 
+  // Voice selection + WF5 state
+  const [voiceSelectionPending, setVoiceSelectionPending] = useState(false);
+  const [voiceGenerating, setVoiceGenerating] = useState(false);
+  const [narrationAudioMap, setNarrationAudioMap] = useState<Record<string, string | null>>({});
+
   // ── Webhook dedup refs (per step) ──
   const step2TriggeredRef = useRef(false);
   const step3TriggeredRef = useRef(false);
