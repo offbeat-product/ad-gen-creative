@@ -421,6 +421,9 @@ const GenerateProgress = () => {
     setSelectedStepIndex(null);
     setErrorMap({});
     setDummyPhaseStarted(false);
+    setVoiceSelectionPending(false);
+    setVoiceGenerating(false);
+    setNarrationAudioMap({});
   }, [jobId]);
 
   const effectiveAutoMode = (jobData?.generation_mode === 'auto') || switchedToAuto;
