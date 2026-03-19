@@ -23,21 +23,8 @@ import type { WizardState } from '@/data/wizard-data';
 import ActionBar from './ActionBar';
 import VoiceSelector from './VoiceSelector';
 import NarrationAudioPlayer from './NarrationAudioPlayer';
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RefreshCw, Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import type { PipelineStep } from '@/pages/GenerateProgress';
-import type { WizardState } from '@/data/wizard-data';
-import ActionBar from './ActionBar';
-import VoiceSelector from './VoiceSelector';
-import NarrationAudioPlayer from './NarrationAudioPlayer';
+
+
 
 interface Props {
   pipeline: PipelineStep[];
