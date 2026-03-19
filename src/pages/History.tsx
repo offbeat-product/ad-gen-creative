@@ -18,12 +18,31 @@ import { useAuth } from '@/contexts/AuthContext';
 
 /* ─── Step progress logic ─── */
 
-const STEP_ORDER = ['appeal_axis', 'copy', 'composition', 'narration_script'];
+const VIDEO_STEPS = [
+  'appeal_axis', 'copy', 'composition', 'narration_script',
+  'narration_audio', 'bgm', 'vcon', 'styleframe',
+  'storyboard', 'video_horizontal', 'video_vertical',
+];
+
+const IMAGE_STEPS = [
+  'appeal_axis', 'copy', 'design_concept', 'layout', 'banner',
+];
+
 const STEP_LABELS: Record<string, string> = {
   appeal_axis: '訴求軸作成',
   copy: 'コピー作成',
   composition: '構成案・字コンテ作成',
   narration_script: 'NA原稿作成',
+  narration_audio: 'ナレーション作成',
+  bgm: 'BGM提案',
+  vcon: 'Vコン作成',
+  styleframe: 'スタイルフレーム作成',
+  storyboard: '絵コンテ作成',
+  video_horizontal: '横動画作成',
+  video_vertical: '縦動画・リサイズ',
+  design_concept: 'デザインコンセプト',
+  layout: 'レイアウト作成',
+  banner: '静止画バナー作成',
 };
 
 type JobProgressStatus = 'completed' | 'in_progress' | 'not_started';
@@ -36,25 +55,38 @@ interface JobProgress {
   totalSteps: number;
 }
 
-const getJobProgress = (steps: Array<{ step_key: string; status: string }>): JobProgress => {
-  let lastCompleted: string | null = null;
-  let completedCount = 0;
+const getJobProgress = (
+  creativeType: string,
+  steps: Array<{ step_key: string; status: string }>,
+  patterns?: Array<{ narration_audio_url: string | null }>,
+): JobProgress => {
+  const allSteps = creativeType === 'video' ? VIDEO_STEPS : IMAGE_STEPS;
+  const totalSteps = allSteps.length;
 
-  for (const stepKey of STEP_ORDER) {
-    const step = steps.find(s => s.step_key === stepKey);
-    if (step?.status === 'completed') {
-      lastCompleted = stepKey;
-      completedCount++;
+  let completedCount = 0;
+  let lastCompleted: string | null = null;
+  let nextStep: string | null = null;
+
+  for (const stepKey of allSteps) {
+    let isDone = false;
+    if (stepKey === 'narration_audio') {
+      // ナレーション作成はgen_patternsのnarration_audio_urlの有無で判定
+      isDone = (patterns ?? []).some(p => !!p.narration_audio_url);
     } else {
-      break;
+      const step = steps.find(s => s.step_key === stepKey);
+      isDone = step?.status === 'completed';
+    }
+
+    if (isDone) {
+      completedCount++;
+      lastCompleted = stepKey;
+    } else {
+      if (!nextStep) nextStep = stepKey;
     }
   }
 
-  const nextStepIndex = lastCompleted ? STEP_ORDER.indexOf(lastCompleted) + 1 : 0;
-  const nextStep = nextStepIndex < STEP_ORDER.length ? STEP_ORDER[nextStepIndex] : null;
-
   let status: JobProgressStatus;
-  if (completedCount === STEP_ORDER.length) {
+  if (completedCount === totalSteps) {
     status = 'completed';
   } else if (completedCount > 0) {
     status = 'in_progress';
@@ -62,7 +94,7 @@ const getJobProgress = (steps: Array<{ step_key: string; status: string }>): Job
     status = 'not_started';
   }
 
-  return { lastCompletedStep: lastCompleted, nextStep, status, completedCount, totalSteps: STEP_ORDER.length };
+  return { lastCompletedStep: lastCompleted, nextStep, status, completedCount, totalSteps };
 };
 
 /* ─── Types ─── */
