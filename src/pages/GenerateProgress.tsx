@@ -926,7 +926,7 @@ const GenerateProgress = () => {
             pipeline={pipeline} selectedStepIndex={selectedStepIndex} completedIndexes={completedIndexes}
             allDone={allDone} total={total} state={state} waitingForApproval={waitingForApproval}
             effectiveAutoMode={effectiveAutoMode} genStepResult={selectedGenStepResult} appealAxesResult={appealAxesStepResult}
-            copyStepResult={copyStepResult} compositionStepResult={compositionStepResult}
+            copyStepResult={copyStepResult} compositionStepResult={compositionStepResult} narrationScriptResult={narrationScriptStepResult}
             jobId={jobId} onApprove={handleApprove} onRegenerate={handleRegenerate}
             onSwitchToAuto={switchToAuto} onNavigateDashboard={() => navigate('/')}
             onResultUpdated={refreshGenSteps}
