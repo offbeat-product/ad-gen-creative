@@ -580,18 +580,24 @@ const GenerateProgress = () => {
     const interval = setInterval(async () => {
       const allTextDone = await doPoll();
       if (allTextDone && !dummyAnimationStartedRef.current) {
-        // In auto mode, start dummy animations immediately
+        // In auto mode, start dummy animations immediately (or show voice selection for video)
         if (isJobAutoMode) {
-          dummyAnimationStartedRef.current = true;
-          setDummyPhaseStarted(true);
-          clearInterval(interval);
-          if (firstDummyIndex >= 0 && firstDummyIndex < pipeline.length) {
-            setTimeout(() => setActiveIndex(firstDummyIndex), 500);
-          } else {
-            setAllDone(true);
-            setShowConfetti(true);
-            clearInterval(timerRef.current);
-            setTimeout(() => setShowConfetti(false), 3500);
+          if (state.creativeType === 'video' && !voiceSelectionPending && !voiceGenerating && Object.keys(narrationAudioMap).length === 0) {
+            // Show voice selection for video before starting dummy animations
+            setVoiceSelectionPending(true);
+            setWaitingForApproval(-1);
+          } else if (state.creativeType !== 'video' || Object.values(narrationAudioMap).some(v => v)) {
+            dummyAnimationStartedRef.current = true;
+            setDummyPhaseStarted(true);
+            clearInterval(interval);
+            if (firstDummyIndex >= 0 && firstDummyIndex < pipeline.length) {
+              setTimeout(() => setActiveIndex(firstDummyIndex), 500);
+            } else {
+              setAllDone(true);
+              setShowConfetti(true);
+              clearInterval(timerRef.current);
+              setTimeout(() => setShowConfetti(false), 3500);
+            }
           }
         }
         // In step mode, keep polling but don't start dummy yet (wait for approval)
