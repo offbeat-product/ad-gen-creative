@@ -1478,35 +1478,92 @@ const PreviewPanel = ({
     toast({ title: 'ダウンロード完了' });
   };
 
+  // Build accordion sections for previous steps (video pipeline only, steps 1-4)
+  const buildPreviousAccordions = (currentIdx: number) => {
+    if (!isVideo || currentIdx <= 0 || currentIdx > 3) return null;
+    const sections: JSX.Element[] = [];
+
+    const stepDefs: Array<{ maxIdx: number; title: string; result: any; render: () => React.ReactNode }> = [
+      {
+        maxIdx: 0, title: '訴求軸', result: appealAxesResult,
+        render: () => appealAxesResult?.appeal_axes ? (
+          <div className="space-y-1">{appealAxesResult.appeal_axes.map((a: any, i: number) => (
+            <p key={i} className="text-sm"><span className="font-medium">{a.index ?? i + 1}.</span> {a.axis_type ?? a.text ?? ''}{a.axis_label ? `（${a.axis_label}）` : ''}</p>
+          ))}</div>
+        ) : null,
+      },
+      {
+        maxIdx: 1, title: 'コピー', result: copyStepResult,
+        render: () => copyStepResult?.copies ? (
+          <div className="space-y-1">{copyStepResult.copies.slice(0, 9).map((c: any, i: number) => (
+            <p key={i} className="text-sm"><span className="font-mono text-xs text-muted-foreground mr-1">{c.pattern_id}</span>「{c.copy_text ?? ''}」</p>
+          ))}</div>
+        ) : null,
+      },
+      {
+        maxIdx: 2, title: '構成案・字コンテ', result: compositionStepResult,
+        render: () => compositionStepResult?.compositions ? (
+          <p className="text-sm text-muted-foreground">{compositionStepResult.compositions.length}パターンの構成案を生成済み</p>
+        ) : null,
+      },
+    ];
+
+    for (const def of stepDefs) {
+      if (def.maxIdx < currentIdx && def.result) {
+        const isImmediatePrevious = def.maxIdx === currentIdx - 1;
+        const content = def.render();
+        if (content) {
+          sections.push(
+            <AccordionSection key={def.title} title={def.title} defaultOpen={isImmediatePrevious}>
+              {content}
+            </AccordionSection>
+          );
+        }
+      }
+    }
+
+    return sections.length > 0 ? <div className="mb-4">{sections}</div> : null;
+  };
+
   const renderPreview = () => {
     if (!step || selectedStepIndex === null) return null;
     const displayData = editing ? editData : parsedResult;
 
+    let mainContent: React.ReactNode = null;
+
     if (isVideo) {
       switch (selectedStepIndex) {
-        case 0: return <PreviewAppealAxis isVideo state={state} genStepResult={displayData} editing={editing} editData={editData} setEditData={setEditData} />;
-        case 1: return <PreviewCopy isVideo state={state} genStepResult={displayData} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />;
-        case 2: return <PreviewStoryboard isVideo state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />;
-        case 3: return <PreviewNAScript state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} compositionStepResult={compositionStepResult} editing={editing} editData={editData} setEditData={setEditData} />;
-        case 4: return <PreviewNarration state={state} narrationAudioMap={narrationAudioMap} narrationAudioMapB={narrationAudioMapB} selectedGender={selectedGender} jobId={jobId} />;
-        case 5: return <PreviewBGM />;
-        case 6: return <PreviewVCon />;
-        case 7: return <PreviewStyleFrames />;
-        case 8: return <PreviewEkonte total={total} />;
-        case 9: return <PreviewFinalVideo total={total} state={state} aspect="16/9" resolution="1920 × 1080" />;
-        case 10: return <PreviewFinalVideo total={total} state={state} aspect="9/16" resolution="1080 × 1920" />;
+        case 0: mainContent = <PreviewAppealAxis isVideo state={state} genStepResult={displayData} editing={editing} editData={editData} setEditData={setEditData} />; break;
+        case 1: mainContent = <PreviewCopy isVideo state={state} genStepResult={displayData} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />; break;
+        case 2: mainContent = <PreviewStoryboard isVideo state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />; break;
+        case 3: mainContent = <PreviewNAScript state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} compositionStepResult={compositionStepResult} editing={editing} editData={editData} setEditData={setEditData} />; break;
+        case 4: return <PreviewNarration state={state} narrationAudioMap={narrationAudioMap} narrationAudioMapB={narrationAudioMapB} selectedGender={selectedGender} jobId={jobId} appealAxesResult={appealAxesResult} copyStepResult={copyStepResult} compositionStepResult={compositionStepResult} narrationScriptResult={narrationScriptResult} />;
+        case 5: mainContent = <PreviewBGM />; break;
+        case 6: mainContent = <PreviewVCon />; break;
+        case 7: mainContent = <PreviewStyleFrames />; break;
+        case 8: mainContent = <PreviewEkonte total={total} />; break;
+        case 9: mainContent = <PreviewFinalVideo total={total} state={state} aspect="16/9" resolution="1920 × 1080" />; break;
+        case 10: mainContent = <PreviewFinalVideo total={total} state={state} aspect="9/16" resolution="1080 × 1920" />; break;
         default: return null;
       }
     } else {
       switch (selectedStepIndex) {
-        case 0: return <PreviewAppealAxis isVideo={false} state={state} genStepResult={displayData} editing={editing} editData={editData} setEditData={setEditData} />;
-        case 1: return <PreviewCopy isVideo={false} state={state} genStepResult={displayData} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />;
-        case 2: return <PreviewStoryboard isVideo={false} state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />;
-        case 3: return <PreviewToneManner />;
-        case 4: return <PreviewBannerImages total={total} state={state} />;
+        case 0: mainContent = <PreviewAppealAxis isVideo={false} state={state} genStepResult={displayData} editing={editing} editData={editData} setEditData={setEditData} />; break;
+        case 1: mainContent = <PreviewCopy isVideo={false} state={state} genStepResult={displayData} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />; break;
+        case 2: mainContent = <PreviewStoryboard isVideo={false} state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />; break;
+        case 3: mainContent = <PreviewToneManner />; break;
+        case 4: mainContent = <PreviewBannerImages total={total} state={state} />; break;
         default: return null;
       }
     }
+
+    const accordions = buildPreviousAccordions(selectedStepIndex);
+    return (
+      <>
+        {accordions}
+        {mainContent}
+      </>
+    );
   };
 
   return (
