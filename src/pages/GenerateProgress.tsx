@@ -400,6 +400,8 @@ const GenerateProgress = () => {
   const [voiceSelectionPending, setVoiceSelectionPending] = useState(false);
   const [voiceGenerating, setVoiceGenerating] = useState(false);
   const [narrationAudioMap, setNarrationAudioMap] = useState<Record<string, string | null>>({});
+  const [narrationAudioMapB, setNarrationAudioMapB] = useState<Record<string, string | null>>({});
+  const [selectedGender, setSelectedGender] = useState<'male' | 'female'>('male');
 
   // ── Webhook dedup refs (per step) ──
   const step2TriggeredRef = useRef(false);
