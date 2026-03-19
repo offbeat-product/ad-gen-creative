@@ -12,12 +12,14 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { PipelineStep } from '@/pages/GenerateProgress';
 import type { WizardState } from '@/data/wizard-data';
 import ActionBar from './ActionBar';
+import VoiceSelector from './VoiceSelector';
+import NarrationAudioPlayer from './NarrationAudioPlayer';
 
 interface Props {
   pipeline: PipelineStep[];
@@ -32,12 +34,17 @@ interface Props {
   appealAxesResult?: any;
   copyStepResult?: any;
   compositionStepResult?: any;
+  narrationScriptResult?: any;
   jobId?: string | null;
+  voiceSelectionPending?: boolean;
+  voiceGenerating?: boolean;
+  narrationAudioMap?: Record<string, string | null>;
   onApprove: (idx: number) => void;
   onRegenerate: (idx: number) => void;
   onSwitchToAuto: () => void;
   onNavigateDashboard: () => void;
   onResultUpdated?: () => void;
+  onTriggerNarrationAudio?: (voiceId: string) => void;
 }
 
 /* ─── Pattern naming helpers ─── */
@@ -876,12 +883,102 @@ const PreviewNAScript = ({ state, genStepResult, copyStepResult, appealAxesResul
   );
 };
 
-const PreviewNarration = () => (
-  <div className="space-y-3">
-    <AudioPlayer label="音声タイプ: 女性ナチュラル" />
-    <p className="text-xs text-muted-foreground">※ デモ用プレースホルダーです</p>
-  </div>
-);
+const PreviewNarration = ({ state, narrationAudioMap, genStepResult, copyStepResult, appealAxesResult, compositionStepResult }: {
+  state: WizardState;
+  narrationAudioMap?: Record<string, string | null>;
+  genStepResult?: any;
+  copyStepResult?: any;
+  appealAxesResult?: any;
+  compositionStepResult?: any;
+}) => {
+  const copyCount = state.copyPatterns;
+  const scriptCount = state.appealAxis * copyCount;
+  const tabKeys = Array.from({ length: Math.min(scriptCount, 9) }, (_, i) => ALPHA[i]);
+  const hasAnyAudio = narrationAudioMap && Object.values(narrationAudioMap).some(v => v);
+
+  // Get narration scripts from NA step result for display alongside audio
+  const realNarrations: any[] | null = (() => {
+    try {
+      if (genStepResult?.narrations && Array.isArray(genStepResult.narrations)) return genStepResult.narrations;
+    } catch {}
+    return null;
+  })();
+
+  const narrationByPattern: Record<string, any> = {};
+  if (realNarrations) {
+    for (const n of realNarrations) {
+      if (n.pattern_id) narrationByPattern[n.pattern_id] = n;
+    }
+  }
+
+  const compositionByPattern: Record<string, any> = {};
+  if (compositionStepResult?.compositions && Array.isArray(compositionStepResult.compositions)) {
+    for (const comp of compositionStepResult.compositions) {
+      if (comp.pattern_id) compositionByPattern[comp.pattern_id] = comp;
+    }
+  }
+
+  if (hasAnyAudio) {
+    return (
+      <div className="space-y-4">
+        <Badge className="bg-success-wash text-success text-xs">AI生成音声</Badge>
+        <Tabs defaultValue={tabKeys[0]}>
+          <TabsList className="w-full flex-wrap h-auto gap-1">
+            {tabKeys.map((letter) => (
+              <TabsTrigger key={letter} value={letter} className="text-xs font-mono">{letter}</TabsTrigger>
+            ))}
+          </TabsList>
+          {tabKeys.map((letter) => {
+            const audioUrl = narrationAudioMap?.[letter];
+            const narration = narrationByPattern[letter];
+            const naSections: any[] = narration?.sections ?? [];
+            const composition = compositionByPattern[letter];
+            const compScenes: any[] = composition?.scenes ?? [];
+
+            return (
+              <TabsContent key={letter} value={letter}>
+                <div className="mt-3 space-y-4">
+                  <PatternHeader patternId={letter} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} />
+
+                  {/* NA Script sections */}
+                  {naSections.length > 0 && (
+                    <div>
+                      {naSections.map((sec: any, j: number) => (
+                        <div key={j} className="bg-accent/30 rounded-lg p-3 mb-2">
+                          <div className="flex items-center gap-2 mb-2">
+                            {sec.time_range && <Badge variant="outline" className="text-xs">{sec.time_range}</Badge>}
+                            <Badge className="bg-secondary text-secondary-foreground text-xs">【{sec.part}】</Badge>
+                          </div>
+                          <p className="text-sm leading-relaxed">{sec.text}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Audio Player */}
+                  {audioUrl ? (
+                    <NarrationAudioPlayer audioUrl={audioUrl} patternName={`パターン${letter}`} />
+                  ) : (
+                    <div className="bg-muted rounded-lg p-4 text-center">
+                      <p className="text-sm text-muted-foreground">音声未生成</p>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            );
+          })}
+        </Tabs>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <AudioPlayer label="音声タイプ: 女性ナチュラル" />
+      <p className="text-xs text-muted-foreground">※ デモ用プレースホルダーです</p>
+    </div>
+  );
+};
 
 const PreviewBGM = () => (
   <div className="space-y-3">
@@ -1132,8 +1229,9 @@ const generateDownloadText = (
 
 const PreviewPanel = ({
   pipeline, selectedStepIndex, completedIndexes, allDone, total, state,
-  waitingForApproval, effectiveAutoMode, genStepResult, appealAxesResult, copyStepResult, compositionStepResult, jobId,
-  onApprove, onRegenerate, onSwitchToAuto, onNavigateDashboard, onResultUpdated,
+  waitingForApproval, effectiveAutoMode, genStepResult, appealAxesResult, copyStepResult, compositionStepResult, narrationScriptResult, jobId,
+  voiceSelectionPending, voiceGenerating, narrationAudioMap,
+  onApprove, onRegenerate, onSwitchToAuto, onNavigateDashboard, onResultUpdated, onTriggerNarrationAudio,
 }: Props) => {
   const { toast } = useToast();
   const [editing, setEditing] = useState(false);
@@ -1155,7 +1253,36 @@ const PreviewPanel = ({
   })();
   const isVideo = state.creativeType === 'video';
   const noSelection = selectedStepIndex === null || !completedIndexes.has(selectedStepIndex);
-  const showApprovalBar = !effectiveAutoMode && waitingForApproval >= 0;
+  const showApprovalBar = !effectiveAutoMode && waitingForApproval >= 0 && !voiceSelectionPending;
+
+  // Show voice selection or voice generating state
+  if (voiceSelectionPending && onTriggerNarrationAudio) {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="px-6 pt-5 pb-3">
+          <div className="flex items-center gap-3">
+            <Sparkles className="h-5 w-5 text-secondary" />
+            <h2 className="text-lg font-bold font-display">ナレーション音声生成</h2>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">NA原稿が承認されました。ボイスを選択して音声を生成します。</p>
+        </div>
+        <Separator />
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          <VoiceSelector onGenerate={onTriggerNarrationAudio} />
+        </div>
+      </div>
+    );
+  }
+
+  if (voiceGenerating) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center px-8">
+        <Loader2 className="h-12 w-12 text-secondary animate-spin mb-4" />
+        <p className="text-lg font-medium mb-2">ナレーション音声を生成中...</p>
+        <p className="text-sm text-muted-foreground">AI音声でNA原稿を読み上げています。しばらくお待ちください。</p>
+      </div>
+    );
+  }
 
   if (noSelection && !allDone && !showApprovalBar) return <EmptyState />;
 
@@ -1217,7 +1344,7 @@ const PreviewPanel = ({
         case 1: return <PreviewCopy isVideo state={state} genStepResult={displayData} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />;
         case 2: return <PreviewStoryboard isVideo state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />;
         case 3: return <PreviewNAScript state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} compositionStepResult={compositionStepResult} editing={editing} editData={editData} setEditData={setEditData} />;
-        case 4: return <PreviewNarration />;
+        case 4: return <PreviewNarration state={state} narrationAudioMap={narrationAudioMap} genStepResult={narrationScriptResult} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} compositionStepResult={compositionStepResult} />;
         case 5: return <PreviewBGM />;
         case 6: return <PreviewVCon />;
         case 7: return <PreviewStyleFrames />;

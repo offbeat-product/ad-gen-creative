@@ -487,6 +487,7 @@ export type Database = {
           created_at: string | null
           id: string
           job_id: string | null
+          narration_audio_url: string | null
           narration_script: string | null
           pattern_id: string
           status: string | null
@@ -502,6 +503,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           job_id?: string | null
+          narration_audio_url?: string | null
           narration_script?: string | null
           pattern_id: string
           status?: string | null
@@ -517,6 +519,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           job_id?: string | null
+          narration_audio_url?: string | null
           narration_script?: string | null
           pattern_id?: string
           status?: string | null

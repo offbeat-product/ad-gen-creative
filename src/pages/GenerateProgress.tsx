@@ -139,6 +139,8 @@ const WEBHOOK_URLS: Record<string, string> = {
   narration_script: 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step4',
 };
 
+const WF5_WEBHOOK_URL = 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step5';
+
 /* ─── Confetti ─── */
 
 const Confetti = () => {
@@ -393,6 +395,11 @@ const GenerateProgress = () => {
   const [dummyPhaseStarted, setDummyPhaseStarted] = useState(false);
   const [errorMap, setErrorMap] = useState<Record<number, string>>({});
 
+  // Voice selection + WF5 state
+  const [voiceSelectionPending, setVoiceSelectionPending] = useState(false);
+  const [voiceGenerating, setVoiceGenerating] = useState(false);
+  const [narrationAudioMap, setNarrationAudioMap] = useState<Record<string, string | null>>({});
+
   // ── Webhook dedup refs (per step) ──
   const step2TriggeredRef = useRef(false);
   const step3TriggeredRef = useRef(false);
@@ -414,6 +421,9 @@ const GenerateProgress = () => {
     setSelectedStepIndex(null);
     setErrorMap({});
     setDummyPhaseStarted(false);
+    setVoiceSelectionPending(false);
+    setVoiceGenerating(false);
+    setNarrationAudioMap({});
   }, [jobId]);
 
   const effectiveAutoMode = (jobData?.generation_mode === 'auto') || switchedToAuto;
@@ -570,18 +580,24 @@ const GenerateProgress = () => {
     const interval = setInterval(async () => {
       const allTextDone = await doPoll();
       if (allTextDone && !dummyAnimationStartedRef.current) {
-        // In auto mode, start dummy animations immediately
+        // In auto mode, start dummy animations immediately (or show voice selection for video)
         if (isJobAutoMode) {
-          dummyAnimationStartedRef.current = true;
-          setDummyPhaseStarted(true);
-          clearInterval(interval);
-          if (firstDummyIndex >= 0 && firstDummyIndex < pipeline.length) {
-            setTimeout(() => setActiveIndex(firstDummyIndex), 500);
-          } else {
-            setAllDone(true);
-            setShowConfetti(true);
-            clearInterval(timerRef.current);
-            setTimeout(() => setShowConfetti(false), 3500);
+          if (state.creativeType === 'video' && !voiceSelectionPending && !voiceGenerating && Object.keys(narrationAudioMap).length === 0) {
+            // Show voice selection for video before starting dummy animations
+            setVoiceSelectionPending(true);
+            setWaitingForApproval(-1);
+          } else if (state.creativeType !== 'video' || Object.values(narrationAudioMap).some(v => v)) {
+            dummyAnimationStartedRef.current = true;
+            setDummyPhaseStarted(true);
+            clearInterval(interval);
+            if (firstDummyIndex >= 0 && firstDummyIndex < pipeline.length) {
+              setTimeout(() => setActiveIndex(firstDummyIndex), 500);
+            } else {
+              setAllDone(true);
+              setShowConfetti(true);
+              clearInterval(timerRef.current);
+              setTimeout(() => setShowConfetti(false), 3500);
+            }
           }
         }
         // In step mode, keep polling but don't start dummy yet (wait for approval)
@@ -673,7 +689,12 @@ const GenerateProgress = () => {
       }
 
       if (currentOrderIdx === TEXT_STEP_KEYS.length - 1) {
-        // Last text step approved → start dummy animations
+        // Last text step (narration_script) approved → show voice selection
+        if (state.creativeType === 'video') {
+          setVoiceSelectionPending(true);
+          return;
+        }
+        // Banner: no voice needed, start dummy animations
         dummyAnimationStartedRef.current = true;
         setDummyPhaseStarted(true);
         if (firstDummyIndex >= 0 && firstDummyIndex < pipeline.length) {
@@ -724,6 +745,75 @@ const GenerateProgress = () => {
     if (steps) setGenStepsData(steps as GenStepRow[]);
   }, [jobId]);
 
+  // ── WF5: Trigger narration audio generation ──
+  const triggerNarrationAudio = useCallback(async (voiceId: string) => {
+    if (!jobId) return;
+    setVoiceGenerating(true);
+    setVoiceSelectionPending(false);
+
+    // Set narration step as active
+    const narrationIdx = stepKeyToIndex.get('narration');
+    if (narrationIdx !== undefined) {
+      setActiveIndex(narrationIdx);
+    }
+
+    try {
+      const response = await fetch(WF5_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ job_id: jobId, voice_id: voiceId }),
+      });
+      console.log('[WF5] Response status:', response.status);
+
+      // Start polling gen_patterns for narration_audio_url
+      const pollAudio = async () => {
+        const { data: patterns } = await supabase
+          .from('gen_patterns')
+          .select('id, pattern_id, narration_audio_url')
+          .eq('job_id', jobId)
+          .order('pattern_id', { ascending: true });
+
+        if (!patterns) return false;
+
+        const audioMap: Record<string, string | null> = {};
+        let allDone = true;
+        for (const p of patterns) {
+          audioMap[p.pattern_id] = p.narration_audio_url;
+          if (!p.narration_audio_url) allDone = false;
+        }
+        setNarrationAudioMap(audioMap);
+        return allDone;
+      };
+
+      // Poll every 3 seconds
+      const audioInterval = setInterval(async () => {
+        const done = await pollAudio();
+        if (done) {
+          clearInterval(audioInterval);
+          setVoiceGenerating(false);
+          // Mark narration step as completed
+          if (narrationIdx !== undefined) {
+            setCompletedIndexes(prev => new Set(prev).add(narrationIdx));
+            setSelectedStepIndex(narrationIdx);
+          }
+          // Start dummy animations for remaining steps
+          dummyAnimationStartedRef.current = true;
+          setDummyPhaseStarted(true);
+          const nextDummyIdx = pipeline.findIndex((s, i) => i > (narrationIdx ?? 4) && !TEXT_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
+          if (nextDummyIdx >= 0) {
+            setTimeout(() => setActiveIndex(nextDummyIdx), 500);
+          }
+        }
+      }, 3000);
+
+      // Also do an immediate check
+      await pollAudio();
+    } catch (e) {
+      console.error('[WF5] Failed:', e);
+      setVoiceGenerating(false);
+    }
+  }, [jobId, pipeline, stepKeyToIndex]);
+
   const handleStepClick = (idx: number) => {
     if (completedIndexes.has(idx)) {
       userSelectedStepRef.current = idx;
@@ -764,6 +854,16 @@ const GenerateProgress = () => {
   // Get composition step result for cross-referencing in NA script display
   const compositionStepResult = (() => {
     const genStep = genStepsData.find(gs => gs.step_key === 'composition');
+    if (!genStep?.result) return null;
+    try {
+      const r = typeof genStep.result === 'string' ? JSON.parse(genStep.result as string) : genStep.result;
+      return r;
+    } catch { return null; }
+  })();
+
+  // Get narration_script step result for narration audio preview
+  const narrationScriptStepResult = (() => {
+    const genStep = genStepsData.find(gs => gs.step_key === 'narration_script');
     if (!genStep?.result) return null;
     try {
       const r = typeof genStep.result === 'string' ? JSON.parse(genStep.result as string) : genStep.result;
@@ -832,10 +932,12 @@ const GenerateProgress = () => {
             pipeline={pipeline} selectedStepIndex={selectedStepIndex} completedIndexes={completedIndexes}
             allDone={allDone} total={total} state={state} waitingForApproval={waitingForApproval}
             effectiveAutoMode={effectiveAutoMode} genStepResult={selectedGenStepResult} appealAxesResult={appealAxesStepResult}
-            copyStepResult={copyStepResult} compositionStepResult={compositionStepResult}
+            copyStepResult={copyStepResult} compositionStepResult={compositionStepResult} narrationScriptResult={narrationScriptStepResult}
             jobId={jobId} onApprove={handleApprove} onRegenerate={handleRegenerate}
             onSwitchToAuto={switchToAuto} onNavigateDashboard={() => navigate('/')}
             onResultUpdated={refreshGenSteps}
+            voiceSelectionPending={voiceSelectionPending} voiceGenerating={voiceGenerating}
+            narrationAudioMap={narrationAudioMap} onTriggerNarrationAudio={triggerNarrationAudio}
           />
         </div>
       </div>
@@ -856,10 +958,12 @@ const GenerateProgress = () => {
             pipeline={pipeline} selectedStepIndex={selectedStepIndex} completedIndexes={completedIndexes}
             allDone={allDone} total={total} state={state} waitingForApproval={waitingForApproval}
             effectiveAutoMode={effectiveAutoMode} genStepResult={selectedGenStepResult} appealAxesResult={appealAxesStepResult}
-            copyStepResult={copyStepResult} compositionStepResult={compositionStepResult}
+            copyStepResult={copyStepResult} compositionStepResult={compositionStepResult} narrationScriptResult={narrationScriptStepResult}
             jobId={jobId} onApprove={handleApprove} onRegenerate={handleRegenerate}
             onSwitchToAuto={switchToAuto} onNavigateDashboard={() => navigate('/')}
             onResultUpdated={refreshGenSteps}
+            voiceSelectionPending={voiceSelectionPending} voiceGenerating={voiceGenerating}
+            narrationAudioMap={narrationAudioMap} onTriggerNarrationAudio={triggerNarrationAudio}
           />
         </div>
       </div>
