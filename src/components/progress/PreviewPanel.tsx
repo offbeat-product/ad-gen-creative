@@ -915,12 +915,16 @@ const VOICE_NAMES: Record<string, Record<string, string>> = {
   female: { a: '女性ボイス A', b: '女性ボイス B' },
 };
 
-const PreviewNarration = ({ state, narrationAudioMap, narrationAudioMapB, selectedGender, jobId }: {
+const PreviewNarration = ({ state, narrationAudioMap, narrationAudioMapB, selectedGender, jobId, appealAxesResult, copyStepResult, compositionStepResult, narrationScriptResult }: {
   state: WizardState;
   narrationAudioMap?: Record<string, string | null>;
   narrationAudioMapB?: Record<string, string | null>;
   selectedGender?: 'male' | 'female';
   jobId?: string | null;
+  appealAxesResult?: any;
+  copyStepResult?: any;
+  compositionStepResult?: any;
+  narrationScriptResult?: any;
 }) => {
   const [genPatterns, setGenPatterns] = useState<Array<{
     pattern_id: string;
@@ -930,6 +934,7 @@ const PreviewNarration = ({ state, narrationAudioMap, narrationAudioMapB, select
     narration_audio_url: string | null;
     narration_audio_url_b: string | null;
   }>>([]);
+  const [selectedVoice, setSelectedVoice] = useState<'a' | 'b'>('a');
 
   useEffect(() => {
     if (!jobId) return;
@@ -950,12 +955,15 @@ const PreviewNarration = ({ state, narrationAudioMap, narrationAudioMapB, select
     narration_audio_url_b: narrationAudioMapB?.[p.pattern_id] ?? p.narration_audio_url_b,
   }));
 
-  const hasPatterns = patternsWithAudio.length > 0;
-  const gender = selectedGender ?? 'male';
-  const voiceNameA = VOICE_NAMES[gender]?.a ?? 'ボイスA';
-  const voiceNameB = VOICE_NAMES[gender]?.b ?? 'ボイスB';
+  // Group by base letter (strip trailing tone number)
+  const getBaseLetter = (pid: string) => pid.replace(/\d+$/, '');
+  const uniqueLetters = [...new Set(patternsWithAudio.map(p => getBaseLetter(p.pattern_id)))].sort();
 
-  if (!hasPatterns) {
+  const gender = selectedGender ?? 'male';
+  const voiceNameA = VOICE_NAMES[gender]?.a ?? 'サンプルボイスA';
+  const voiceNameB = VOICE_NAMES[gender]?.b ?? 'サンプルボイスB';
+
+  if (uniqueLetters.length === 0) {
     return (
       <div className="space-y-3">
         <AudioPlayer label="音声タイプ: 女性ナチュラル" />
@@ -964,60 +972,151 @@ const PreviewNarration = ({ state, narrationAudioMap, narrationAudioMapB, select
     );
   }
 
+  const getPatternForLetter = (letter: string) =>
+    patternsWithAudio.find(p => getBaseLetter(p.pattern_id) === letter);
+
+  const getCompositionForLetter = (letter: string) => {
+    if (!compositionStepResult?.compositions) return null;
+    return compositionStepResult.compositions.find((c: any) => c.pattern_id === letter);
+  };
+
+  const getNarrationForLetter = (letter: string) => {
+    if (!narrationScriptResult?.narrations) return null;
+    return narrationScriptResult.narrations.find((n: any) => n.pattern_id === letter);
+  };
+
   return (
     <div className="space-y-4">
       <Badge className="bg-success-wash text-success text-xs">AI生成音声</Badge>
-      <Tabs defaultValue={patternsWithAudio[0]?.pattern_id}>
+
+      {/* Voice A/B toggle */}
+      <div className="flex gap-2">
+        {(['a', 'b'] as const).map(v => (
+          <button
+            key={v}
+            onClick={() => setSelectedVoice(v)}
+            className={cn(
+              'flex-1 py-2.5 px-4 rounded-xl text-sm font-medium transition-all',
+              selectedVoice === v
+                ? 'brand-gradient-bg text-primary-foreground shadow-md'
+                : 'bg-muted text-muted-foreground hover:bg-accent',
+            )}
+          >
+            {v === 'a' ? `🔵 ${voiceNameA}` : `⚪ ${voiceNameB}`}
+          </button>
+        ))}
+      </div>
+
+      {/* Pattern A-I tabs */}
+      <Tabs defaultValue={uniqueLetters[0]}>
         <TabsList className="w-full flex-wrap h-auto gap-1">
-          {patternsWithAudio.map((p) => (
-            <TabsTrigger key={p.pattern_id} value={p.pattern_id} className="text-xs font-mono">{p.pattern_id}</TabsTrigger>
+          {uniqueLetters.map(letter => (
+            <TabsTrigger key={letter} value={letter} className="text-xs font-mono">{letter}</TabsTrigger>
           ))}
         </TabsList>
-        {patternsWithAudio.map((p) => (
-          <TabsContent key={p.pattern_id} value={p.pattern_id}>
-            <div className="mt-3 space-y-4">
-              {/* Pattern info */}
-              <div className="space-y-2">
-                {p.appeal_axis_text && (
-                  <div className="bg-accent/30 rounded-lg p-3">
-                    <p className="text-xs font-medium text-muted-foreground mb-1">訴求軸</p>
-                    <p className="text-sm">{p.appeal_axis_text}</p>
-                  </div>
-                )}
-                {p.copy_text && (
-                  <div className="bg-accent/30 rounded-lg p-3">
-                    <p className="text-xs font-medium text-muted-foreground mb-1">コピー</p>
-                    <p className="text-sm font-medium">「{p.copy_text}」</p>
-                  </div>
-                )}
-              </div>
+        {uniqueLetters.map(letter => {
+          const pattern = getPatternForLetter(letter);
+          const composition = getCompositionForLetter(letter);
+          const narration = getNarrationForLetter(letter);
+          const audioUrl = selectedVoice === 'a' ? pattern?.narration_audio_url : pattern?.narration_audio_url_b;
 
-              {/* Voice A */}
-              <div>
-                <p className="text-xs font-semibold text-secondary mb-1">🔵 {voiceNameA}</p>
-                {p.narration_audio_url ? (
-                  <NarrationAudioPlayer audioUrl={p.narration_audio_url} patternName={`パターン${p.pattern_id}_A`} />
-                ) : (
-                  <div className="bg-muted rounded-lg p-4 text-center">
-                    <p className="text-sm text-muted-foreground">音声未生成</p>
+          return (
+            <TabsContent key={letter} value={letter}>
+              <div className="mt-3 space-y-3">
+                {/* Pattern summary */}
+                {(pattern?.appeal_axis_text || pattern?.copy_text) && (
+                  <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">
+                    {pattern?.appeal_axis_text && (
+                      <div className="flex gap-2">
+                        <span className="text-muted-foreground shrink-0 w-14">訴求軸:</span>
+                        <span className="font-medium">{pattern.appeal_axis_text}</span>
+                      </div>
+                    )}
+                    {pattern?.copy_text && (
+                      <div className="flex gap-2">
+                        <span className="text-muted-foreground shrink-0 w-14">コピー:</span>
+                        <span className="font-medium">「{pattern.copy_text}」</span>
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
 
-              {/* Voice B */}
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground mb-1">⚪ {voiceNameB}</p>
-                {p.narration_audio_url_b ? (
-                  <NarrationAudioPlayer audioUrl={p.narration_audio_url_b} patternName={`パターン${p.pattern_id}_B`} />
-                ) : (
-                  <div className="bg-muted rounded-lg p-4 text-center">
-                    <p className="text-sm text-muted-foreground">音声未生成</p>
-                  </div>
+                {/* Closed accordions for older previous steps */}
+                {appealAxesResult?.appeal_axes && (
+                  <AccordionSection title="訴求軸" defaultOpen={false}>
+                    <div className="space-y-2">
+                      {appealAxesResult.appeal_axes.map((axis: any, i: number) => (
+                        <div key={i} className="text-sm">
+                          <span className="font-medium">{axis.index ?? i + 1}. {axis.axis_type ?? ''}</span>
+                          {axis.axis_label && <span className="text-muted-foreground">（{axis.axis_label}）</span>}
+                          {axis.text && <p className="text-muted-foreground ml-4">{axis.text}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionSection>
                 )}
+
+                {copyStepResult?.copies && (
+                  <AccordionSection title="コピー" defaultOpen={false}>
+                    <div className="space-y-1">
+                      {copyStepResult.copies.slice(0, 9).map((c: any, i: number) => (
+                        <p key={i} className="text-sm">
+                          <span className="font-mono text-xs text-muted-foreground mr-1">{c.pattern_id}</span>
+                          「{c.copy_text ?? ''}」
+                        </p>
+                      ))}
+                    </div>
+                  </AccordionSection>
+                )}
+
+                {composition && (
+                  <AccordionSection title="構成案・字コンテ" defaultOpen={false}>
+                    <div className="space-y-2">
+                      {(composition.scenes ?? []).map((scene: any, j: number) => (
+                        <div key={j} className="text-sm">
+                          <span className="font-medium">【{scene.part ?? scene.type}】</span>
+                          {scene.time_range && <span className="text-muted-foreground text-xs ml-1">{scene.time_range}</span>}
+                          {scene.telop && <p className="text-muted-foreground ml-4">テロップ: {scene.telop}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionSection>
+                )}
+
+                {/* Open accordion for immediate previous step (NA原稿) */}
+                {narration && (
+                  <AccordionSection title="NA原稿" defaultOpen={true}>
+                    <div className="space-y-2">
+                      {(narration.sections ?? []).map((sec: any, j: number) => (
+                        <div key={j} className="bg-accent/30 rounded-lg p-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            {sec.time_range && <Badge variant="outline" className="text-xs">{sec.time_range}</Badge>}
+                            <Badge className="bg-secondary text-secondary-foreground text-xs">【{sec.part}】</Badge>
+                          </div>
+                          <p className="text-sm leading-relaxed">{sec.text}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionSection>
+                )}
+
+                {/* Main content: Audio player */}
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">
+                    ▶ ナレーション音声（{selectedVoice === 'a' ? voiceNameA : voiceNameB}）
+                  </p>
+                  {audioUrl ? (
+                    <NarrationAudioPlayer audioUrl={audioUrl} patternName={`パターン${letter}_${selectedVoice === 'a' ? 'A' : 'B'}`} />
+                  ) : (
+                    <div className="bg-muted rounded-lg p-4 text-center">
+                      <p className="text-sm text-muted-foreground">音声未生成</p>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          </TabsContent>
-        ))}
+            </TabsContent>
+          );
+        })}
       </Tabs>
     </div>
   );
