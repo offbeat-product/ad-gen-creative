@@ -39,12 +39,14 @@ interface Props {
   voiceSelectionPending?: boolean;
   voiceGenerating?: boolean;
   narrationAudioMap?: Record<string, string | null>;
+  narrationAudioMapB?: Record<string, string | null>;
+  selectedGender?: 'male' | 'female';
   onApprove: (idx: number) => void;
   onRegenerate: (idx: number) => void;
   onSwitchToAuto: () => void;
   onNavigateDashboard: () => void;
   onResultUpdated?: () => void;
-  onTriggerNarrationAudio?: (voiceId: string) => void;
+  onTriggerNarrationAudio?: (voiceIdA: string, voiceIdB: string, gender: 'male' | 'female') => void;
 }
 
 /* ─── Pattern naming helpers ─── */
