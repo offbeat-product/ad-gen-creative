@@ -134,6 +134,7 @@ export const makeVideoPipeline = (s: WizardState): PipelineStep[] => {
 /* ─── Webhook URLs ─── */
 
 const WEBHOOK_URLS: Record<string, string> = {
+  appeal_axis: 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step1',
   copy: 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step2',
   composition: 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step3',
   narration_script: 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step4',
@@ -720,13 +721,153 @@ const GenerateProgress = () => {
     }
   }, [pipeline, jobId, jobData, genStepsData, jobMeta, firstDummyIndex]);
 
-  const handleRegenerate = useCallback((idx: number) => {
+  const handleRegenerate = useCallback(async (idx: number) => {
+    if (!jobId || !jobData) {
+      // Legacy demo mode: just re-run dummy animation
+      setCompletedIndexes(prev => { const s = new Set(prev); s.delete(idx); return s; });
+      setWaitingForApproval(-1);
+      setCountUpValues(prev => { const n = { ...prev }; delete n[idx]; return n; });
+      setActiveIndex(-1);
+      setTimeout(() => setActiveIndex(idx), 100);
+      return;
+    }
+
+    const stepKey = pipeline[idx]?.stepKey;
+    if (!stepKey || !TEXT_STEP_KEYS.includes(stepKey)) {
+      // Non-text step: just re-run dummy animation
+      setCompletedIndexes(prev => { const s = new Set(prev); s.delete(idx); return s; });
+      setWaitingForApproval(-1);
+      setActiveIndex(-1);
+      setTimeout(() => setActiveIndex(idx), 100);
+      return;
+    }
+
+    const confirmed = window.confirm('この工程を再生成しますか？現在の結果は上書きされます。');
+    if (!confirmed) return;
+
+    // 1. Reset gen_step status
+    await supabase
+      .from('gen_steps')
+      .update({
+        status: 'pending',
+        result: null,
+        error_message: null,
+        started_at: null,
+        completed_at: null,
+      })
+      .eq('job_id', jobId)
+      .eq('step_key', stepKey);
+
+    // 2. Reset local UI
     setCompletedIndexes(prev => { const s = new Set(prev); s.delete(idx); return s; });
     setWaitingForApproval(-1);
-    setCountUpValues(prev => { const n = { ...prev }; delete n[idx]; return n; });
-    setActiveIndex(-1);
-    setTimeout(() => setActiveIndex(idx), 100);
-  }, []);
+    setErrorMap(prev => { const n = { ...prev }; delete n[idx]; return n; });
+
+    // Reset webhook dedup refs so this step can be re-triggered
+    const refMap: Record<string, React.MutableRefObject<boolean>> = {
+      copy: step2TriggeredRef,
+      composition: step3TriggeredRef,
+      narration_script: step4TriggeredRef,
+    };
+    if (refMap[stepKey]) refMap[stepKey].current = false;
+
+    // 3. Get previous completed steps' results for building the request body
+    const { data: allCompletedSteps } = await supabase
+      .from('gen_steps')
+      .select('step_key, result')
+      .eq('job_id', jobId)
+      .eq('status', 'completed');
+
+    const previousResults: Record<string, any> = {};
+    allCompletedSteps?.forEach((s: any) => {
+      previousResults[s.step_key] = typeof s.result === 'string' ? safeParse(s.result) : s.result;
+    });
+
+    const step1Result = previousResults['appeal_axis'] || {};
+    const knowledgeFields = {
+      _rules_text: step1Result._rules_text || '',
+      _refs_text: step1Result._refs_text || '',
+      _patterns_text: step1Result._patterns_text || '',
+    };
+
+    // 4. Build webhook body
+    const webhookUrl = WEBHOOK_URLS[stepKey];
+    if (!webhookUrl) return;
+
+    let body: any = { job_id: jobId };
+
+    if (stepKey === 'appeal_axis') {
+      body = {
+        job_id: jobId,
+        creative_type: jobData.creative_type,
+        duration_seconds: jobData.duration_seconds,
+        num_appeal_axes: jobData.num_appeal_axes,
+        client_name: jobMeta.clientName,
+        product_name: jobMeta.productName,
+        project_name: jobMeta.projectName,
+      };
+    } else if (stepKey === 'copy') {
+      body = {
+        job_id: jobId,
+        creative_type: jobData.creative_type,
+        duration_seconds: jobData.duration_seconds,
+        num_copies: jobData.num_copies,
+        client_name: jobMeta.clientName,
+        product_name: jobMeta.productName,
+        project_name: jobMeta.projectName,
+        previous_results: {
+          appeal_axes: step1Result?.appeal_axes || [],
+          ...knowledgeFields,
+        },
+      };
+    } else if (stepKey === 'composition') {
+      const step2Result = previousResults['copy'] || {};
+      body = {
+        job_id: jobId,
+        creative_type: jobData.creative_type,
+        duration_seconds: jobData.duration_seconds,
+        client_name: jobMeta.clientName,
+        product_name: jobMeta.productName,
+        project_name: jobMeta.projectName,
+        previous_results: {
+          copies: step2Result?.copies || [],
+          ...knowledgeFields,
+        },
+      };
+    } else if (stepKey === 'narration_script') {
+      const step2Result = previousResults['copy'] || {};
+      const step3Result = previousResults['composition'] || {};
+      body = {
+        job_id: jobId,
+        creative_type: jobData.creative_type,
+        duration_seconds: jobData.duration_seconds,
+        client_name: jobMeta.clientName,
+        product_name: jobMeta.productName,
+        project_name: jobMeta.projectName,
+        previous_results: {
+          appeal_axes: step1Result?.appeal_axes || [],
+          copies: step2Result?.copies || [],
+          compositions: step3Result?.compositions || [],
+          ...knowledgeFields,
+        },
+      };
+    }
+
+    // 5. Call webhook
+    try {
+      console.log(`[Regenerate] Calling ${stepKey} webhook...`);
+      await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      console.log(`[Regenerate] ${stepKey} webhook called successfully`);
+    } catch (e) {
+      console.error(`[Regenerate] Failed to call ${stepKey} webhook:`, e);
+    }
+
+    // 6. Polling will automatically pick up the new status from gen_steps
+  }, [jobId, jobData, pipeline, jobMeta]);
 
   const switchToAuto = useCallback(() => {
     setSwitchedToAuto(true);
