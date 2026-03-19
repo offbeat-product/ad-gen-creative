@@ -17,6 +17,7 @@ interface Props {
   allDone: boolean;
   effectiveAutoMode: boolean;
   errorMap?: Record<number, string>;
+  narrationProgress?: { completed: number; total: number } | null;
   onStepClick: (idx: number) => void;
   onSwitchToAuto: () => void;
 }
@@ -25,7 +26,7 @@ const PipelineTimeline = ({
   pipeline, activeIndex, completedIndexes, selectedStepIndex,
   countUpValues, total, progressPct, completedCount,
   elapsedStr, remainStr, allDone, effectiveAutoMode,
-  errorMap = {}, onStepClick, onSwitchToAuto,
+  errorMap = {}, narrationProgress, onStepClick, onSwitchToAuto,
 }: Props) => {
   return (
     <div className="space-y-4">
@@ -130,14 +131,26 @@ const PipelineTimeline = ({
               {/* Running text */}
               {isRunning && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-1.5">
-                  <p className="text-xs text-secondary truncate">{runText}</p>
+                  <p className="text-xs text-secondary truncate">
+                    {step.stepKey === 'narration' && narrationProgress
+                      ? `AI音声でナレーションを生成しています... (${narrationProgress.completed}/${narrationProgress.total})`
+                      : runText}
+                  </p>
                   <div className="h-1 w-full rounded-full bg-muted overflow-hidden mt-1">
-                    <motion.div
-                      className="h-full rounded-full bg-secondary"
-                      initial={{ width: '5%' }}
-                      animate={{ width: '90%' }}
-                      transition={{ duration: step.demoSeconds - 0.3, ease: 'linear' }}
-                    />
+                    {step.stepKey === 'narration' && narrationProgress ? (
+                      <motion.div
+                        className="h-full rounded-full bg-secondary"
+                        animate={{ width: `${narrationProgress.total > 0 ? Math.max(5, (narrationProgress.completed / narrationProgress.total) * 100) : 5}%` }}
+                        transition={{ duration: 0.5, ease: 'easeOut' }}
+                      />
+                    ) : (
+                      <motion.div
+                        className="h-full rounded-full bg-secondary"
+                        initial={{ width: '5%' }}
+                        animate={{ width: '90%' }}
+                        transition={{ duration: step.demoSeconds - 0.3, ease: 'linear' }}
+                      />
+                    )}
                   </div>
                 </motion.div>
               )}

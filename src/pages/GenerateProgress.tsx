@@ -630,6 +630,8 @@ const GenerateProgress = () => {
     if (jobId && pipeline[activeIndex].stepType === 'text') return;
     // Also guard by stepKey for text 4 steps (belt-and-suspenders)
     if (jobId && TEXT_STEP_KEYS.includes(pipeline[activeIndex].stepKey)) return;
+    // Never dummy-animate the narration step when voice is generating — it's driven by polling
+    if (jobId && pipeline[activeIndex].stepKey === 'narration' && voiceGenerating) return;
 
     const step = pipeline[activeIndex];
 
@@ -664,7 +666,7 @@ const GenerateProgress = () => {
     }, step.demoSeconds * 1000);
 
     return () => clearTimeout(t);
-  }, [activeIndex, effectiveAutoMode, completedIndexes, stateReady, jobId]);
+  }, [activeIndex, effectiveAutoMode, completedIndexes, stateReady, jobId, voiceGenerating]);
 
   // ── Handle approve: trigger next webhook (step mode) or advance dummy ──
   const handleApprove = useCallback(async (idx: number) => {
@@ -1056,6 +1058,15 @@ const GenerateProgress = () => {
   const estRemaining = Math.max(0, avgPerStep * remainingSteps);
   const remainStr = `${Math.floor(estRemaining / 60000)}:${String(Math.floor((estRemaining % 60000) / 1000)).padStart(2, '0')}`;
 
+  // Narration progress from polling data
+  const narrationProgress = (() => {
+    const entries = Object.entries(narrationAudioMap);
+    if (entries.length === 0 && !voiceGenerating) return null;
+    const totalPatterns = entries.length || total;
+    const completedPatterns = entries.filter(([, url]) => !!url).length;
+    return { completed: completedPatterns, total: totalPatterns };
+  })();
+
   if (!stateReady) {
     return (
       <div className="h-[calc(100vh-56px)] flex items-center justify-center">
@@ -1092,7 +1103,7 @@ const GenerateProgress = () => {
                     selectedStepIndex={selectedStepIndex} countUpValues={countUpValues} total={total}
                     progressPct={progressPct} completedCount={completedCount} elapsedStr={elapsedStr}
                     remainStr={remainStr} allDone={allDone} effectiveAutoMode={effectiveAutoMode}
-                    errorMap={errorMap} onStepClick={handleStepClick} onSwitchToAuto={switchToAuto}
+                     errorMap={errorMap} narrationProgress={narrationProgress} onStepClick={handleStepClick} onSwitchToAuto={switchToAuto}
                   />
                 </div>
               </motion.div>
@@ -1123,7 +1134,7 @@ const GenerateProgress = () => {
             selectedStepIndex={selectedStepIndex} countUpValues={countUpValues} total={total}
             progressPct={progressPct} completedCount={completedCount} elapsedStr={elapsedStr}
             remainStr={remainStr} allDone={allDone} effectiveAutoMode={effectiveAutoMode}
-            errorMap={errorMap} onStepClick={handleStepClick} onSwitchToAuto={switchToAuto}
+            errorMap={errorMap} narrationProgress={narrationProgress} onStepClick={handleStepClick} onSwitchToAuto={switchToAuto}
           />
         </div>
         <div className="w-[60%] overflow-y-auto">
