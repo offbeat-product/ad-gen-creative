@@ -171,16 +171,12 @@ const ActionBar = ({ step, stepIndex, state, pipeline, completedIndexes, selecte
             </Button>
           </>
         )}
-        {!isAudio && (
-          <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setAdCheckOpen(true)}>
-            <ShieldCheck className="h-3.5 w-3.5 mr-1" />Ad Checkに送信
-          </Button>
-        )}
-        {!isAudio && (
-          <Button variant="outline" size="sm" onClick={() => setCreatorOpen(true)}>
-            <UserPlus className="h-3.5 w-3.5 mr-1" />プロに依頼
-          </Button>
-        )}
+        <Button size="sm" className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={() => setAdCheckOpen(true)}>
+          <ShieldCheck className="h-3.5 w-3.5 mr-1" />Ad Checkに送信
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => setCreatorOpen(true)}>
+          <UserPlus className="h-3.5 w-3.5 mr-1" />プロに依頼
+        </Button>
         <Button variant="outline" size="sm" onClick={handleDownload}>
           <Download className="h-3.5 w-3.5 mr-1" />ダウンロード
         </Button>
