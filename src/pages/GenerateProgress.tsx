@@ -739,6 +739,75 @@ const GenerateProgress = () => {
     if (steps) setGenStepsData(steps as GenStepRow[]);
   }, [jobId]);
 
+  // ── WF5: Trigger narration audio generation ──
+  const triggerNarrationAudio = useCallback(async (voiceId: string) => {
+    if (!jobId) return;
+    setVoiceGenerating(true);
+    setVoiceSelectionPending(false);
+
+    // Set narration step as active
+    const narrationIdx = stepKeyToIndex.get('narration');
+    if (narrationIdx !== undefined) {
+      setActiveIndex(narrationIdx);
+    }
+
+    try {
+      const response = await fetch(WF5_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ job_id: jobId, voice_id: voiceId }),
+      });
+      console.log('[WF5] Response status:', response.status);
+
+      // Start polling gen_patterns for narration_audio_url
+      const pollAudio = async () => {
+        const { data: patterns } = await supabase
+          .from('gen_patterns')
+          .select('id, pattern_id, narration_audio_url')
+          .eq('job_id', jobId)
+          .order('pattern_id', { ascending: true });
+
+        if (!patterns) return false;
+
+        const audioMap: Record<string, string | null> = {};
+        let allDone = true;
+        for (const p of patterns) {
+          audioMap[p.pattern_id] = p.narration_audio_url;
+          if (!p.narration_audio_url) allDone = false;
+        }
+        setNarrationAudioMap(audioMap);
+        return allDone;
+      };
+
+      // Poll every 3 seconds
+      const audioInterval = setInterval(async () => {
+        const done = await pollAudio();
+        if (done) {
+          clearInterval(audioInterval);
+          setVoiceGenerating(false);
+          // Mark narration step as completed
+          if (narrationIdx !== undefined) {
+            setCompletedIndexes(prev => new Set(prev).add(narrationIdx));
+            setSelectedStepIndex(narrationIdx);
+          }
+          // Start dummy animations for remaining steps
+          dummyAnimationStartedRef.current = true;
+          setDummyPhaseStarted(true);
+          const nextDummyIdx = pipeline.findIndex((s, i) => i > (narrationIdx ?? 4) && !TEXT_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
+          if (nextDummyIdx >= 0) {
+            setTimeout(() => setActiveIndex(nextDummyIdx), 500);
+          }
+        }
+      }, 3000);
+
+      // Also do an immediate check
+      await pollAudio();
+    } catch (e) {
+      console.error('[WF5] Failed:', e);
+      setVoiceGenerating(false);
+    }
+  }, [jobId, pipeline, stepKeyToIndex]);
+
   const handleStepClick = (idx: number) => {
     if (completedIndexes.has(idx)) {
       userSelectedStepRef.current = idx;
