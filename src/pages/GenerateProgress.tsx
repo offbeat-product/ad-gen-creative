@@ -930,6 +930,8 @@ const GenerateProgress = () => {
             jobId={jobId} onApprove={handleApprove} onRegenerate={handleRegenerate}
             onSwitchToAuto={switchToAuto} onNavigateDashboard={() => navigate('/')}
             onResultUpdated={refreshGenSteps}
+            voiceSelectionPending={voiceSelectionPending} voiceGenerating={voiceGenerating}
+            narrationAudioMap={narrationAudioMap} onTriggerNarrationAudio={triggerNarrationAudio}
           />
         </div>
       </div>
