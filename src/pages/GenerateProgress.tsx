@@ -1103,7 +1103,7 @@ const GenerateProgress = () => {
                     selectedStepIndex={selectedStepIndex} countUpValues={countUpValues} total={total}
                     progressPct={progressPct} completedCount={completedCount} elapsedStr={elapsedStr}
                     remainStr={remainStr} allDone={allDone} effectiveAutoMode={effectiveAutoMode}
-                    errorMap={errorMap} onStepClick={handleStepClick} onSwitchToAuto={switchToAuto}
+                     errorMap={errorMap} narrationProgress={narrationProgress} onStepClick={handleStepClick} onSwitchToAuto={switchToAuto}
                   />
                 </div>
               </motion.div>
