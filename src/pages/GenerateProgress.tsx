@@ -630,6 +630,8 @@ const GenerateProgress = () => {
     if (jobId && pipeline[activeIndex].stepType === 'text') return;
     // Also guard by stepKey for text 4 steps (belt-and-suspenders)
     if (jobId && TEXT_STEP_KEYS.includes(pipeline[activeIndex].stepKey)) return;
+    // Never dummy-animate the narration step when voice is generating — it's driven by polling
+    if (jobId && pipeline[activeIndex].stepKey === 'narration' && voiceGenerating) return;
 
     const step = pipeline[activeIndex];
 
