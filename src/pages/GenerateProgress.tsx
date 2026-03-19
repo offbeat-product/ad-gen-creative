@@ -710,7 +710,24 @@ const GenerateProgress = () => {
       }
     }
 
-    // Non-text step: advance to next dummy step
+    // Non-text step (including narration audio step): advance to next dummy step
+    const narrationStepKey = pipeline[idx]?.stepKey;
+    if (narrationStepKey === 'narration') {
+      // Narration audio approved → start dummy animations
+      dummyAnimationStartedRef.current = true;
+      setDummyPhaseStarted(true);
+      const nextDummyIdx = pipeline.findIndex((s, i) => i > idx && !TEXT_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
+      if (nextDummyIdx >= 0) {
+        setTimeout(() => setActiveIndex(nextDummyIdx), 300);
+      } else {
+        setAllDone(true);
+        setShowConfetti(true);
+        clearInterval(timerRef.current);
+        setTimeout(() => setShowConfetti(false), 3500);
+      }
+      return;
+    }
+
     if (idx + 1 < pipeline.length) {
       setTimeout(() => setActiveIndex(idx + 1), 300);
     } else {
@@ -936,13 +953,19 @@ const GenerateProgress = () => {
           if (narrationIdx !== undefined) {
             setCompletedIndexes(prev => new Set(prev).add(narrationIdx));
             setSelectedStepIndex(narrationIdx);
-          }
-          // Start dummy animations for remaining steps
-          dummyAnimationStartedRef.current = true;
-          setDummyPhaseStarted(true);
-          const nextDummyIdx = pipeline.findIndex((s, i) => i > (narrationIdx ?? 4) && !TEXT_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
-          if (nextDummyIdx >= 0) {
-            setTimeout(() => setActiveIndex(nextDummyIdx), 500);
+            setActiveIndex(-1);
+            // Wait for approval before proceeding to dummy animations
+            if (!effectiveAutoMode) {
+              setWaitingForApproval(narrationIdx);
+            } else {
+              // Auto mode: start dummy animations immediately
+              dummyAnimationStartedRef.current = true;
+              setDummyPhaseStarted(true);
+              const nextDummyIdx = pipeline.findIndex((s, i) => i > narrationIdx && !TEXT_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
+              if (nextDummyIdx >= 0) {
+                setTimeout(() => setActiveIndex(nextDummyIdx), 500);
+              }
+            }
           }
         }
       }, 3000);
@@ -953,7 +976,7 @@ const GenerateProgress = () => {
       console.error('[WF5] Failed:', e);
       setVoiceGenerating(false);
     }
-  }, [jobId, pipeline, stepKeyToIndex]);
+  }, [jobId, pipeline, stepKeyToIndex, effectiveAutoMode]);
 
   const handleStepClick = (idx: number) => {
     if (completedIndexes.has(idx)) {

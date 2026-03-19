@@ -883,99 +883,89 @@ const PreviewNAScript = ({ state, genStepResult, copyStepResult, appealAxesResul
   );
 };
 
-const PreviewNarration = ({ state, narrationAudioMap, genStepResult, copyStepResult, appealAxesResult, compositionStepResult }: {
+const PreviewNarration = ({ state, narrationAudioMap, jobId }: {
   state: WizardState;
   narrationAudioMap?: Record<string, string | null>;
-  genStepResult?: any;
-  copyStepResult?: any;
-  appealAxesResult?: any;
-  compositionStepResult?: any;
+  jobId?: string | null;
 }) => {
-  const copyCount = state.copyPatterns;
-  const scriptCount = state.appealAxis * copyCount;
-  const tabKeys = Array.from({ length: Math.min(scriptCount, 9) }, (_, i) => ALPHA[i]);
-  const hasAnyAudio = narrationAudioMap && Object.values(narrationAudioMap).some(v => v);
+  const [genPatterns, setGenPatterns] = useState<Array<{
+    pattern_id: string;
+    appeal_axis_text: string | null;
+    copy_text: string | null;
+    narration_script: string | null;
+    narration_audio_url: string | null;
+  }>>([]);
 
-  // Get narration scripts from NA step result for display alongside audio
-  const realNarrations: any[] | null = (() => {
-    try {
-      if (genStepResult?.narrations && Array.isArray(genStepResult.narrations)) return genStepResult.narrations;
-    } catch {}
-    return null;
-  })();
+  useEffect(() => {
+    if (!jobId) return;
+    const fetchPatterns = async () => {
+      const { data } = await supabase
+        .from('gen_patterns')
+        .select('pattern_id, appeal_axis_text, copy_text, narration_script, narration_audio_url')
+        .eq('job_id', jobId)
+        .order('pattern_id', { ascending: true });
+      if (data) setGenPatterns(data);
+    };
+    fetchPatterns();
+  }, [jobId, narrationAudioMap]);
 
-  const narrationByPattern: Record<string, any> = {};
-  if (realNarrations) {
-    for (const n of realNarrations) {
-      if (n.pattern_id) narrationByPattern[n.pattern_id] = n;
-    }
-  }
+  // Merge narrationAudioMap into genPatterns (polling may have newer URLs)
+  const patternsWithAudio = genPatterns.map(p => ({
+    ...p,
+    narration_audio_url: narrationAudioMap?.[p.pattern_id] ?? p.narration_audio_url,
+  }));
 
-  const compositionByPattern: Record<string, any> = {};
-  if (compositionStepResult?.compositions && Array.isArray(compositionStepResult.compositions)) {
-    for (const comp of compositionStepResult.compositions) {
-      if (comp.pattern_id) compositionByPattern[comp.pattern_id] = comp;
-    }
-  }
+  const hasPatterns = patternsWithAudio.length > 0;
 
-  if (hasAnyAudio) {
+  if (!hasPatterns) {
     return (
-      <div className="space-y-4">
-        <Badge className="bg-success-wash text-success text-xs">AI生成音声</Badge>
-        <Tabs defaultValue={tabKeys[0]}>
-          <TabsList className="w-full flex-wrap h-auto gap-1">
-            {tabKeys.map((letter) => (
-              <TabsTrigger key={letter} value={letter} className="text-xs font-mono">{letter}</TabsTrigger>
-            ))}
-          </TabsList>
-          {tabKeys.map((letter) => {
-            const audioUrl = narrationAudioMap?.[letter];
-            const narration = narrationByPattern[letter];
-            const naSections: any[] = narration?.sections ?? [];
-            const composition = compositionByPattern[letter];
-            const compScenes: any[] = composition?.scenes ?? [];
-
-            return (
-              <TabsContent key={letter} value={letter}>
-                <div className="mt-3 space-y-4">
-                  <PatternHeader patternId={letter} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} />
-
-                  {/* NA Script sections */}
-                  {naSections.length > 0 && (
-                    <div>
-                      {naSections.map((sec: any, j: number) => (
-                        <div key={j} className="bg-accent/30 rounded-lg p-3 mb-2">
-                          <div className="flex items-center gap-2 mb-2">
-                            {sec.time_range && <Badge variant="outline" className="text-xs">{sec.time_range}</Badge>}
-                            <Badge className="bg-secondary text-secondary-foreground text-xs">【{sec.part}】</Badge>
-                          </div>
-                          <p className="text-sm leading-relaxed">{sec.text}</p>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Audio Player */}
-                  {audioUrl ? (
-                    <NarrationAudioPlayer audioUrl={audioUrl} patternName={`パターン${letter}`} />
-                  ) : (
-                    <div className="bg-muted rounded-lg p-4 text-center">
-                      <p className="text-sm text-muted-foreground">音声未生成</p>
-                    </div>
-                  )}
-                </div>
-              </TabsContent>
-            );
-          })}
-        </Tabs>
+      <div className="space-y-3">
+        <AudioPlayer label="音声タイプ: 女性ナチュラル" />
+        <p className="text-xs text-muted-foreground">※ デモ用プレースホルダーです</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      <AudioPlayer label="音声タイプ: 女性ナチュラル" />
-      <p className="text-xs text-muted-foreground">※ デモ用プレースホルダーです</p>
+    <div className="space-y-4">
+      <Badge className="bg-success-wash text-success text-xs">AI生成音声</Badge>
+      <Tabs defaultValue={patternsWithAudio[0]?.pattern_id}>
+        <TabsList className="w-full flex-wrap h-auto gap-1">
+          {patternsWithAudio.map((p) => (
+            <TabsTrigger key={p.pattern_id} value={p.pattern_id} className="text-xs font-mono">{p.pattern_id}</TabsTrigger>
+          ))}
+        </TabsList>
+        {patternsWithAudio.map((p) => (
+          <TabsContent key={p.pattern_id} value={p.pattern_id}>
+            <div className="mt-3 space-y-4">
+              {/* Pattern info */}
+              <div className="space-y-2">
+                {p.appeal_axis_text && (
+                  <div className="bg-accent/30 rounded-lg p-3">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">訴求軸</p>
+                    <p className="text-sm">{p.appeal_axis_text}</p>
+                  </div>
+                )}
+                {p.copy_text && (
+                  <div className="bg-accent/30 rounded-lg p-3">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">コピー</p>
+                    <p className="text-sm font-medium">「{p.copy_text}」</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Audio Player */}
+              {p.narration_audio_url ? (
+                <NarrationAudioPlayer audioUrl={p.narration_audio_url} patternName={`パターン${p.pattern_id}`} />
+              ) : (
+                <div className="bg-muted rounded-lg p-4 text-center">
+                  <p className="text-sm text-muted-foreground">音声未生成</p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        ))}
+      </Tabs>
     </div>
   );
 };
@@ -1344,7 +1334,7 @@ const PreviewPanel = ({
         case 1: return <PreviewCopy isVideo state={state} genStepResult={displayData} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />;
         case 2: return <PreviewStoryboard isVideo state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />;
         case 3: return <PreviewNAScript state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} compositionStepResult={compositionStepResult} editing={editing} editData={editData} setEditData={setEditData} />;
-        case 4: return <PreviewNarration state={state} narrationAudioMap={narrationAudioMap} genStepResult={narrationScriptResult} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} compositionStepResult={compositionStepResult} />;
+        case 4: return <PreviewNarration state={state} narrationAudioMap={narrationAudioMap} jobId={jobId} />;
         case 5: return <PreviewBGM />;
         case 6: return <PreviewVCon />;
         case 7: return <PreviewStyleFrames />;
