@@ -936,13 +936,19 @@ const GenerateProgress = () => {
           if (narrationIdx !== undefined) {
             setCompletedIndexes(prev => new Set(prev).add(narrationIdx));
             setSelectedStepIndex(narrationIdx);
-          }
-          // Start dummy animations for remaining steps
-          dummyAnimationStartedRef.current = true;
-          setDummyPhaseStarted(true);
-          const nextDummyIdx = pipeline.findIndex((s, i) => i > (narrationIdx ?? 4) && !TEXT_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
-          if (nextDummyIdx >= 0) {
-            setTimeout(() => setActiveIndex(nextDummyIdx), 500);
+            setActiveIndex(-1);
+            // Wait for approval before proceeding to dummy animations
+            if (!effectiveAutoMode) {
+              setWaitingForApproval(narrationIdx);
+            } else {
+              // Auto mode: start dummy animations immediately
+              dummyAnimationStartedRef.current = true;
+              setDummyPhaseStarted(true);
+              const nextDummyIdx = pipeline.findIndex((s, i) => i > narrationIdx && !TEXT_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
+              if (nextDummyIdx >= 0) {
+                setTimeout(() => setActiveIndex(nextDummyIdx), 500);
+              }
+            }
           }
         }
       }, 3000);
