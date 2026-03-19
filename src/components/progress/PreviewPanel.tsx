@@ -205,6 +205,26 @@ const AudioPlayer = ({ label }: { label: string }) => (
   </div>
 );
 
+const AccordionSection = ({ title, defaultOpen = false, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  return (
+    <div className="border border-border rounded-lg mb-3">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between p-3 text-left hover:bg-accent/50 rounded-t-lg transition-colors"
+      >
+        <span className="font-medium text-sm">{title}</span>
+        <span className="text-muted-foreground text-xs">{isOpen ? '▲' : '▼'}</span>
+      </button>
+      {isOpen && (
+        <div className="p-3 pt-0 border-t border-border">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
 /* ─── Step-specific preview renderers ─── */
 
 const PreviewAppealAxis = ({ isVideo, state, genStepResult, editing, editData, setEditData }: {
@@ -895,12 +915,16 @@ const VOICE_NAMES: Record<string, Record<string, string>> = {
   female: { a: '女性ボイス A', b: '女性ボイス B' },
 };
 
-const PreviewNarration = ({ state, narrationAudioMap, narrationAudioMapB, selectedGender, jobId }: {
+const PreviewNarration = ({ state, narrationAudioMap, narrationAudioMapB, selectedGender, jobId, appealAxesResult, copyStepResult, compositionStepResult, narrationScriptResult }: {
   state: WizardState;
   narrationAudioMap?: Record<string, string | null>;
   narrationAudioMapB?: Record<string, string | null>;
   selectedGender?: 'male' | 'female';
   jobId?: string | null;
+  appealAxesResult?: any;
+  copyStepResult?: any;
+  compositionStepResult?: any;
+  narrationScriptResult?: any;
 }) => {
   const [genPatterns, setGenPatterns] = useState<Array<{
     pattern_id: string;
@@ -910,6 +934,7 @@ const PreviewNarration = ({ state, narrationAudioMap, narrationAudioMapB, select
     narration_audio_url: string | null;
     narration_audio_url_b: string | null;
   }>>([]);
+  const [selectedVoice, setSelectedVoice] = useState<'a' | 'b'>('a');
 
   useEffect(() => {
     if (!jobId) return;
@@ -930,12 +955,15 @@ const PreviewNarration = ({ state, narrationAudioMap, narrationAudioMapB, select
     narration_audio_url_b: narrationAudioMapB?.[p.pattern_id] ?? p.narration_audio_url_b,
   }));
 
-  const hasPatterns = patternsWithAudio.length > 0;
-  const gender = selectedGender ?? 'male';
-  const voiceNameA = VOICE_NAMES[gender]?.a ?? 'ボイスA';
-  const voiceNameB = VOICE_NAMES[gender]?.b ?? 'ボイスB';
+  // Group by base letter (strip trailing tone number)
+  const getBaseLetter = (pid: string) => pid.replace(/\d+$/, '');
+  const uniqueLetters = [...new Set(patternsWithAudio.map(p => getBaseLetter(p.pattern_id)))].sort();
 
-  if (!hasPatterns) {
+  const gender = selectedGender ?? 'male';
+  const voiceNameA = VOICE_NAMES[gender]?.a ?? 'サンプルボイスA';
+  const voiceNameB = VOICE_NAMES[gender]?.b ?? 'サンプルボイスB';
+
+  if (uniqueLetters.length === 0) {
     return (
       <div className="space-y-3">
         <AudioPlayer label="音声タイプ: 女性ナチュラル" />
@@ -944,60 +972,151 @@ const PreviewNarration = ({ state, narrationAudioMap, narrationAudioMapB, select
     );
   }
 
+  const getPatternForLetter = (letter: string) =>
+    patternsWithAudio.find(p => getBaseLetter(p.pattern_id) === letter);
+
+  const getCompositionForLetter = (letter: string) => {
+    if (!compositionStepResult?.compositions) return null;
+    return compositionStepResult.compositions.find((c: any) => c.pattern_id === letter);
+  };
+
+  const getNarrationForLetter = (letter: string) => {
+    if (!narrationScriptResult?.narrations) return null;
+    return narrationScriptResult.narrations.find((n: any) => n.pattern_id === letter);
+  };
+
   return (
     <div className="space-y-4">
       <Badge className="bg-success-wash text-success text-xs">AI生成音声</Badge>
-      <Tabs defaultValue={patternsWithAudio[0]?.pattern_id}>
+
+      {/* Voice A/B toggle */}
+      <div className="flex gap-2">
+        {(['a', 'b'] as const).map(v => (
+          <button
+            key={v}
+            onClick={() => setSelectedVoice(v)}
+            className={cn(
+              'flex-1 py-2.5 px-4 rounded-xl text-sm font-medium transition-all',
+              selectedVoice === v
+                ? 'brand-gradient-bg text-primary-foreground shadow-md'
+                : 'bg-muted text-muted-foreground hover:bg-accent',
+            )}
+          >
+            {v === 'a' ? `🔵 ${voiceNameA}` : `⚪ ${voiceNameB}`}
+          </button>
+        ))}
+      </div>
+
+      {/* Pattern A-I tabs */}
+      <Tabs defaultValue={uniqueLetters[0]}>
         <TabsList className="w-full flex-wrap h-auto gap-1">
-          {patternsWithAudio.map((p) => (
-            <TabsTrigger key={p.pattern_id} value={p.pattern_id} className="text-xs font-mono">{p.pattern_id}</TabsTrigger>
+          {uniqueLetters.map(letter => (
+            <TabsTrigger key={letter} value={letter} className="text-xs font-mono">{letter}</TabsTrigger>
           ))}
         </TabsList>
-        {patternsWithAudio.map((p) => (
-          <TabsContent key={p.pattern_id} value={p.pattern_id}>
-            <div className="mt-3 space-y-4">
-              {/* Pattern info */}
-              <div className="space-y-2">
-                {p.appeal_axis_text && (
-                  <div className="bg-accent/30 rounded-lg p-3">
-                    <p className="text-xs font-medium text-muted-foreground mb-1">訴求軸</p>
-                    <p className="text-sm">{p.appeal_axis_text}</p>
-                  </div>
-                )}
-                {p.copy_text && (
-                  <div className="bg-accent/30 rounded-lg p-3">
-                    <p className="text-xs font-medium text-muted-foreground mb-1">コピー</p>
-                    <p className="text-sm font-medium">「{p.copy_text}」</p>
-                  </div>
-                )}
-              </div>
+        {uniqueLetters.map(letter => {
+          const pattern = getPatternForLetter(letter);
+          const composition = getCompositionForLetter(letter);
+          const narration = getNarrationForLetter(letter);
+          const audioUrl = selectedVoice === 'a' ? pattern?.narration_audio_url : pattern?.narration_audio_url_b;
 
-              {/* Voice A */}
-              <div>
-                <p className="text-xs font-semibold text-secondary mb-1">🔵 {voiceNameA}</p>
-                {p.narration_audio_url ? (
-                  <NarrationAudioPlayer audioUrl={p.narration_audio_url} patternName={`パターン${p.pattern_id}_A`} />
-                ) : (
-                  <div className="bg-muted rounded-lg p-4 text-center">
-                    <p className="text-sm text-muted-foreground">音声未生成</p>
+          return (
+            <TabsContent key={letter} value={letter}>
+              <div className="mt-3 space-y-3">
+                {/* Pattern summary */}
+                {(pattern?.appeal_axis_text || pattern?.copy_text) && (
+                  <div className="bg-muted/50 rounded-lg p-3 space-y-1 text-sm">
+                    {pattern?.appeal_axis_text && (
+                      <div className="flex gap-2">
+                        <span className="text-muted-foreground shrink-0 w-14">訴求軸:</span>
+                        <span className="font-medium">{pattern.appeal_axis_text}</span>
+                      </div>
+                    )}
+                    {pattern?.copy_text && (
+                      <div className="flex gap-2">
+                        <span className="text-muted-foreground shrink-0 w-14">コピー:</span>
+                        <span className="font-medium">「{pattern.copy_text}」</span>
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
 
-              {/* Voice B */}
-              <div>
-                <p className="text-xs font-semibold text-muted-foreground mb-1">⚪ {voiceNameB}</p>
-                {p.narration_audio_url_b ? (
-                  <NarrationAudioPlayer audioUrl={p.narration_audio_url_b} patternName={`パターン${p.pattern_id}_B`} />
-                ) : (
-                  <div className="bg-muted rounded-lg p-4 text-center">
-                    <p className="text-sm text-muted-foreground">音声未生成</p>
-                  </div>
+                {/* Closed accordions for older previous steps */}
+                {appealAxesResult?.appeal_axes && (
+                  <AccordionSection title="訴求軸" defaultOpen={false}>
+                    <div className="space-y-2">
+                      {appealAxesResult.appeal_axes.map((axis: any, i: number) => (
+                        <div key={i} className="text-sm">
+                          <span className="font-medium">{axis.index ?? i + 1}. {axis.axis_type ?? ''}</span>
+                          {axis.axis_label && <span className="text-muted-foreground">（{axis.axis_label}）</span>}
+                          {axis.text && <p className="text-muted-foreground ml-4">{axis.text}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionSection>
                 )}
+
+                {copyStepResult?.copies && (
+                  <AccordionSection title="コピー" defaultOpen={false}>
+                    <div className="space-y-1">
+                      {copyStepResult.copies.slice(0, 9).map((c: any, i: number) => (
+                        <p key={i} className="text-sm">
+                          <span className="font-mono text-xs text-muted-foreground mr-1">{c.pattern_id}</span>
+                          「{c.copy_text ?? ''}」
+                        </p>
+                      ))}
+                    </div>
+                  </AccordionSection>
+                )}
+
+                {composition && (
+                  <AccordionSection title="構成案・字コンテ" defaultOpen={false}>
+                    <div className="space-y-2">
+                      {(composition.scenes ?? []).map((scene: any, j: number) => (
+                        <div key={j} className="text-sm">
+                          <span className="font-medium">【{scene.part ?? scene.type}】</span>
+                          {scene.time_range && <span className="text-muted-foreground text-xs ml-1">{scene.time_range}</span>}
+                          {scene.telop && <p className="text-muted-foreground ml-4">テロップ: {scene.telop}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionSection>
+                )}
+
+                {/* Open accordion for immediate previous step (NA原稿) */}
+                {narration && (
+                  <AccordionSection title="NA原稿" defaultOpen={true}>
+                    <div className="space-y-2">
+                      {(narration.sections ?? []).map((sec: any, j: number) => (
+                        <div key={j} className="bg-accent/30 rounded-lg p-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            {sec.time_range && <Badge variant="outline" className="text-xs">{sec.time_range}</Badge>}
+                            <Badge className="bg-secondary text-secondary-foreground text-xs">【{sec.part}】</Badge>
+                          </div>
+                          <p className="text-sm leading-relaxed">{sec.text}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionSection>
+                )}
+
+                {/* Main content: Audio player */}
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-2">
+                    ▶ ナレーション音声（{selectedVoice === 'a' ? voiceNameA : voiceNameB}）
+                  </p>
+                  {audioUrl ? (
+                    <NarrationAudioPlayer audioUrl={audioUrl} patternName={`パターン${letter}_${selectedVoice === 'a' ? 'A' : 'B'}`} />
+                  ) : (
+                    <div className="bg-muted rounded-lg p-4 text-center">
+                      <p className="text-sm text-muted-foreground">音声未生成</p>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          </TabsContent>
-        ))}
+            </TabsContent>
+          );
+        })}
       </Tabs>
     </div>
   );
@@ -1359,35 +1478,92 @@ const PreviewPanel = ({
     toast({ title: 'ダウンロード完了' });
   };
 
+  // Build accordion sections for previous steps (video pipeline only, steps 1-4)
+  const buildPreviousAccordions = (currentIdx: number) => {
+    if (!isVideo || currentIdx <= 0 || currentIdx > 3) return null;
+    const sections: JSX.Element[] = [];
+
+    const stepDefs: Array<{ maxIdx: number; title: string; result: any; render: () => React.ReactNode }> = [
+      {
+        maxIdx: 0, title: '訴求軸', result: appealAxesResult,
+        render: () => appealAxesResult?.appeal_axes ? (
+          <div className="space-y-1">{appealAxesResult.appeal_axes.map((a: any, i: number) => (
+            <p key={i} className="text-sm"><span className="font-medium">{a.index ?? i + 1}.</span> {a.axis_type ?? a.text ?? ''}{a.axis_label ? `（${a.axis_label}）` : ''}</p>
+          ))}</div>
+        ) : null,
+      },
+      {
+        maxIdx: 1, title: 'コピー', result: copyStepResult,
+        render: () => copyStepResult?.copies ? (
+          <div className="space-y-1">{copyStepResult.copies.slice(0, 9).map((c: any, i: number) => (
+            <p key={i} className="text-sm"><span className="font-mono text-xs text-muted-foreground mr-1">{c.pattern_id}</span>「{c.copy_text ?? ''}」</p>
+          ))}</div>
+        ) : null,
+      },
+      {
+        maxIdx: 2, title: '構成案・字コンテ', result: compositionStepResult,
+        render: () => compositionStepResult?.compositions ? (
+          <p className="text-sm text-muted-foreground">{compositionStepResult.compositions.length}パターンの構成案を生成済み</p>
+        ) : null,
+      },
+    ];
+
+    for (const def of stepDefs) {
+      if (def.maxIdx < currentIdx && def.result) {
+        const isImmediatePrevious = def.maxIdx === currentIdx - 1;
+        const content = def.render();
+        if (content) {
+          sections.push(
+            <AccordionSection key={def.title} title={def.title} defaultOpen={isImmediatePrevious}>
+              {content}
+            </AccordionSection>
+          );
+        }
+      }
+    }
+
+    return sections.length > 0 ? <div className="mb-4">{sections}</div> : null;
+  };
+
   const renderPreview = () => {
     if (!step || selectedStepIndex === null) return null;
     const displayData = editing ? editData : parsedResult;
 
+    let mainContent: React.ReactNode = null;
+
     if (isVideo) {
       switch (selectedStepIndex) {
-        case 0: return <PreviewAppealAxis isVideo state={state} genStepResult={displayData} editing={editing} editData={editData} setEditData={setEditData} />;
-        case 1: return <PreviewCopy isVideo state={state} genStepResult={displayData} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />;
-        case 2: return <PreviewStoryboard isVideo state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />;
-        case 3: return <PreviewNAScript state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} compositionStepResult={compositionStepResult} editing={editing} editData={editData} setEditData={setEditData} />;
-        case 4: return <PreviewNarration state={state} narrationAudioMap={narrationAudioMap} narrationAudioMapB={narrationAudioMapB} selectedGender={selectedGender} jobId={jobId} />;
-        case 5: return <PreviewBGM />;
-        case 6: return <PreviewVCon />;
-        case 7: return <PreviewStyleFrames />;
-        case 8: return <PreviewEkonte total={total} />;
-        case 9: return <PreviewFinalVideo total={total} state={state} aspect="16/9" resolution="1920 × 1080" />;
-        case 10: return <PreviewFinalVideo total={total} state={state} aspect="9/16" resolution="1080 × 1920" />;
+        case 0: mainContent = <PreviewAppealAxis isVideo state={state} genStepResult={displayData} editing={editing} editData={editData} setEditData={setEditData} />; break;
+        case 1: mainContent = <PreviewCopy isVideo state={state} genStepResult={displayData} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />; break;
+        case 2: mainContent = <PreviewStoryboard isVideo state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />; break;
+        case 3: mainContent = <PreviewNAScript state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} compositionStepResult={compositionStepResult} editing={editing} editData={editData} setEditData={setEditData} />; break;
+        case 4: return <PreviewNarration state={state} narrationAudioMap={narrationAudioMap} narrationAudioMapB={narrationAudioMapB} selectedGender={selectedGender} jobId={jobId} appealAxesResult={appealAxesResult} copyStepResult={copyStepResult} compositionStepResult={compositionStepResult} narrationScriptResult={narrationScriptResult} />;
+        case 5: mainContent = <PreviewBGM />; break;
+        case 6: mainContent = <PreviewVCon />; break;
+        case 7: mainContent = <PreviewStyleFrames />; break;
+        case 8: mainContent = <PreviewEkonte total={total} />; break;
+        case 9: mainContent = <PreviewFinalVideo total={total} state={state} aspect="16/9" resolution="1920 × 1080" />; break;
+        case 10: mainContent = <PreviewFinalVideo total={total} state={state} aspect="9/16" resolution="1080 × 1920" />; break;
         default: return null;
       }
     } else {
       switch (selectedStepIndex) {
-        case 0: return <PreviewAppealAxis isVideo={false} state={state} genStepResult={displayData} editing={editing} editData={editData} setEditData={setEditData} />;
-        case 1: return <PreviewCopy isVideo={false} state={state} genStepResult={displayData} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />;
-        case 2: return <PreviewStoryboard isVideo={false} state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />;
-        case 3: return <PreviewToneManner />;
-        case 4: return <PreviewBannerImages total={total} state={state} />;
+        case 0: mainContent = <PreviewAppealAxis isVideo={false} state={state} genStepResult={displayData} editing={editing} editData={editData} setEditData={setEditData} />; break;
+        case 1: mainContent = <PreviewCopy isVideo={false} state={state} genStepResult={displayData} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />; break;
+        case 2: mainContent = <PreviewStoryboard isVideo={false} state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />; break;
+        case 3: mainContent = <PreviewToneManner />; break;
+        case 4: mainContent = <PreviewBannerImages total={total} state={state} />; break;
         default: return null;
       }
     }
+
+    const accordions = buildPreviousAccordions(selectedStepIndex);
+    return (
+      <>
+        {accordions}
+        {mainContent}
+      </>
+    );
   };
 
   return (
