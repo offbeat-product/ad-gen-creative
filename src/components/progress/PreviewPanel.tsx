@@ -205,6 +205,26 @@ const AudioPlayer = ({ label }: { label: string }) => (
   </div>
 );
 
+const AccordionSection = ({ title, defaultOpen = false, children }: { title: string; defaultOpen?: boolean; children: React.ReactNode }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  return (
+    <div className="border border-border rounded-lg mb-3">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between p-3 text-left hover:bg-accent/50 rounded-t-lg transition-colors"
+      >
+        <span className="font-medium text-sm">{title}</span>
+        <span className="text-muted-foreground text-xs">{isOpen ? '▲' : '▼'}</span>
+      </button>
+      {isOpen && (
+        <div className="p-3 pt-0 border-t border-border">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
 /* ─── Step-specific preview renderers ─── */
 
 const PreviewAppealAxis = ({ isVideo, state, genStepResult, editing, editData, setEditData }: {
