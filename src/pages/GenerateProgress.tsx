@@ -139,6 +139,8 @@ const WEBHOOK_URLS: Record<string, string> = {
   narration_script: 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step4',
 };
 
+const WF5_WEBHOOK_URL = 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step5';
+
 /* ─── Confetti ─── */
 
 const Confetti = () => {
