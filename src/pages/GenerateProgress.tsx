@@ -855,6 +855,16 @@ const GenerateProgress = () => {
     } catch { return null; }
   })();
 
+  // Get narration_script step result for narration audio preview
+  const narrationScriptStepResult = (() => {
+    const genStep = genStepsData.find(gs => gs.step_key === 'narration_script');
+    if (!genStep?.result) return null;
+    try {
+      const r = typeof genStep.result === 'string' ? JSON.parse(genStep.result as string) : genStep.result;
+      return r;
+    } catch { return null; }
+  })();
+
   // Summary line with real names
   const typeLabel = state.creativeType === 'video' ? `動画${state.videoDuration}秒` : '静止画バナー';
   const patternLabel = state.productionPattern === 'new' ? '新規制作' : 'パターン展開';
