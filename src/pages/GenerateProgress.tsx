@@ -134,6 +134,7 @@ export const makeVideoPipeline = (s: WizardState): PipelineStep[] => {
 /* ─── Webhook URLs ─── */
 
 const WEBHOOK_URLS: Record<string, string> = {
+  appeal_axis: 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step1',
   copy: 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step2',
   composition: 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step3',
   narration_script: 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step4',
