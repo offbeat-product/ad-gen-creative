@@ -34,6 +34,7 @@ interface Props {
   appealAxesResult?: any;
   copyStepResult?: any;
   compositionStepResult?: any;
+  narrationScriptResult?: any;
   jobId?: string | null;
   voiceSelectionPending?: boolean;
   voiceGenerating?: boolean;
