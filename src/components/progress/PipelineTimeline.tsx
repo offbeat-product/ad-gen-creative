@@ -17,6 +17,7 @@ interface Props {
   allDone: boolean;
   effectiveAutoMode: boolean;
   errorMap?: Record<number, string>;
+  narrationProgress?: { completed: number; total: number } | null;
   onStepClick: (idx: number) => void;
   onSwitchToAuto: () => void;
 }
