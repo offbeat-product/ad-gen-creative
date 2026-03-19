@@ -1252,7 +1252,36 @@ const PreviewPanel = ({
   })();
   const isVideo = state.creativeType === 'video';
   const noSelection = selectedStepIndex === null || !completedIndexes.has(selectedStepIndex);
-  const showApprovalBar = !effectiveAutoMode && waitingForApproval >= 0;
+  const showApprovalBar = !effectiveAutoMode && waitingForApproval >= 0 && !voiceSelectionPending;
+
+  // Show voice selection or voice generating state
+  if (voiceSelectionPending && onTriggerNarrationAudio) {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="px-6 pt-5 pb-3">
+          <div className="flex items-center gap-3">
+            <Sparkles className="h-5 w-5 text-secondary" />
+            <h2 className="text-lg font-bold font-display">ナレーション音声生成</h2>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">NA原稿が承認されました。ボイスを選択して音声を生成します。</p>
+        </div>
+        <Separator />
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          <VoiceSelector onGenerate={onTriggerNarrationAudio} />
+        </div>
+      </div>
+    );
+  }
+
+  if (voiceGenerating) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center px-8">
+        <Loader2 className="h-12 w-12 text-secondary animate-spin mb-4" />
+        <p className="text-lg font-medium mb-2">ナレーション音声を生成中...</p>
+        <p className="text-sm text-muted-foreground">AI音声でNA原稿を読み上げています。しばらくお待ちください。</p>
+      </div>
+    );
+  }
 
   if (noSelection && !allDone && !showApprovalBar) return <EmptyState />;
 
