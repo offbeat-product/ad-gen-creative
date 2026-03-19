@@ -1259,6 +1259,8 @@ const PreviewPanel = ({
   const { toast } = useToast();
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState<any>(null);
+  const [voiceApprovalOpen, setVoiceApprovalOpen] = useState(false);
+  const [chosenVoice, setChosenVoice] = useState<'a' | 'b'>('a');
 
   // Reset editing when step changes
   useEffect(() => {
