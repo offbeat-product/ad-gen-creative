@@ -116,7 +116,7 @@ const mapJobToRow = (job: any): HistoryRow => {
 
   return {
     id: job.id,
-    date: format(displayDate, 'MM/dd HH:mm'),
+    date: format(createdAt, 'MM/dd HH:mm'),
     client: clientName,
     product: productName,
     project: projectName,
