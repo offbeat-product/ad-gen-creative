@@ -139,7 +139,8 @@ const mapJobToRow = (job: any): HistoryRow => {
   const totalPatterns = job.total_patterns || axes * copies * tones;
 
   const steps = (job.gen_steps ?? []) as Array<{ step_key: string; status: string }>;
-  const progress = getJobProgress(steps);
+  const patternsForAudio = (job.gen_patterns ?? []) as Array<{ narration_audio_url: string | null }>;
+  const progress = getJobProgress(job.creative_type, steps, patternsForAudio);
 
   let statusLabel: HistoryRow['status'];
   if (progress.status === 'completed') statusLabel = '完了';
