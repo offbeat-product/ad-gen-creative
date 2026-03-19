@@ -976,7 +976,7 @@ const GenerateProgress = () => {
       console.error('[WF5] Failed:', e);
       setVoiceGenerating(false);
     }
-  }, [jobId, pipeline, stepKeyToIndex]);
+  }, [jobId, pipeline, stepKeyToIndex, effectiveAutoMode]);
 
   const handleStepClick = (idx: number) => {
     if (completedIndexes.has(idx)) {
