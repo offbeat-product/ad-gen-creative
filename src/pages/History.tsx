@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, FileText, UserPlus, CalendarIcon, Image, Video, X, Loader2 } from 'lucide-react';
+import { Sparkles, FileText, UserPlus, CalendarIcon, Image, Video, X, Loader2, PlayCircle, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -12,8 +12,58 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, ChevronRight } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+
+/* ─── Step progress logic ─── */
+
+const STEP_ORDER = ['appeal_axis', 'copy', 'composition', 'narration_script'];
+const STEP_LABELS: Record<string, string> = {
+  appeal_axis: '訴求軸作成',
+  copy: 'コピー作成',
+  composition: '構成案・字コンテ作成',
+  narration_script: 'NA原稿作成',
+};
+
+type JobProgressStatus = 'completed' | 'in_progress' | 'not_started';
+
+interface JobProgress {
+  lastCompletedStep: string | null;
+  nextStep: string | null;
+  status: JobProgressStatus;
+  completedCount: number;
+  totalSteps: number;
+}
+
+const getJobProgress = (steps: Array<{ step_key: string; status: string }>): JobProgress => {
+  let lastCompleted: string | null = null;
+  let completedCount = 0;
+
+  for (const stepKey of STEP_ORDER) {
+    const step = steps.find(s => s.step_key === stepKey);
+    if (step?.status === 'completed') {
+      lastCompleted = stepKey;
+      completedCount++;
+    } else {
+      break;
+    }
+  }
+
+  const nextStepIndex = lastCompleted ? STEP_ORDER.indexOf(lastCompleted) + 1 : 0;
+  const nextStep = nextStepIndex < STEP_ORDER.length ? STEP_ORDER[nextStepIndex] : null;
+
+  let status: JobProgressStatus;
+  if (completedCount === STEP_ORDER.length) {
+    status = 'completed';
+  } else if (completedCount > 0) {
+    status = 'in_progress';
+  } else {
+    status = 'not_started';
+  }
+
+  return { lastCompletedStep: lastCompleted, nextStep, status, completedCount, totalSteps: STEP_ORDER.length };
+};
 
 /* ─── Types ─── */
 interface HistoryRow {
@@ -26,13 +76,14 @@ interface HistoryRow {
   patterns: string;
   total: string;
   totalNum: number;
-  status: '完了' | '生成中' | '一部依頼中';
+  status: '完了' | '生成中' | '未開始';
+  progress: JobProgress;
 }
 
 const statusConfig: Record<string, { className: string; pulse?: boolean }> = {
   '完了': { className: 'bg-success-wash text-success' },
-  '生成中': { className: 'bg-secondary-wash text-secondary', pulse: true },
-  '一部依頼中': { className: 'bg-warning-wash text-warning' },
+  '生成中': { className: 'bg-warning-wash text-warning', pulse: true },
+  '未開始': { className: 'bg-muted text-muted-foreground' },
 };
 
 const PAGE_SIZE = 10;
@@ -55,9 +106,13 @@ const mapJobToRow = (job: any): HistoryRow => {
   const tones = job.num_tonmana ?? 2;
   const totalPatterns = job.total_patterns ?? axes * copies * tones;
 
-  let statusLabel: HistoryRow['status'] = '生成中';
-  if (job.status === 'completed') statusLabel = '完了';
-  else if (job.status === 'processing' || job.status === 'pending') statusLabel = '生成中';
+  const steps = (job.gen_steps ?? []) as Array<{ step_key: string; status: string }>;
+  const progress = getJobProgress(steps);
+
+  let statusLabel: HistoryRow['status'];
+  if (progress.status === 'completed') statusLabel = '完了';
+  else if (progress.status === 'in_progress') statusLabel = '生成中';
+  else statusLabel = '未開始';
 
   return {
     id: job.id,
@@ -70,6 +125,7 @@ const mapJobToRow = (job: any): HistoryRow => {
     total: `${totalPatterns}本`,
     totalNum: totalPatterns,
     status: statusLabel,
+    progress,
   };
 };
 
@@ -95,6 +151,40 @@ function StatusBadge({ status }: { status: string }) {
   return <Badge className={cn('text-xs', sc.className, sc.pulse && 'animate-pulse')}>{status}</Badge>;
 }
 
+/* ─── Progress cell for table rows ─── */
+
+function ProgressCell({ row, navigate }: { row: HistoryRow; navigate: (path: string) => void }) {
+  const { progress } = row;
+  const pct = Math.round((progress.completedCount / progress.totalSteps) * 100);
+
+  if (progress.status === 'completed') {
+    return (
+      <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); navigate(`/result/${row.id}`); }}>
+        結果を見る
+      </Button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+      <div className="flex-1 min-w-[80px]">
+        <Progress value={pct} className="h-2" />
+        <span className="text-[10px] text-muted-foreground mt-0.5 block">
+          {progress.completedCount}/{progress.totalSteps}工程
+          {progress.nextStep && ` • 次: ${STEP_LABELS[progress.nextStep]}`}
+        </span>
+      </div>
+      <Button
+        variant="brand" size="sm" className="whitespace-nowrap text-xs px-3 h-7"
+        onClick={() => navigate(`/generate/progress?job_id=${row.id}`)}
+      >
+        {progress.status === 'not_started' ? '開始' : '再開'}
+        <ArrowRight className="h-3 w-3 ml-1" />
+      </Button>
+    </div>
+  );
+}
+
 /* ─── Table Components ─── */
 
 function HistoryTableHead({ columns }: { columns: string[] }) {
@@ -110,6 +200,14 @@ function HistoryTableHead({ columns }: { columns: string[] }) {
 }
 
 function HistoryTableRow({ row, columns, navigate }: { row: HistoryRow; columns: string[]; navigate: (path: string) => void }) {
+  const handleRowClick = () => {
+    if (row.progress.status === 'completed') {
+      navigate(`/result/${row.id}`);
+    } else {
+      navigate(`/generate/progress?job_id=${row.id}`);
+    }
+  };
+
   const cellMap: Record<string, React.ReactNode> = {
     '日時': <span className="text-muted-foreground whitespace-nowrap">{row.date}</span>,
     'クライアント': <span className="font-medium">{row.client}</span>,
@@ -119,17 +217,13 @@ function HistoryTableRow({ row, columns, navigate }: { row: HistoryRow; columns:
     'パターン数': <span className="text-muted-foreground">{row.patterns}</span>,
     '合計本数': <span className="tabular-nums">{row.total}</span>,
     'ステータス': <StatusBadge status={row.status} />,
-    'アクション': (
-      <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); navigate(`/result/${row.id}`); }}>
-        詳細
-      </Button>
-    ),
+    '進捗': <ProgressCell row={row} navigate={navigate} />,
   };
 
   return (
     <tr
       className="border-b last:border-0 hover:bg-primary-wash transition-colors cursor-pointer"
-      onClick={() => navigate(`/result/${row.id}`)}
+      onClick={handleRowClick}
     >
       {columns.map((col) => (
         <td key={col} className="p-3 text-sm">{cellMap[col]}</td>
@@ -166,7 +260,7 @@ function GroupedByClient({ data, navigate }: { data: HistoryRow[]; navigate: (pa
   }, [data]);
 
   const [expanded, setExpanded] = useState<string | null>(groups[0]?.[0] ?? null);
-  const columns = ['日時', '商材', '案件', 'タイプ', 'パターン数', '合計本数', 'ステータス'];
+  const columns = ['日時', '商材', '案件', 'タイプ', 'パターン数', 'ステータス', '進捗'];
 
   return (
     <div className="space-y-2 mt-4">
@@ -202,7 +296,7 @@ function GroupedByProduct({ data, navigate }: { data: HistoryRow[]; navigate: (p
   }, [data]);
 
   const [expanded, setExpanded] = useState<string | null>(groups[0]?.[0] ?? null);
-  const columns = ['日時', '案件', 'タイプ', 'パターン数', '合計本数', 'ステータス'];
+  const columns = ['日時', '案件', 'タイプ', 'パターン数', 'ステータス', '進捗'];
 
   return (
     <div className="space-y-2 mt-4">
@@ -239,7 +333,7 @@ function GroupedByProject({ data, navigate }: { data: HistoryRow[]; navigate: (p
   }, [data]);
 
   const [expanded, setExpanded] = useState<string | null>(groups[0]?.[0] ?? null);
-  const columns = ['日時', 'タイプ', 'パターン数', '合計本数', 'ステータス'];
+  const columns = ['日時', 'タイプ', 'パターン数', 'ステータス', '進捗'];
 
   return (
     <div className="space-y-2 mt-4">
@@ -277,7 +371,7 @@ function GroupedByType({ data, navigate }: { data: HistoryRow[]; navigate: (path
     return Array.from(map.entries()).filter(([, rows]) => rows.length > 0);
   }, [data]);
 
-  const columns = ['日時', 'クライアント', '商材', '案件', 'パターン数', '合計本数', 'ステータス'];
+  const columns = ['日時', 'クライアント', '商材', '案件', 'パターン数', 'ステータス', '進捗'];
 
   const typeIcon = (type: string) => {
     if (type === '静止画') return <Image className="h-4 w-4 text-muted-foreground" />;
@@ -343,7 +437,7 @@ const HistoryPage = () => {
   const [dateTo, setDateTo] = useState<Date>();
   const [page, setPage] = useState(1);
 
-  // Fetch gen_jobs from Supabase
+  // Fetch gen_jobs with gen_steps from Supabase
   useEffect(() => {
     if (!user) return;
     const fetchJobs = async () => {
@@ -360,6 +454,10 @@ const HistoryPage = () => {
                 name
               )
             )
+          ),
+          gen_steps (
+            step_key,
+            status
           )
         `)
         .eq('created_by', user.id)
@@ -402,7 +500,7 @@ const HistoryPage = () => {
   };
 
   const totalCreatives = historyData.reduce((sum, r) => sum + r.totalNum, 0);
-  const allColumns = ['日時', 'クライアント', '商材', '案件', 'タイプ', 'パターン数', '合計本数', 'ステータス', 'アクション'];
+  const allColumns = ['日時', 'クライアント', '商材', '案件', 'タイプ', 'ステータス', '進捗'];
 
   if (loading) {
     return (
@@ -471,6 +569,7 @@ const HistoryPage = () => {
                       <SelectItem value="all">全て</SelectItem>
                       <SelectItem value="完了">完了</SelectItem>
                       <SelectItem value="生成中">生成中</SelectItem>
+                      <SelectItem value="未開始">未開始</SelectItem>
                     </SelectContent>
                   </Select>
 
