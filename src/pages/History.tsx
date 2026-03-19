@@ -94,13 +94,8 @@ const fadeUp = {
 };
 
 /* ─── Map gen_jobs row to HistoryRow ─── */
-const getJobDisplayDate = (job: any) => {
-  const primaryDate = job.completed_at ?? job.created_at;
-  return primaryDate ? new Date(primaryDate) : new Date();
-};
-
 const mapJobToRow = (job: any): HistoryRow => {
-  const displayDate = getJobDisplayDate(job);
+  const createdAt = job.created_at ? new Date(job.created_at) : new Date();
   const clientName = job.projects?.products?.clients?.name ?? '—';
   const productName = job.projects?.products?.name ?? '—';
   const projectName = job.projects?.name ?? '—';
