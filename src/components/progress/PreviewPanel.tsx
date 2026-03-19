@@ -882,12 +882,102 @@ const PreviewNAScript = ({ state, genStepResult, copyStepResult, appealAxesResul
   );
 };
 
-const PreviewNarration = () => (
-  <div className="space-y-3">
-    <AudioPlayer label="音声タイプ: 女性ナチュラル" />
-    <p className="text-xs text-muted-foreground">※ デモ用プレースホルダーです</p>
-  </div>
-);
+const PreviewNarration = ({ state, narrationAudioMap, genStepResult, copyStepResult, appealAxesResult, compositionStepResult }: {
+  state: WizardState;
+  narrationAudioMap?: Record<string, string | null>;
+  genStepResult?: any;
+  copyStepResult?: any;
+  appealAxesResult?: any;
+  compositionStepResult?: any;
+}) => {
+  const copyCount = state.copyPatterns;
+  const scriptCount = state.appealAxis * copyCount;
+  const tabKeys = Array.from({ length: Math.min(scriptCount, 9) }, (_, i) => ALPHA[i]);
+  const hasAnyAudio = narrationAudioMap && Object.values(narrationAudioMap).some(v => v);
+
+  // Get narration scripts from NA step result for display alongside audio
+  const realNarrations: any[] | null = (() => {
+    try {
+      if (genStepResult?.narrations && Array.isArray(genStepResult.narrations)) return genStepResult.narrations;
+    } catch {}
+    return null;
+  })();
+
+  const narrationByPattern: Record<string, any> = {};
+  if (realNarrations) {
+    for (const n of realNarrations) {
+      if (n.pattern_id) narrationByPattern[n.pattern_id] = n;
+    }
+  }
+
+  const compositionByPattern: Record<string, any> = {};
+  if (compositionStepResult?.compositions && Array.isArray(compositionStepResult.compositions)) {
+    for (const comp of compositionStepResult.compositions) {
+      if (comp.pattern_id) compositionByPattern[comp.pattern_id] = comp;
+    }
+  }
+
+  if (hasAnyAudio) {
+    return (
+      <div className="space-y-4">
+        <Badge className="bg-success-wash text-success text-xs">AI生成音声</Badge>
+        <Tabs defaultValue={tabKeys[0]}>
+          <TabsList className="w-full flex-wrap h-auto gap-1">
+            {tabKeys.map((letter) => (
+              <TabsTrigger key={letter} value={letter} className="text-xs font-mono">{letter}</TabsTrigger>
+            ))}
+          </TabsList>
+          {tabKeys.map((letter) => {
+            const audioUrl = narrationAudioMap?.[letter];
+            const narration = narrationByPattern[letter];
+            const naSections: any[] = narration?.sections ?? [];
+            const composition = compositionByPattern[letter];
+            const compScenes: any[] = composition?.scenes ?? [];
+
+            return (
+              <TabsContent key={letter} value={letter}>
+                <div className="mt-3 space-y-4">
+                  <PatternHeader patternId={letter} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} />
+
+                  {/* NA Script sections */}
+                  {naSections.length > 0 && (
+                    <div>
+                      {naSections.map((sec: any, j: number) => (
+                        <div key={j} className="bg-accent/30 rounded-lg p-3 mb-2">
+                          <div className="flex items-center gap-2 mb-2">
+                            {sec.time_range && <Badge variant="outline" className="text-xs">{sec.time_range}</Badge>}
+                            <Badge className="bg-secondary text-secondary-foreground text-xs">【{sec.part}】</Badge>
+                          </div>
+                          <p className="text-sm leading-relaxed">{sec.text}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Audio Player */}
+                  {audioUrl ? (
+                    <NarrationAudioPlayer audioUrl={audioUrl} patternName={`パターン${letter}`} />
+                  ) : (
+                    <div className="bg-muted rounded-lg p-4 text-center">
+                      <p className="text-sm text-muted-foreground">音声未生成</p>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            );
+          })}
+        </Tabs>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <AudioPlayer label="音声タイプ: 女性ナチュラル" />
+      <p className="text-xs text-muted-foreground">※ デモ用プレースホルダーです</p>
+    </div>
+  );
+};
 
 const PreviewBGM = () => (
   <div className="space-y-3">
