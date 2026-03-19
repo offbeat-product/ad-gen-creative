@@ -710,7 +710,24 @@ const GenerateProgress = () => {
       }
     }
 
-    // Non-text step: advance to next dummy step
+    // Non-text step (including narration audio step): advance to next dummy step
+    const narrationStepKey = pipeline[idx]?.stepKey;
+    if (narrationStepKey === 'narration') {
+      // Narration audio approved → start dummy animations
+      dummyAnimationStartedRef.current = true;
+      setDummyPhaseStarted(true);
+      const nextDummyIdx = pipeline.findIndex((s, i) => i > idx && !TEXT_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
+      if (nextDummyIdx >= 0) {
+        setTimeout(() => setActiveIndex(nextDummyIdx), 300);
+      } else {
+        setAllDone(true);
+        setShowConfetti(true);
+        clearInterval(timerRef.current);
+        setTimeout(() => setShowConfetti(false), 3500);
+      }
+      return;
+    }
+
     if (idx + 1 < pipeline.length) {
       setTimeout(() => setActiveIndex(idx + 1), 300);
     } else {
