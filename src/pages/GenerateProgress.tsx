@@ -683,7 +683,12 @@ const GenerateProgress = () => {
       }
 
       if (currentOrderIdx === TEXT_STEP_KEYS.length - 1) {
-        // Last text step approved → start dummy animations
+        // Last text step (narration_script) approved → show voice selection
+        if (state.creativeType === 'video') {
+          setVoiceSelectionPending(true);
+          return;
+        }
+        // Banner: no voice needed, start dummy animations
         dummyAnimationStartedRef.current = true;
         setDummyPhaseStarted(true);
         if (firstDummyIndex >= 0 && firstDummyIndex < pipeline.length) {
