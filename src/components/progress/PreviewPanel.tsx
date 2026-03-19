@@ -35,11 +35,15 @@ interface Props {
   copyStepResult?: any;
   compositionStepResult?: any;
   jobId?: string | null;
+  voiceSelectionPending?: boolean;
+  voiceGenerating?: boolean;
+  narrationAudioMap?: Record<string, string | null>;
   onApprove: (idx: number) => void;
   onRegenerate: (idx: number) => void;
   onSwitchToAuto: () => void;
   onNavigateDashboard: () => void;
   onResultUpdated?: () => void;
+  onTriggerNarrationAudio?: (voiceId: string) => void;
 }
 
 /* ─── Pattern naming helpers ─── */
