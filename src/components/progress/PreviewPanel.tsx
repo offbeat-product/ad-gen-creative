@@ -1253,7 +1253,7 @@ const generateDownloadText = (
 const PreviewPanel = ({
   pipeline, selectedStepIndex, completedIndexes, allDone, total, state,
   waitingForApproval, effectiveAutoMode, genStepResult, appealAxesResult, copyStepResult, compositionStepResult, narrationScriptResult, jobId,
-  voiceSelectionPending, voiceGenerating, narrationAudioMap,
+  voiceSelectionPending, voiceGenerating, narrationAudioMap, narrationAudioMapB, selectedGender,
   onApprove, onRegenerate, onSwitchToAuto, onNavigateDashboard, onResultUpdated, onTriggerNarrationAudio,
 }: Props) => {
   const { toast } = useToast();
