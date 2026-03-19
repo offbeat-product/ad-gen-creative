@@ -885,9 +885,16 @@ const PreviewNAScript = ({ state, genStepResult, copyStepResult, appealAxesResul
   );
 };
 
-const PreviewNarration = ({ state, narrationAudioMap, jobId }: {
+const VOICE_NAMES: Record<string, Record<string, string>> = {
+  male: { a: '男性ボイス A', b: '男性ボイス B' },
+  female: { a: '女性ボイス A', b: '女性ボイス B' },
+};
+
+const PreviewNarration = ({ state, narrationAudioMap, narrationAudioMapB, selectedGender, jobId }: {
   state: WizardState;
   narrationAudioMap?: Record<string, string | null>;
+  narrationAudioMapB?: Record<string, string | null>;
+  selectedGender?: 'male' | 'female';
   jobId?: string | null;
 }) => {
   const [genPatterns, setGenPatterns] = useState<Array<{
@@ -896,6 +903,7 @@ const PreviewNarration = ({ state, narrationAudioMap, jobId }: {
     copy_text: string | null;
     narration_script: string | null;
     narration_audio_url: string | null;
+    narration_audio_url_b: string | null;
   }>>([]);
 
   useEffect(() => {
@@ -903,21 +911,24 @@ const PreviewNarration = ({ state, narrationAudioMap, jobId }: {
     const fetchPatterns = async () => {
       const { data } = await supabase
         .from('gen_patterns')
-        .select('pattern_id, appeal_axis_text, copy_text, narration_script, narration_audio_url')
+        .select('pattern_id, appeal_axis_text, copy_text, narration_script, narration_audio_url, narration_audio_url_b')
         .eq('job_id', jobId)
         .order('pattern_id', { ascending: true });
       if (data) setGenPatterns(data);
     };
     fetchPatterns();
-  }, [jobId, narrationAudioMap]);
+  }, [jobId, narrationAudioMap, narrationAudioMapB]);
 
-  // Merge narrationAudioMap into genPatterns (polling may have newer URLs)
   const patternsWithAudio = genPatterns.map(p => ({
     ...p,
     narration_audio_url: narrationAudioMap?.[p.pattern_id] ?? p.narration_audio_url,
+    narration_audio_url_b: narrationAudioMapB?.[p.pattern_id] ?? p.narration_audio_url_b,
   }));
 
   const hasPatterns = patternsWithAudio.length > 0;
+  const gender = selectedGender ?? 'male';
+  const voiceNameA = VOICE_NAMES[gender]?.a ?? 'ボイスA';
+  const voiceNameB = VOICE_NAMES[gender]?.b ?? 'ボイスB';
 
   if (!hasPatterns) {
     return (
@@ -956,14 +967,29 @@ const PreviewNarration = ({ state, narrationAudioMap, jobId }: {
                 )}
               </div>
 
-              {/* Audio Player */}
-              {p.narration_audio_url ? (
-                <NarrationAudioPlayer audioUrl={p.narration_audio_url} patternName={`パターン${p.pattern_id}`} />
-              ) : (
-                <div className="bg-muted rounded-lg p-4 text-center">
-                  <p className="text-sm text-muted-foreground">音声未生成</p>
-                </div>
-              )}
+              {/* Voice A */}
+              <div>
+                <p className="text-xs font-semibold text-secondary mb-1">🔵 {voiceNameA}</p>
+                {p.narration_audio_url ? (
+                  <NarrationAudioPlayer audioUrl={p.narration_audio_url} patternName={`パターン${p.pattern_id}_A`} />
+                ) : (
+                  <div className="bg-muted rounded-lg p-4 text-center">
+                    <p className="text-sm text-muted-foreground">音声未生成</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Voice B */}
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground mb-1">⚪ {voiceNameB}</p>
+                {p.narration_audio_url_b ? (
+                  <NarrationAudioPlayer audioUrl={p.narration_audio_url_b} patternName={`パターン${p.pattern_id}_B`} />
+                ) : (
+                  <div className="bg-muted rounded-lg p-4 text-center">
+                    <p className="text-sm text-muted-foreground">音声未生成</p>
+                  </div>
+                )}
+              </div>
             </div>
           </TabsContent>
         ))}
