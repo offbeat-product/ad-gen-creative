@@ -1058,6 +1058,15 @@ const GenerateProgress = () => {
   const estRemaining = Math.max(0, avgPerStep * remainingSteps);
   const remainStr = `${Math.floor(estRemaining / 60000)}:${String(Math.floor((estRemaining % 60000) / 1000)).padStart(2, '0')}`;
 
+  // Narration progress from polling data
+  const narrationProgress = (() => {
+    const entries = Object.entries(narrationAudioMap);
+    if (entries.length === 0 && !voiceGenerating) return null;
+    const totalPatterns = entries.length || total;
+    const completedPatterns = entries.filter(([, url]) => !!url).length;
+    return { completed: completedPatterns, total: totalPatterns };
+  })();
+
   if (!stateReady) {
     return (
       <div className="h-[calc(100vh-56px)] flex items-center justify-center">
