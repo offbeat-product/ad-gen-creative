@@ -24,6 +24,7 @@ import ActionBar from './ActionBar';
 import VoiceSelector from './VoiceSelector';
 import NarrationAudioPlayer from './NarrationAudioPlayer';
 import VconPreview from './VconPreview';
+import BgmUploader from './BgmUploader';
 
 
 interface Props {
