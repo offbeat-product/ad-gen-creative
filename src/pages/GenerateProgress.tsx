@@ -461,6 +461,9 @@ const GenerateProgress = () => {
 
   const effectiveAutoMode = (jobData?.generation_mode === 'auto') || switchedToAuto;
 
+  // Keep ref in sync for polling closure
+  useEffect(() => { styleSelectionPendingRef.current = styleSelectionPending; }, [styleSelectionPending]);
+
   // Elapsed timer
   useEffect(() => {
     timerRef.current = setInterval(() => setElapsed(Date.now() - startTime), 1000);
