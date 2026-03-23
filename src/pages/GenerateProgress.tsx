@@ -981,18 +981,18 @@ const GenerateProgress = () => {
             setCompletedIndexes(prev => new Set(prev).add(narrationIdx));
             setSelectedStepIndex(narrationIdx);
             setActiveIndex(-1);
-            // Wait for approval before proceeding to dummy animations
+
+            // Trigger WF6 (BGM suggestion) for video jobs
+            if (state.creativeType === 'video' && !wf6TriggeredRef.current) {
+              wf6TriggeredRef.current = true;
+              triggerBgmSuggestion();
+            }
+
+            // Wait for approval before proceeding
             if (!effectiveAutoMode) {
               setWaitingForApproval(narrationIdx);
-            } else {
-              // Auto mode: start dummy animations immediately
-              dummyAnimationStartedRef.current = true;
-              setDummyPhaseStarted(true);
-              const nextDummyIdx = pipeline.findIndex((s, i) => i > narrationIdx && !TEXT_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
-              if (nextDummyIdx >= 0) {
-                setTimeout(() => setActiveIndex(nextDummyIdx), 500);
-              }
             }
+            // In auto mode, polling will detect bgm_suggestion completion and start dummy phase
           }
         }
       }, 3000);
