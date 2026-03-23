@@ -86,12 +86,17 @@ serve(async (req) => {
       },
     ];
 
-    // Add BGM suggestion step for video only
+    // Add BGM suggestion and Vcon steps for video only
     if (body.creative_type === "video") {
       steps.push({
         step_number: 5,
         step_key: "bgm_suggestion",
         step_label: "BGM提案",
+      });
+      steps.push({
+        step_number: 6,
+        step_key: "vcon",
+        step_label: "Vコン作成",
       });
     }
 

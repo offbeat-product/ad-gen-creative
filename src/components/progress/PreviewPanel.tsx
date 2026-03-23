@@ -23,7 +23,7 @@ import type { WizardState } from '@/data/wizard-data';
 import ActionBar from './ActionBar';
 import VoiceSelector from './VoiceSelector';
 import NarrationAudioPlayer from './NarrationAudioPlayer';
-
+import VconPreview from './VconPreview';
 
 
 interface Props {
@@ -1196,13 +1196,15 @@ const PreviewBGM = ({ genStepResult }: { genStepResult?: any }) => {
   );
 };
 
-const PreviewVCon = () => (
-  <div className="space-y-3">
-    <div className="bg-muted rounded-xl flex items-center justify-center" style={{ aspectRatio: '16/9' }}>
-      <Play className="h-12 w-12 text-muted-foreground" />
-    </div>
-    <p className="text-xs text-muted-foreground">字コンテ + NA + BGMの統合</p>
-  </div>
+const PreviewVCon = ({ genStepResult, narrationAudioMap, narrationAudioMapB, selectedGender }: {
+  genStepResult?: any; narrationAudioMap?: Record<string, string | null>; narrationAudioMapB?: Record<string, string | null>; selectedGender?: 'male' | 'female';
+}) => (
+  <VconPreview
+    genStepResult={genStepResult}
+    narrationAudioMap={narrationAudioMap}
+    narrationAudioMapB={narrationAudioMapB}
+    selectedGender={selectedGender}
+  />
 );
 
 const PreviewStyleFrames = () => (
@@ -1598,7 +1600,7 @@ const PreviewPanel = ({
         case 3: mainContent = <PreviewNAScript state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} compositionStepResult={compositionStepResult} editing={editing} editData={editData} setEditData={setEditData} />; break;
         case 4: return <PreviewNarration state={state} narrationAudioMap={narrationAudioMap} narrationAudioMapB={narrationAudioMapB} selectedGender={selectedGender} jobId={jobId} appealAxesResult={appealAxesResult} copyStepResult={copyStepResult} compositionStepResult={compositionStepResult} narrationScriptResult={narrationScriptResult} />;
         case 5: mainContent = <PreviewBGM genStepResult={displayData} />; break;
-        case 6: mainContent = <PreviewVCon />; break;
+        case 6: mainContent = <PreviewVCon genStepResult={displayData} narrationAudioMap={narrationAudioMap} narrationAudioMapB={narrationAudioMapB} selectedGender={selectedGender} />; break;
         case 7: mainContent = <PreviewStyleFrames />; break;
         case 8: mainContent = <PreviewEkonte total={total} />; break;
         case 9: mainContent = <PreviewFinalVideo total={total} state={state} aspect="16/9" resolution="1920 × 1080" />; break;

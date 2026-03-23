@@ -141,6 +141,7 @@ const WEBHOOK_URLS: Record<string, string> = {
 
 const WF5_WEBHOOK_URL = 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step5';
 const WF6_WEBHOOK_URL = 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step6';
+const WF7_WEBHOOK_URL = 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step7';
 
 /* ─── Confetti ─── */
 
@@ -221,7 +222,7 @@ const safeParse = (v: any): any => {
 /* ─── Text step keys (driven by Supabase only) ─── */
 
 const TEXT_STEP_KEYS = ['appeal_axis', 'copy', 'composition', 'narration_script'];
-const DATA_DRIVEN_STEP_KEYS = [...TEXT_STEP_KEYS, 'bgm_suggestion'];
+const DATA_DRIVEN_STEP_KEYS = [...TEXT_STEP_KEYS, 'bgm_suggestion', 'vcon'];
 
 /* ─── Trigger a specific next step webhook ─── */
 
@@ -409,6 +410,7 @@ const GenerateProgress = () => {
   const step3TriggeredRef = useRef(false);
   const step4TriggeredRef = useRef(false);
   const wf6TriggeredRef = useRef(false);
+  const wf7TriggeredRef = useRef(false);
   const dummyAnimationStartedRef = useRef(false);
 
   // Reset dedup refs and UI state on jobId change
@@ -417,6 +419,7 @@ const GenerateProgress = () => {
     step3TriggeredRef.current = false;
     step4TriggeredRef.current = false;
     wf6TriggeredRef.current = false;
+    wf7TriggeredRef.current = false;
     dummyAnimationStartedRef.current = false;
     setActiveIndex(-1);
     setCompletedIndexes(new Set());
@@ -535,6 +538,14 @@ const GenerateProgress = () => {
           step4TriggeredRef.current = true;
           triggerWebhook('narration_script', jobData, steps as GenStepRow[], jobMeta);
         }
+
+        // BGM completed & Vcon pending → trigger WF7
+        const bgmStep = steps.find((s: any) => s.step_key === 'bgm_suggestion');
+        const vconStep = steps.find((s: any) => s.step_key === 'vcon');
+        if (bgmStep?.status === 'completed' && vconStep?.status === 'pending' && !wf7TriggeredRef.current) {
+          wf7TriggeredRef.current = true;
+          triggerVcon();
+        }
       }
 
       // ── Step mode: detect newly completed step → set waitingForApproval ──
@@ -568,14 +579,25 @@ const GenerateProgress = () => {
           if (gs?.status === 'processing' || gs?.status === 'pending') break;
         }
 
-        // Also check bgm_suggestion step for approval
+        // Also check bgm_suggestion and vcon steps for approval
         if (!foundApproval) {
-          const bgmGs = steps.find((s: any) => s.step_key === 'bgm_suggestion');
-          const bgmIdx = stepKeyToIndex.get('bgm_suggestion');
-          if (bgmGs?.status === 'completed' && bgmIdx !== undefined && !dummyAnimationStartedRef.current) {
-            setWaitingForApproval(bgmIdx);
-            if (userSelectedStepRef.current === null) setSelectedStepIndex(bgmIdx);
-            foundApproval = true;
+          for (const extraKey of ['bgm_suggestion', 'vcon']) {
+            const gs = steps.find((s: any) => s.step_key === extraKey);
+            const pIdx = stepKeyToIndex.get(extraKey);
+            if (gs?.status === 'completed' && pIdx !== undefined && !dummyAnimationStartedRef.current) {
+              // Only show approval if the next data-driven step is pending or doesn't exist
+              const nextKeys = DATA_DRIVEN_STEP_KEYS.slice(DATA_DRIVEN_STEP_KEYS.indexOf(extraKey) + 1);
+              const nextPending = nextKeys.find(nk => {
+                const ngs = steps.find((s: any) => s.step_key === nk);
+                return !ngs || ngs.status === 'pending';
+              });
+              if (nextPending || nextKeys.length === 0) {
+                setWaitingForApproval(pIdx);
+                if (userSelectedStepRef.current === null) setSelectedStepIndex(pIdx);
+                foundApproval = true;
+                break;
+              }
+            }
           }
         }
 
@@ -593,8 +615,7 @@ const GenerateProgress = () => {
       // ── Check if all data-driven steps (including bgm_suggestion) completed ──
       const allDataDone = DATA_DRIVEN_STEP_KEYS.every(key => {
         const gs = steps.find((s: any) => s.step_key === key);
-        // bgm_suggestion may not exist for image jobs
-        if (!gs && key === 'bgm_suggestion' && state.creativeType !== 'video') return true;
+        if (!gs && (key === 'bgm_suggestion' || key === 'vcon') && state.creativeType !== 'video') return true;
         return gs?.status === 'completed';
       });
 
@@ -737,6 +758,48 @@ const GenerateProgress = () => {
     }
   }, [jobId, jobData, jobMeta, genStepsData, stepKeyToIndex]);
 
+  // ── WF7: Trigger Vcon generation ──
+  const triggerVcon = useCallback(async () => {
+    if (!jobId || !jobData) return;
+
+    const vconIdx = stepKeyToIndex.get('vcon');
+    if (vconIdx !== undefined) {
+      setActiveIndex(vconIdx);
+    }
+
+    try {
+      const { data: patterns } = await supabase
+        .from('gen_patterns')
+        .select('pattern_id, appeal_axis_text, copy_text, composition, narration_script')
+        .eq('job_id', jobId)
+        .order('pattern_id', { ascending: true });
+
+      const step1 = genStepsData.find(s => s.step_key === 'appeal_axis');
+      const step1Result = step1?.result
+        ? (typeof step1.result === 'string' ? safeParse(step1.result) : step1.result)
+        : {};
+      const rulesText = step1Result?._rules_text || '';
+
+      const response = await fetch(WF7_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          job_id: jobId,
+          creative_type: jobData.creative_type,
+          duration_seconds: jobData.duration_seconds,
+          client_name: jobMeta.clientName,
+          product_name: jobMeta.productName,
+          project_name: jobMeta.projectName,
+          patterns: patterns || [],
+          _rules_text: rulesText,
+        }),
+      });
+      console.log('[WF7] Response status:', response.status);
+    } catch (e) {
+      console.error('[WF7] Failed:', e);
+    }
+  }, [jobId, jobData, jobMeta, genStepsData, stepKeyToIndex]);
+
   // ── Handle approve: trigger next webhook (step mode) or advance dummy ──
   const handleApprove = useCallback(async (idx: number) => {
     setWaitingForApproval(-1);
@@ -797,8 +860,18 @@ const GenerateProgress = () => {
       return;
     }
 
-    // BGM suggestion approved → start dummy animations
+    // BGM suggestion approved → trigger WF7 (Vcon)
     if (narrationStepKey === 'bgm_suggestion') {
+      if (state.creativeType === 'video' && !wf7TriggeredRef.current) {
+        wf7TriggeredRef.current = true;
+        triggerVcon();
+      }
+      // Polling will detect vcon completion and advance
+      return;
+    }
+
+    // Vcon approved → start dummy animations
+    if (narrationStepKey === 'vcon') {
       dummyAnimationStartedRef.current = true;
       setDummyPhaseStarted(true);
       const nextDummyIdx = pipeline.findIndex((s, i) => i > idx && !DATA_DRIVEN_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
@@ -821,7 +894,7 @@ const GenerateProgress = () => {
       clearInterval(timerRef.current);
       setTimeout(() => setShowConfetti(false), 3500);
     }
-  }, [pipeline, jobId, jobData, genStepsData, jobMeta, firstDummyIndex, state.creativeType, triggerBgmSuggestion]);
+  }, [pipeline, jobId, jobData, genStepsData, jobMeta, firstDummyIndex, state.creativeType, triggerBgmSuggestion, triggerVcon]);
 
   const handleRegenerate = useCallback(async (idx: number) => {
     if (!jobId || !jobData) {
