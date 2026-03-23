@@ -1633,6 +1633,25 @@ const PreviewPanel = ({
   };
 
   // Show voice selection or voice generating state
+  // Show style selection UI for styleframe step
+  if (styleSelectionPending && onStyleSelected) {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="px-6 pt-5 pb-3">
+          <div className="flex items-center gap-3">
+            <Sparkles className="h-5 w-5 text-secondary" />
+            <h2 className="text-lg font-bold font-display">スタイルフレーム作成</h2>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">Vコンが完了しました。スタイルフレームのクリエイティブスタイルを選択してください。</p>
+        </div>
+        <Separator />
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          <StyleSelectionForStyleframe onSelect={onStyleSelected} />
+        </div>
+      </div>
+    );
+  }
+
   if (voiceSelectionPending && onTriggerNarrationAudio) {
     return (
       <div className="flex flex-col h-full">
