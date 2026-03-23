@@ -1249,6 +1249,43 @@ const PreviewVCon = ({ genStepResult, narrationAudioMap, narrationAudioMapB, sel
   />
 );
 
+/* ─── Style Selection UI (inline for progress page) ─── */
+
+const CREATIVE_STYLES = [
+  { id: 'photographic', title: '🎬 実写素材型', desc: '写実的な広告写真をAIで生成' },
+  { id: 'motion_graphics', title: '🎨 モーショングラフィックス型', desc: 'テロップ演出・イラスト・装飾をAIで生成' },
+  { id: 'hybrid', title: '🔀 ハイブリッド型', desc: '実写+テロップの組み合わせ' },
+];
+
+const StyleSelectionForStyleframe = ({ onSelect }: { onSelect: (style: string) => void }) => {
+  const [selected, setSelected] = useState<string>('photographic');
+  return (
+    <div className="space-y-6">
+      <p className="text-sm text-muted-foreground">クリエイティブスタイルを選択してください。</p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {CREATIVE_STYLES.map(s => (
+          <button
+            key={s.id}
+            onClick={() => setSelected(s.id)}
+            className={cn(
+              'rounded-xl border-2 p-4 text-left transition-all',
+              selected === s.id
+                ? 'border-secondary bg-secondary/5'
+                : 'border-border hover:border-muted-foreground/30',
+            )}
+          >
+            <p className="text-sm font-bold mb-1">{s.title}</p>
+            <p className="text-xs text-muted-foreground">{s.desc}</p>
+          </button>
+        ))}
+      </div>
+      <Button variant="brand" onClick={() => onSelect(selected)} className="w-full">
+        🚀 スタイルフレームを生成
+      </Button>
+    </div>
+  );
+};
+
 const PreviewStyleFrames = ({ genStepResult }: { genStepResult?: any }) => {
   const parsed = (() => {
     if (!genStepResult) return null;
