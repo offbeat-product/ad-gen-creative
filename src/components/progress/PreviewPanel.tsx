@@ -50,6 +50,7 @@ interface Props {
   selectedGender?: 'male' | 'female';
   errorMap?: Record<number, string>;
   genStepsData?: any[];
+  styleSelectionPending?: boolean;
   onApprove: (idx: number) => void;
   onRegenerate: (idx: number) => void;
   onSwitchToAuto: () => void;
@@ -58,6 +59,7 @@ interface Props {
   onTriggerNarrationAudio?: (voiceIdA: string, voiceIdB: string, gender: 'male' | 'female') => void;
   onSkipStep?: (idx: number) => void;
   onRetryStep?: (idx: number) => void;
+  onStyleSelected?: (style: string) => void;
 }
 
 /* ─── Pattern naming helpers ─── */
