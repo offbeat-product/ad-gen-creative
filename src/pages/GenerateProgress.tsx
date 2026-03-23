@@ -423,6 +423,7 @@ const GenerateProgress = () => {
     wf7TriggeredRef.current = false;
     dummyAnimationStartedRef.current = false;
     setActiveIndex(-1);
+    setSkippedIndexes(new Set());
     setCompletedIndexes(new Set());
     setWaitingForApproval(-1);
     setCountUpValues({});
