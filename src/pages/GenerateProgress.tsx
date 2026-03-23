@@ -106,9 +106,7 @@ export const makeVideoPipeline = (s: WizardState): PipelineStep[] => {
     },
     {
       stepKey: 'styleframe', icon: Palette,
-      label: s.creativeStyle === 'motion_graphics' ? 'スタイルフレーム作成（モーショングラフィックス）'
-           : s.creativeStyle === 'hybrid' ? 'スタイルフレーム作成（ハイブリッド）'
-           : 'スタイルフレーム作成（実写素材）',
+      label: 'スタイルフレーム作成',
       demoSeconds: 3, stepType: 'visual',
       runningText: 'スタイルフレーム（トンマナデザイン）を生成しています...',
       completedText: `${s.tonePatterns}パターンのスタイルフレームを生成しました`,
