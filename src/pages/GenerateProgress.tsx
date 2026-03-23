@@ -1159,6 +1159,117 @@ const GenerateProgress = () => {
     console.log(`[Skip] Skipped step ${stepKey}, triggering next step`);
   }, [jobId, jobData, pipeline, genStepsData, jobMeta, state.creativeType, firstDummyIndex, triggerBgmSuggestion, triggerVcon]);
 
+  // ── Handle retry: reset failed step and re-trigger webhook ──
+  const handleRetryStep = useCallback(async (idx: number) => {
+    if (!jobId || !jobData) return;
+
+    const stepKey = pipeline[idx]?.stepKey;
+    if (!stepKey) return;
+
+    // 1. Reset gen_step status
+    await supabase
+      .from('gen_steps')
+      .update({
+        status: 'pending',
+        result: null,
+        error_message: null,
+        started_at: null,
+        completed_at: null,
+      })
+      .eq('job_id', jobId)
+      .eq('step_key', stepKey);
+
+    // 2. Reset local UI
+    setCompletedIndexes(prev => { const s = new Set(prev); s.delete(idx); return s; });
+    setSkippedIndexes(prev => { const s = new Set(prev); s.delete(idx); return s; });
+    setErrorMap(prev => { const n = { ...prev }; delete n[idx]; return n; });
+
+    // Reset webhook dedup refs
+    const refMap: Record<string, React.MutableRefObject<boolean>> = {
+      copy: step2TriggeredRef,
+      composition: step3TriggeredRef,
+      narration_script: step4TriggeredRef,
+      bgm_suggestion: wf6TriggeredRef,
+      vcon: wf7TriggeredRef,
+    };
+    if (refMap[stepKey]) refMap[stepKey].current = false;
+
+    // 3. Build and call webhook
+    const webhookUrl = WEBHOOK_URLS[stepKey];
+    if (!webhookUrl) return;
+
+    try {
+      // For bgm_suggestion and vcon, use dedicated trigger functions
+      if (stepKey === 'bgm_suggestion') {
+        wf6TriggeredRef.current = true;
+        await triggerBgmSuggestion();
+        return;
+      }
+      if (stepKey === 'vcon') {
+        wf7TriggeredRef.current = true;
+        await triggerVcon();
+        return;
+      }
+
+      // For text steps, build body with previous results
+      const { data: allSteps } = await supabase
+        .from('gen_steps')
+        .select('step_key, result')
+        .eq('job_id', jobId)
+        .eq('status', 'completed');
+
+      const previousResults: Record<string, any> = {};
+      allSteps?.forEach((s: any) => {
+        previousResults[s.step_key] = typeof s.result === 'string' ? safeParse(s.result) : s.result;
+      });
+
+      const step1Result = previousResults['appeal_axis'] || {};
+      const knowledgeFields = {
+        _rules_text: step1Result._rules_text || '',
+        _refs_text: step1Result._refs_text || '',
+        _patterns_text: step1Result._patterns_text || '',
+      };
+
+      let body: any = {
+        job_id: jobId,
+        creative_type: jobData.creative_type,
+        duration_seconds: jobData.duration_seconds,
+        num_appeal_axes: jobData.num_appeal_axes,
+        num_copies: jobData.num_copies,
+        num_tonmana: jobData.num_tonmana,
+        client_name: jobMeta.clientName,
+        product_name: jobMeta.productName,
+        project_name: jobMeta.projectName,
+      };
+
+      if (stepKey === 'copy') {
+        body.previous_results = { appeal_axes: step1Result?.appeal_axes || [], ...knowledgeFields };
+      } else if (stepKey === 'composition') {
+        body.previous_results = { copies: (previousResults['copy'] || {})?.copies || [], ...knowledgeFields };
+      } else if (stepKey === 'narration_script') {
+        body.previous_results = {
+          appeal_axes: step1Result?.appeal_axes || [],
+          copies: (previousResults['copy'] || {})?.copies || [],
+          compositions: (previousResults['composition'] || {})?.compositions || [],
+          ...knowledgeFields,
+        };
+      } else if (stepKey === 'narration_audio') {
+        // For narration_audio, use the WF5 format
+        body = { job_id: jobId, voice_id_a: '', voice_id_b: '' };
+      }
+
+      console.log(`[Retry] Calling ${stepKey} webhook...`);
+      await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      console.log(`[Retry] ${stepKey} webhook called successfully`);
+    } catch (e) {
+      console.error(`[Retry] Failed to call ${stepKey} webhook:`, e);
+    }
+  }, [jobId, jobData, pipeline, jobMeta, triggerBgmSuggestion, triggerVcon]);
+
   const refreshGenSteps = useCallback(async () => {
     if (!jobId) return;
     const { data: steps } = await supabase
