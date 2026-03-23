@@ -67,6 +67,8 @@ const StepPatternCount = ({ state, updateState, goBack }: Props) => {
           client_name: client?.name ?? '',
           product_name: product?.name ?? '',
           project_name: project?.name ?? '',
+          creative_style: state.creativeStyle,
+          style_options: state.styleOptions,
         },
       });
 
