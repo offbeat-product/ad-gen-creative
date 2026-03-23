@@ -409,6 +409,7 @@ const GenerateProgress = () => {
   const step2TriggeredRef = useRef(false);
   const step3TriggeredRef = useRef(false);
   const step4TriggeredRef = useRef(false);
+  const wf6TriggeredRef = useRef(false);
   const dummyAnimationStartedRef = useRef(false);
 
   // Reset dedup refs and UI state on jobId change
