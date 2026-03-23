@@ -592,7 +592,10 @@ const GenerateProgress = () => {
               }
             } else {
               // Last text step (narration_script) completed → wait for approval to start voice selection
-              if (!dummyAnimationStartedRef.current && !voiceSelectionPending && !voiceGenerating) {
+              // But only if narration audio hasn't already been handled
+              const narrationAudioGs = steps.find((s: any) => s.step_key === 'narration_audio');
+              const narrationAlreadyHandled = narrationAudioGs && ['completed', 'skipped', 'failed'].includes(narrationAudioGs.status);
+              if (!dummyAnimationStartedRef.current && !voiceSelectionPending && !voiceGenerating && !narrationAlreadyHandled) {
                 setWaitingForApproval(pIdx);
                 if (userSelectedStepRef.current === null) setSelectedStepIndex(pIdx);
                 foundApproval = true;
