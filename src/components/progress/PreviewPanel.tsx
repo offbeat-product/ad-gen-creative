@@ -1122,20 +1122,79 @@ const PreviewNarration = ({ state, narrationAudioMap, narrationAudioMapB, select
   );
 };
 
-const PreviewBGM = () => (
-  <div className="space-y-3">
-    {BGM_DATA.map((bgm, i) => (
-      <div key={i} className="border rounded-lg p-4 space-y-2">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">{bgm.name}</p>
-          <Badge variant="outline">BPM {bgm.bpm}</Badge>
+const PreviewBGM = ({ genStepResult }: { genStepResult?: any }) => {
+  const [openIdx, setOpenIdx] = useState(0);
+
+  const parsed = (() => {
+    if (!genStepResult) return null;
+    try {
+      const r = typeof genStepResult === 'string' ? JSON.parse(genStepResult) : genStepResult;
+      return r?.bgm_suggestions || null;
+    } catch { return null; }
+  })();
+
+  const renderCandidate = (candidate: any, label: string, isPrimary: boolean) => {
+    if (!candidate) return null;
+    return (
+      <div className={cn('rounded-lg p-4 space-y-2', isPrimary ? 'border-l-4 border-l-secondary border border-border' : 'border-l-4 border-l-muted-foreground/30 border border-border')}>
+        <p className="text-sm font-bold">{label}: {candidate.description}</p>
+        <div className="flex flex-wrap gap-1.5">
+          {candidate.mood && <Badge variant="outline" className="text-xs">Mood: {candidate.mood}</Badge>}
+          {candidate.genre && <Badge variant="outline" className="text-xs">Genre: {candidate.genre}</Badge>}
+          {candidate.tempo && <Badge variant="outline" className="text-xs">Tempo: {candidate.tempo}</Badge>}
+          {candidate.theme && <Badge variant="outline" className="text-xs">Theme: {candidate.theme}</Badge>}
+          {candidate.vocals && <Badge variant="outline" className="text-xs">Vocals: {candidate.vocals}</Badge>}
         </div>
-        <p className="text-xs text-muted-foreground">{bgm.genre}</p>
-        <AudioPlayer label={bgm.name} />
+        {candidate.reason && <p className="text-xs text-muted-foreground">{candidate.reason}</p>}
+        {candidate.search_url && (
+          <a href={candidate.search_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-secondary hover:underline mt-1">
+            🔗 Envato Elementsで検索
+          </a>
+        )}
       </div>
-    ))}
-  </div>
-);
+    );
+  };
+
+  if (!parsed || !Array.isArray(parsed) || parsed.length === 0) {
+    return (
+      <div className="space-y-3">
+        {BGM_DATA.map((bgm, i) => (
+          <div key={i} className="border rounded-lg p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium">{bgm.name}</p>
+              <Badge variant="outline">BPM {bgm.bpm}</Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">{bgm.genre}</p>
+            <AudioPlayer label={bgm.name} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <Badge className="bg-success-wash text-success text-xs mb-2">AI生成データ</Badge>
+      {parsed.map((item: any, i: number) => (
+        <div key={i} className="border border-border rounded-lg overflow-hidden">
+          <button
+            onClick={() => setOpenIdx(openIdx === i ? -1 : i)}
+            className="w-full flex items-center justify-between p-3 text-left hover:bg-accent/50 transition-colors"
+          >
+            <span className="font-medium text-sm">パターン {item.pattern_name}</span>
+            <span className="text-muted-foreground text-xs">{openIdx === i ? '▲' : '▼'}</span>
+          </button>
+          {openIdx === i && (
+            <div className="p-3 pt-0 space-y-3">
+              {renderCandidate(item.primary, '第1候補', true)}
+              {renderCandidate(item.alternative, '第2候補', false)}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const PreviewVCon = () => (
   <div className="space-y-3">
@@ -1538,7 +1597,7 @@ const PreviewPanel = ({
         case 2: mainContent = <PreviewStoryboard isVideo state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />; break;
         case 3: mainContent = <PreviewNAScript state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} compositionStepResult={compositionStepResult} editing={editing} editData={editData} setEditData={setEditData} />; break;
         case 4: return <PreviewNarration state={state} narrationAudioMap={narrationAudioMap} narrationAudioMapB={narrationAudioMapB} selectedGender={selectedGender} jobId={jobId} appealAxesResult={appealAxesResult} copyStepResult={copyStepResult} compositionStepResult={compositionStepResult} narrationScriptResult={narrationScriptResult} />;
-        case 5: mainContent = <PreviewBGM />; break;
+        case 5: mainContent = <PreviewBGM genStepResult={displayData} />; break;
         case 6: mainContent = <PreviewVCon />; break;
         case 7: mainContent = <PreviewStyleFrames />; break;
         case 8: mainContent = <PreviewEkonte total={total} />; break;

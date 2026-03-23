@@ -20,7 +20,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const VIDEO_STEPS = [
   'appeal_axis', 'copy', 'composition', 'narration_script',
-  'narration_audio', 'bgm', 'vcon', 'styleframe',
+  'narration_audio', 'bgm_suggestion', 'vcon', 'styleframe',
   'storyboard', 'video_horizontal', 'video_vertical',
 ];
 
@@ -34,7 +34,7 @@ const STEP_LABELS: Record<string, string> = {
   composition: '構成案・字コンテ作成',
   narration_script: 'NA原稿作成',
   narration_audio: 'ナレーション作成',
-  bgm: 'BGM提案',
+  bgm_suggestion: 'BGM提案',
   vcon: 'Vコン作成',
   styleframe: 'スタイルフレーム作成',
   storyboard: '絵コンテ作成',

@@ -94,10 +94,9 @@ export const makeVideoPipeline = (s: WizardState): PipelineStep[] => {
       extra: '音声タイプ: 女性ナチュラル',
     },
     {
-      stepKey: 'bgm', icon: Music, label: 'BGM提案', demoSeconds: 2, stepType: 'audio',
-      runningText: '有料素材ライブラリからBGMを自動抽出しています...',
-      completedText: '3曲のBGM候補を抽出しました',
-      details: ['① アップテンポ・ポジティブ（BPM 120）', '② エモーショナル・ドラマティック（BPM 90）', '③ クール・テクノ（BPM 130）'],
+      stepKey: 'bgm_suggestion', icon: Music, label: 'BGM提案', demoSeconds: 2, stepType: 'text',
+      runningText: 'AIが最適なBGMを選定しています...',
+      completedText: 'BGM候補を提案しました',
     },
     {
       stepKey: 'vcon', icon: Play, label: 'Vコン作成', demoSeconds: 5, stepType: 'visual',
@@ -141,6 +140,7 @@ const WEBHOOK_URLS: Record<string, string> = {
 };
 
 const WF5_WEBHOOK_URL = 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step5';
+const WF6_WEBHOOK_URL = 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step6';
 
 /* ─── Confetti ─── */
 
@@ -221,6 +221,7 @@ const safeParse = (v: any): any => {
 /* ─── Text step keys (driven by Supabase only) ─── */
 
 const TEXT_STEP_KEYS = ['appeal_axis', 'copy', 'composition', 'narration_script'];
+const DATA_DRIVEN_STEP_KEYS = [...TEXT_STEP_KEYS, 'bgm_suggestion'];
 
 /* ─── Trigger a specific next step webhook ─── */
 
@@ -374,7 +375,7 @@ const GenerateProgress = () => {
 
   // Map pipeline step keys to indexes
   const stepKeyToIndex = new Map(pipeline.map((p, i) => [p.stepKey, i]));
-  const firstDummyIndex = pipeline.findIndex(s => s.stepType !== 'text');
+  const firstDummyIndex = pipeline.findIndex(s => !DATA_DRIVEN_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
 
   const [activeIndex, setActiveIndex] = useState(-1);
   const [completedIndexes, setCompletedIndexes] = useState<Set<number>>(new Set());
@@ -407,6 +408,7 @@ const GenerateProgress = () => {
   const step2TriggeredRef = useRef(false);
   const step3TriggeredRef = useRef(false);
   const step4TriggeredRef = useRef(false);
+  const wf6TriggeredRef = useRef(false);
   const dummyAnimationStartedRef = useRef(false);
 
   // Reset dedup refs and UI state on jobId change
@@ -414,6 +416,7 @@ const GenerateProgress = () => {
     step2TriggeredRef.current = false;
     step3TriggeredRef.current = false;
     step4TriggeredRef.current = false;
+    wf6TriggeredRef.current = false;
     dummyAnimationStartedRef.current = false;
     setActiveIndex(-1);
     setCompletedIndexes(new Set());
@@ -478,12 +481,12 @@ const GenerateProgress = () => {
         }
       });
 
-      // Text 4 steps are always rebuilt from DB only; only dummy-step completions are preserved locally
+      // Data-driven steps (text 4 + bgm_suggestion) are always rebuilt from DB; only dummy-step completions are preserved locally
       setCompletedIndexes(prev => {
         const next = new Set<number>();
         prev.forEach(idx => {
           const step = pipeline[idx];
-          if (step && !TEXT_STEP_KEYS.includes(step.stepKey)) next.add(idx);
+          if (step && !DATA_DRIVEN_STEP_KEYS.includes(step.stepKey)) next.add(idx);
         });
         newCompleted.forEach(idx => next.add(idx));
         return next;
@@ -553,8 +556,8 @@ const GenerateProgress = () => {
                 break;
               }
             } else {
-              // Last text step (narration_script) completed → wait for approval to start dummy phase
-              if (!dummyAnimationStartedRef.current) {
+              // Last text step (narration_script) completed → wait for approval to start voice selection
+              if (!dummyAnimationStartedRef.current && !voiceSelectionPending && !voiceGenerating) {
                 setWaitingForApproval(pIdx);
                 if (userSelectedStepRef.current === null) setSelectedStepIndex(pIdx);
                 foundApproval = true;
@@ -562,10 +565,20 @@ const GenerateProgress = () => {
               break;
             }
           }
-          // If this step is still processing or pending, stop looking
           if (gs?.status === 'processing' || gs?.status === 'pending') break;
         }
-        // If no approval needed (all triggered already), clear it
+
+        // Also check bgm_suggestion step for approval
+        if (!foundApproval) {
+          const bgmGs = steps.find((s: any) => s.step_key === 'bgm_suggestion');
+          const bgmIdx = stepKeyToIndex.get('bgm_suggestion');
+          if (bgmGs?.status === 'completed' && bgmIdx !== undefined && !dummyAnimationStartedRef.current) {
+            setWaitingForApproval(bgmIdx);
+            if (userSelectedStepRef.current === null) setSelectedStepIndex(bgmIdx);
+            foundApproval = true;
+          }
+        }
+
         if (!foundApproval) {
           setWaitingForApproval(-1);
         }
@@ -577,35 +590,51 @@ const GenerateProgress = () => {
         return gs?.status === 'completed';
       });
 
-      return allTextDone;
+      // ── Check if all data-driven steps (including bgm_suggestion) completed ──
+      const allDataDone = DATA_DRIVEN_STEP_KEYS.every(key => {
+        const gs = steps.find((s: any) => s.step_key === key);
+        // bgm_suggestion may not exist for image jobs
+        if (!gs && key === 'bgm_suggestion' && state.creativeType !== 'video') return true;
+        return gs?.status === 'completed';
+      });
+
+      return { allTextDone, allDataDone };
     };
 
     doPoll();
 
     const interval = setInterval(async () => {
-      const allTextDone = await doPoll();
+      const result = await doPoll();
+      if (!result) return;
+      const { allTextDone, allDataDone } = result;
+
+      // For video: after all text steps done, show voice selection
       if (allTextDone && !dummyAnimationStartedRef.current) {
-        // In auto mode, start dummy animations immediately (or show voice selection for video)
         if (isJobAutoMode) {
           if (state.creativeType === 'video' && !voiceSelectionPending && !voiceGenerating && Object.keys(narrationAudioMap).length === 0) {
-            // Show voice selection for video before starting dummy animations
             setVoiceSelectionPending(true);
             setWaitingForApproval(-1);
-          } else if (state.creativeType !== 'video' || Object.values(narrationAudioMap).some(v => v)) {
-            dummyAnimationStartedRef.current = true;
-            setDummyPhaseStarted(true);
-            clearInterval(interval);
-            if (firstDummyIndex >= 0 && firstDummyIndex < pipeline.length) {
-              setTimeout(() => setActiveIndex(firstDummyIndex), 500);
-            } else {
-              setAllDone(true);
-              setShowConfetti(true);
-              clearInterval(timerRef.current);
-              setTimeout(() => setShowConfetti(false), 3500);
-            }
           }
         }
-        // In step mode, keep polling but don't start dummy yet (wait for approval)
+      }
+
+      // After all data-driven steps done (text + bgm), start dummy animations
+      if (allDataDone && !dummyAnimationStartedRef.current) {
+        // Check narration audio is also done for video
+        const narrationDone = state.creativeType !== 'video' || Object.values(narrationAudioMap).some(v => v);
+        if (narrationDone && isJobAutoMode) {
+          dummyAnimationStartedRef.current = true;
+          setDummyPhaseStarted(true);
+          clearInterval(interval);
+          if (firstDummyIndex >= 0 && firstDummyIndex < pipeline.length) {
+            setTimeout(() => setActiveIndex(firstDummyIndex), 500);
+          } else {
+            setAllDone(true);
+            setShowConfetti(true);
+            clearInterval(timerRef.current);
+            setTimeout(() => setShowConfetti(false), 3500);
+          }
+        }
       }
     }, 3000);
 
@@ -626,10 +655,8 @@ const GenerateProgress = () => {
     if (activeIndex < 0 || activeIndex >= pipeline.length) return;
     if (completedIndexes.has(activeIndex)) return;
 
-    // If we have a jobId, NEVER animate text steps — they are driven by Supabase data only
-    if (jobId && pipeline[activeIndex].stepType === 'text') return;
-    // Also guard by stepKey for text 4 steps (belt-and-suspenders)
-    if (jobId && TEXT_STEP_KEYS.includes(pipeline[activeIndex].stepKey)) return;
+    // If we have a jobId, NEVER animate data-driven steps — they are driven by Supabase data only
+    if (jobId && DATA_DRIVEN_STEP_KEYS.includes(pipeline[activeIndex].stepKey)) return;
     // Never dummy-animate the narration step when voice is generating — it's driven by polling
     if (jobId && pipeline[activeIndex].stepKey === 'narration' && voiceGenerating) return;
 
@@ -667,6 +694,48 @@ const GenerateProgress = () => {
 
     return () => clearTimeout(t);
   }, [activeIndex, effectiveAutoMode, completedIndexes, stateReady, jobId, voiceGenerating]);
+
+  // ── WF6: Trigger BGM suggestion ──
+  const triggerBgmSuggestion = useCallback(async () => {
+    if (!jobId || !jobData) return;
+
+    const bgmIdx = stepKeyToIndex.get('bgm_suggestion');
+    if (bgmIdx !== undefined) {
+      setActiveIndex(bgmIdx);
+    }
+
+    try {
+      const { data: patterns } = await supabase
+        .from('gen_patterns')
+        .select('pattern_id, appeal_axis_text, copy_text, composition, narration_script')
+        .eq('job_id', jobId)
+        .order('pattern_id', { ascending: true });
+
+      const step1 = genStepsData.find(s => s.step_key === 'appeal_axis');
+      const step1Result = step1?.result
+        ? (typeof step1.result === 'string' ? safeParse(step1.result) : step1.result)
+        : {};
+      const rulesText = step1Result?._rules_text || '';
+
+      const response = await fetch(WF6_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          job_id: jobId,
+          creative_type: jobData.creative_type,
+          duration_seconds: jobData.duration_seconds,
+          client_name: jobMeta.clientName,
+          product_name: jobMeta.productName,
+          project_name: jobMeta.projectName,
+          patterns: patterns || [],
+          _rules_text: rulesText,
+        }),
+      });
+      console.log('[WF6] Response status:', response.status);
+    } catch (e) {
+      console.error('[WF6] Failed:', e);
+    }
+  }, [jobId, jobData, jobMeta, genStepsData, stepKeyToIndex]);
 
   // ── Handle approve: trigger next webhook (step mode) or advance dummy ──
   const handleApprove = useCallback(async (idx: number) => {
@@ -716,13 +785,23 @@ const GenerateProgress = () => {
       }
     }
 
-    // Non-text step (including narration audio step): advance to next dummy step
+    // Non-text step (including narration audio step): advance
     const narrationStepKey = pipeline[idx]?.stepKey;
     if (narrationStepKey === 'narration') {
-      // Narration audio approved → start dummy animations
+      // Narration audio approved → trigger WF6 if not already, then wait for bgm_suggestion
+      if (state.creativeType === 'video' && !wf6TriggeredRef.current) {
+        wf6TriggeredRef.current = true;
+        triggerBgmSuggestion();
+      }
+      // Polling will detect bgm_suggestion completion and advance
+      return;
+    }
+
+    // BGM suggestion approved → start dummy animations
+    if (narrationStepKey === 'bgm_suggestion') {
       dummyAnimationStartedRef.current = true;
       setDummyPhaseStarted(true);
-      const nextDummyIdx = pipeline.findIndex((s, i) => i > idx && !TEXT_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
+      const nextDummyIdx = pipeline.findIndex((s, i) => i > idx && !DATA_DRIVEN_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
       if (nextDummyIdx >= 0) {
         setTimeout(() => setActiveIndex(nextDummyIdx), 300);
       } else {
@@ -742,7 +821,7 @@ const GenerateProgress = () => {
       clearInterval(timerRef.current);
       setTimeout(() => setShowConfetti(false), 3500);
     }
-  }, [pipeline, jobId, jobData, genStepsData, jobMeta, firstDummyIndex]);
+  }, [pipeline, jobId, jobData, genStepsData, jobMeta, firstDummyIndex, state.creativeType, triggerBgmSuggestion]);
 
   const handleRegenerate = useCallback(async (idx: number) => {
     if (!jobId || !jobData) {
@@ -964,18 +1043,18 @@ const GenerateProgress = () => {
             setCompletedIndexes(prev => new Set(prev).add(narrationIdx));
             setSelectedStepIndex(narrationIdx);
             setActiveIndex(-1);
-            // Wait for approval before proceeding to dummy animations
+
+            // Trigger WF6 (BGM suggestion) for video jobs
+            if (state.creativeType === 'video' && !wf6TriggeredRef.current) {
+              wf6TriggeredRef.current = true;
+              triggerBgmSuggestion();
+            }
+
+            // Wait for approval before proceeding
             if (!effectiveAutoMode) {
               setWaitingForApproval(narrationIdx);
-            } else {
-              // Auto mode: start dummy animations immediately
-              dummyAnimationStartedRef.current = true;
-              setDummyPhaseStarted(true);
-              const nextDummyIdx = pipeline.findIndex((s, i) => i > narrationIdx && !TEXT_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
-              if (nextDummyIdx >= 0) {
-                setTimeout(() => setActiveIndex(nextDummyIdx), 500);
-              }
             }
+            // In auto mode, polling will detect bgm_suggestion completion and start dummy phase
           }
         }
       }, 3000);
