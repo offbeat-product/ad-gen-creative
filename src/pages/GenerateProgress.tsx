@@ -1063,6 +1063,84 @@ const GenerateProgress = () => {
     }
   }, [waitingForApproval, handleApprove]);
 
+  // ── Handle skip: mark step as skipped and trigger next step ──
+  const handleSkipStep = useCallback(async (idx: number) => {
+    if (!jobId || !jobData) return;
+
+    const stepKey = pipeline[idx]?.stepKey;
+    if (!stepKey) return;
+
+    const genStep = genStepsData.find(gs => gs.step_key === stepKey);
+    if (!genStep) return;
+
+    // 1. Update gen_step status to skipped
+    await supabase
+      .from('gen_steps')
+      .update({
+        status: 'skipped',
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', genStep.id);
+
+    // 2. Update local UI
+    setSkippedIndexes(prev => new Set(prev).add(idx));
+    setErrorMap(prev => { const n = { ...prev }; delete n[idx]; return n; });
+    setActiveIndex(-1);
+
+    // 3. Determine and trigger next step
+    const ALL_STEP_KEYS = [...DATA_DRIVEN_STEP_KEYS];
+    if (stepKey === 'narration') ALL_STEP_KEYS.splice(ALL_STEP_KEYS.indexOf('bgm_suggestion'), 0, 'narration');
+    
+    const currentOrderIdx = DATA_DRIVEN_STEP_KEYS.indexOf(stepKey);
+    
+    // For text steps, trigger next webhook
+    if (TEXT_STEP_KEYS.includes(stepKey)) {
+      const textIdx = TEXT_STEP_KEYS.indexOf(stepKey);
+      if (textIdx < TEXT_STEP_KEYS.length - 1) {
+        const nextKey = TEXT_STEP_KEYS[textIdx + 1];
+        const refMap: Record<string, React.MutableRefObject<boolean>> = {
+          copy: step2TriggeredRef,
+          composition: step3TriggeredRef,
+          narration_script: step4TriggeredRef,
+        };
+        const ref = refMap[nextKey];
+        if (ref && !ref.current) {
+          ref.current = true;
+          await triggerWebhook(nextKey, jobData, genStepsData, jobMeta);
+        }
+      } else {
+        // Last text step skipped → show voice selection for video, or start dummy for banner
+        if (state.creativeType === 'video') {
+          setVoiceSelectionPending(true);
+        } else {
+          dummyAnimationStartedRef.current = true;
+          setDummyPhaseStarted(true);
+          if (firstDummyIndex >= 0) setTimeout(() => setActiveIndex(firstDummyIndex), 300);
+        }
+      }
+    } else if (stepKey === 'narration') {
+      // Narration skipped → trigger BGM
+      if (state.creativeType === 'video' && !wf6TriggeredRef.current) {
+        wf6TriggeredRef.current = true;
+        triggerBgmSuggestion();
+      }
+    } else if (stepKey === 'bgm_suggestion') {
+      // BGM skipped → trigger Vcon
+      if (state.creativeType === 'video' && !wf7TriggeredRef.current) {
+        wf7TriggeredRef.current = true;
+        triggerVcon();
+      }
+    } else if (stepKey === 'vcon') {
+      // Vcon skipped → start dummy animations
+      dummyAnimationStartedRef.current = true;
+      setDummyPhaseStarted(true);
+      const nextDummyIdx = pipeline.findIndex((s, i) => i > idx && !DATA_DRIVEN_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
+      if (nextDummyIdx >= 0) setTimeout(() => setActiveIndex(nextDummyIdx), 300);
+    }
+
+    console.log(`[Skip] Skipped step ${stepKey}, triggering next step`);
+  }, [jobId, jobData, pipeline, genStepsData, jobMeta, state.creativeType, firstDummyIndex, triggerBgmSuggestion, triggerVcon]);
+
   const refreshGenSteps = useCallback(async () => {
     if (!jobId) return;
     const { data: steps } = await supabase
