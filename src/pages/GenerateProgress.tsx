@@ -424,6 +424,7 @@ const GenerateProgress = () => {
   const [narrationAudioMapB, setNarrationAudioMapB] = useState<Record<string, string | null>>({});
   const [selectedGender, setSelectedGender] = useState<'male' | 'female'>('male');
   const [styleSelectionPending, setStyleSelectionPending] = useState(false);
+  const styleSelectionPendingRef = useRef(false);
 
   // ── Webhook dedup refs (per step) ──
   const step2TriggeredRef = useRef(false);
