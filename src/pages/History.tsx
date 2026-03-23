@@ -74,7 +74,7 @@ const getJobProgress = (
       isDone = (patterns ?? []).some(p => !!p.narration_audio_url);
     } else {
       const step = steps.find(s => s.step_key === stepKey);
-      isDone = step?.status === 'completed';
+      isDone = step?.status === 'completed' || step?.status === 'skipped';
     }
 
     if (isDone) {

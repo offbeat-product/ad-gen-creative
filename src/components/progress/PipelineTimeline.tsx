@@ -1,12 +1,14 @@
 import { motion } from 'framer-motion';
-import { Check, AlertCircle } from 'lucide-react';
+import { Check, AlertCircle, SkipForward } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import type { PipelineStep } from '@/pages/GenerateProgress';
 
 interface Props {
   pipeline: PipelineStep[];
   activeIndex: number;
   completedIndexes: Set<number>;
+  skippedIndexes: Set<number>;
   selectedStepIndex: number | null;
   countUpValues: Record<number, number>;
   total: number;
@@ -20,13 +22,14 @@ interface Props {
   narrationProgress?: { completed: number; total: number } | null;
   onStepClick: (idx: number) => void;
   onSwitchToAuto: () => void;
+  onSkipStep?: (idx: number) => void;
 }
 
 const PipelineTimeline = ({
-  pipeline, activeIndex, completedIndexes, selectedStepIndex,
+  pipeline, activeIndex, completedIndexes, skippedIndexes, selectedStepIndex,
   countUpValues, total, progressPct, completedCount,
   elapsedStr, remainStr, allDone, effectiveAutoMode,
-  errorMap = {}, narrationProgress, onStepClick, onSwitchToAuto,
+  errorMap = {}, narrationProgress, onStepClick, onSwitchToAuto, onSkipStep,
 }: Props) => {
   return (
     <div className="space-y-4">
@@ -66,7 +69,8 @@ const PipelineTimeline = ({
 
         {pipeline.map((step, i) => {
           const isDone = completedIndexes.has(i);
-          const isRunning = activeIndex === i && !isDone;
+          const isSkipped = skippedIndexes.has(i);
+          const isRunning = activeIndex === i && !isDone && !isSkipped;
           const isSelected = selectedStepIndex === i;
           const hasError = !!errorMap[i];
           const StepIcon = step.icon;
@@ -82,15 +86,20 @@ const PipelineTimeline = ({
               className={cn(
                 "relative mb-1.5 last:mb-0 rounded-lg px-3 py-2 ml-2 transition-all duration-200",
                 isDone && "cursor-pointer hover:bg-success-wash/50",
+                isSkipped && "opacity-60",
                 isSelected && isDone && "bg-secondary-wash border-l-[3px] border-secondary",
                 isRunning && "bg-secondary-wash/30",
-                hasError && "bg-destructive/5",
-                !isDone && !isRunning && !hasError && "opacity-60",
+                hasError && !isSkipped && "bg-destructive/5",
+                !isDone && !isRunning && !hasError && !isSkipped && "opacity-60",
               )}
             >
               {/* Timeline dot */}
               <div className="absolute -left-8 top-2.5 flex items-center justify-center">
-                {hasError ? (
+                {isSkipped ? (
+                  <div className="w-[26px] h-[26px] rounded-full bg-muted flex items-center justify-center">
+                    <SkipForward className="h-3.5 w-3.5 text-muted-foreground" />
+                  </div>
+                ) : hasError ? (
                   <div className="w-[26px] h-[26px] rounded-full bg-destructive flex items-center justify-center">
                     <AlertCircle className="h-3.5 w-3.5 text-destructive-foreground" />
                   </div>
@@ -118,11 +127,11 @@ const PipelineTimeline = ({
               <div className="flex items-center gap-2">
                 <StepIcon className={cn(
                   "h-3.5 w-3.5 shrink-0",
-                  hasError ? 'text-destructive' : isDone ? 'text-success' : isRunning ? 'text-secondary' : 'text-muted-foreground',
+                  isSkipped ? 'text-muted-foreground' : hasError ? 'text-destructive' : isDone ? 'text-success' : isRunning ? 'text-secondary' : 'text-muted-foreground',
                 )} />
                 <span className={cn(
                   "text-sm font-medium truncate",
-                  hasError ? 'text-destructive' : !isDone && !isRunning && 'text-muted-foreground',
+                  isSkipped ? 'text-muted-foreground' : hasError ? 'text-destructive' : !isDone && !isRunning && 'text-muted-foreground',
                 )}>
                   {step.label}
                 </span>
@@ -155,13 +164,31 @@ const PipelineTimeline = ({
                 </motion.div>
               )}
 
-              {/* Error message */}
-              {hasError && (
-                <p className="text-xs text-destructive mt-0.5 truncate">{errorMap[i]}</p>
+              {/* Error message + Skip button */}
+              {hasError && !isSkipped && (
+                <div className="mt-0.5">
+                  <p className="text-xs text-destructive truncate">{errorMap[i]}</p>
+                  {onSkipStep && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-1.5 h-7 text-xs gap-1 border-orange-300 text-orange-600 hover:bg-orange-50"
+                      onClick={(e) => { e.stopPropagation(); onSkipStep(i); }}
+                    >
+                      <SkipForward className="h-3 w-3" />
+                      スキップして次へ進む
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {/* Skipped summary */}
+              {isSkipped && (
+                <p className="text-xs text-muted-foreground mt-0.5">スキップしました</p>
               )}
 
               {/* Completed summary */}
-              {isDone && !isRunning && !hasError && (
+              {isDone && !isRunning && !hasError && !isSkipped && (
                 <p className="text-xs text-success mt-0.5 truncate">{step.completedText}</p>
               )}
             </div>

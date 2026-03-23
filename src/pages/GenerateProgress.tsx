@@ -380,6 +380,7 @@ const GenerateProgress = () => {
 
   const [activeIndex, setActiveIndex] = useState(-1);
   const [completedIndexes, setCompletedIndexes] = useState<Set<number>>(new Set());
+  const [skippedIndexes, setSkippedIndexes] = useState<Set<number>>(new Set());
   const [waitingForApproval, setWaitingForApproval] = useState(-1);
   const [countUpValues, setCountUpValues] = useState<Record<number, number>>({});
   const [allDone, setAllDone] = useState(false);
@@ -422,6 +423,7 @@ const GenerateProgress = () => {
     wf7TriggeredRef.current = false;
     dummyAnimationStartedRef.current = false;
     setActiveIndex(-1);
+    setSkippedIndexes(new Set());
     setCompletedIndexes(new Set());
     setWaitingForApproval(-1);
     setCountUpValues({});
@@ -464,6 +466,7 @@ const GenerateProgress = () => {
 
       // ── Update pipeline UI from gen_steps data ──
       const newCompleted = new Set<number>();
+      const newSkipped = new Set<number>();
       const newErrors: Record<number, string> = {};
       let latestProcessing = -1;
       let latestCompletedIdx = -1;
@@ -476,11 +479,19 @@ const GenerateProgress = () => {
           newCompleted.add(pipelineIdx);
           if (pipelineIdx > latestCompletedIdx) latestCompletedIdx = pipelineIdx;
         }
+        if (gs.status === 'skipped') {
+          newSkipped.add(pipelineIdx);
+          if (pipelineIdx > latestCompletedIdx) latestCompletedIdx = pipelineIdx;
+        }
         if (gs.status === 'processing') {
           latestProcessing = pipelineIdx;
         }
-        if (gs.status === 'error' && gs.error_message) {
+        if ((gs.status === 'error' || gs.status === 'failed') && gs.error_message) {
           newErrors[pipelineIdx] = gs.error_message;
+        }
+        // Also show a generic error for failed steps without error_message
+        if ((gs.status === 'error' || gs.status === 'failed') && !gs.error_message) {
+          newErrors[pipelineIdx] = 'ステップが失敗しました';
         }
       });
 
@@ -494,6 +505,7 @@ const GenerateProgress = () => {
         newCompleted.forEach(idx => next.add(idx));
         return next;
       });
+      setSkippedIndexes(newSkipped);
       setErrorMap(newErrors);
       if (latestProcessing >= 0) {
         setActiveIndex(latestProcessing);
@@ -609,14 +621,14 @@ const GenerateProgress = () => {
       // ── Check if all text steps completed ──
       const allTextDone = TEXT_STEP_KEYS.every(key => {
         const gs = steps.find((s: any) => s.step_key === key);
-        return gs?.status === 'completed';
+        return gs?.status === 'completed' || gs?.status === 'skipped';
       });
 
       // ── Check if all data-driven steps (including bgm_suggestion) completed ──
       const allDataDone = DATA_DRIVEN_STEP_KEYS.every(key => {
         const gs = steps.find((s: any) => s.step_key === key);
         if (!gs && (key === 'bgm_suggestion' || key === 'vcon') && state.creativeType !== 'video') return true;
-        return gs?.status === 'completed';
+        return gs?.status === 'completed' || gs?.status === 'skipped';
       });
 
       return { allTextDone, allDataDone };
@@ -1051,6 +1063,84 @@ const GenerateProgress = () => {
     }
   }, [waitingForApproval, handleApprove]);
 
+  // ── Handle skip: mark step as skipped and trigger next step ──
+  const handleSkipStep = useCallback(async (idx: number) => {
+    if (!jobId || !jobData) return;
+
+    const stepKey = pipeline[idx]?.stepKey;
+    if (!stepKey) return;
+
+    const genStep = genStepsData.find(gs => gs.step_key === stepKey);
+    if (!genStep) return;
+
+    // 1. Update gen_step status to skipped
+    await supabase
+      .from('gen_steps')
+      .update({
+        status: 'skipped',
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', genStep.id);
+
+    // 2. Update local UI
+    setSkippedIndexes(prev => new Set(prev).add(idx));
+    setErrorMap(prev => { const n = { ...prev }; delete n[idx]; return n; });
+    setActiveIndex(-1);
+
+    // 3. Determine and trigger next step
+    const ALL_STEP_KEYS = [...DATA_DRIVEN_STEP_KEYS];
+    if (stepKey === 'narration') ALL_STEP_KEYS.splice(ALL_STEP_KEYS.indexOf('bgm_suggestion'), 0, 'narration');
+    
+    const currentOrderIdx = DATA_DRIVEN_STEP_KEYS.indexOf(stepKey);
+    
+    // For text steps, trigger next webhook
+    if (TEXT_STEP_KEYS.includes(stepKey)) {
+      const textIdx = TEXT_STEP_KEYS.indexOf(stepKey);
+      if (textIdx < TEXT_STEP_KEYS.length - 1) {
+        const nextKey = TEXT_STEP_KEYS[textIdx + 1];
+        const refMap: Record<string, React.MutableRefObject<boolean>> = {
+          copy: step2TriggeredRef,
+          composition: step3TriggeredRef,
+          narration_script: step4TriggeredRef,
+        };
+        const ref = refMap[nextKey];
+        if (ref && !ref.current) {
+          ref.current = true;
+          await triggerWebhook(nextKey, jobData, genStepsData, jobMeta);
+        }
+      } else {
+        // Last text step skipped → show voice selection for video, or start dummy for banner
+        if (state.creativeType === 'video') {
+          setVoiceSelectionPending(true);
+        } else {
+          dummyAnimationStartedRef.current = true;
+          setDummyPhaseStarted(true);
+          if (firstDummyIndex >= 0) setTimeout(() => setActiveIndex(firstDummyIndex), 300);
+        }
+      }
+    } else if (stepKey === 'narration') {
+      // Narration skipped → trigger BGM
+      if (state.creativeType === 'video' && !wf6TriggeredRef.current) {
+        wf6TriggeredRef.current = true;
+        triggerBgmSuggestion();
+      }
+    } else if (stepKey === 'bgm_suggestion') {
+      // BGM skipped → trigger Vcon
+      if (state.creativeType === 'video' && !wf7TriggeredRef.current) {
+        wf7TriggeredRef.current = true;
+        triggerVcon();
+      }
+    } else if (stepKey === 'vcon') {
+      // Vcon skipped → start dummy animations
+      dummyAnimationStartedRef.current = true;
+      setDummyPhaseStarted(true);
+      const nextDummyIdx = pipeline.findIndex((s, i) => i > idx && !DATA_DRIVEN_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
+      if (nextDummyIdx >= 0) setTimeout(() => setActiveIndex(nextDummyIdx), 300);
+    }
+
+    console.log(`[Skip] Skipped step ${stepKey}, triggering next step`);
+  }, [jobId, jobData, pipeline, genStepsData, jobMeta, state.creativeType, firstDummyIndex, triggerBgmSuggestion, triggerVcon]);
+
   const refreshGenSteps = useCallback(async () => {
     if (!jobId) return;
     const { data: steps } = await supabase
@@ -1202,7 +1292,7 @@ const GenerateProgress = () => {
   const patternLabel = state.productionPattern === 'new' ? '新規制作' : 'パターン展開';
   const summaryLine = `${typeLabel} / ${jobMeta.clientName} / ${jobMeta.productName} / ${jobMeta.projectName} / ${patternLabel} / 合計${total}本`;
 
-  const completedCount = completedIndexes.size;
+  const completedCount = completedIndexes.size + skippedIndexes.size;
   const progressPct = Math.round((completedCount / pipeline.length) * 100);
   const elapsedStr = `${Math.floor(elapsed / 60000)}:${String(Math.floor((elapsed % 60000) / 1000)).padStart(2, '0')}`;
   const avgPerStep = completedCount > 0 ? elapsed / completedCount : 0;
@@ -1252,10 +1342,12 @@ const GenerateProgress = () => {
                 <div className="px-4 pb-3 max-h-[40vh] overflow-y-auto">
                   <PipelineTimeline
                     pipeline={pipeline} activeIndex={activeIndex} completedIndexes={completedIndexes}
+                    skippedIndexes={skippedIndexes}
                     selectedStepIndex={selectedStepIndex} countUpValues={countUpValues} total={total}
                     progressPct={progressPct} completedCount={completedCount} elapsedStr={elapsedStr}
                     remainStr={remainStr} allDone={allDone} effectiveAutoMode={effectiveAutoMode}
-                     errorMap={errorMap} narrationProgress={narrationProgress} onStepClick={handleStepClick} onSwitchToAuto={switchToAuto}
+                    errorMap={errorMap} narrationProgress={narrationProgress} onStepClick={handleStepClick} onSwitchToAuto={switchToAuto}
+                    onSkipStep={handleSkipStep}
                   />
                 </div>
               </motion.div>
@@ -1283,10 +1375,12 @@ const GenerateProgress = () => {
         <div className="w-[40%] border-r border-border overflow-y-auto p-4">
           <PipelineTimeline
             pipeline={pipeline} activeIndex={activeIndex} completedIndexes={completedIndexes}
+            skippedIndexes={skippedIndexes}
             selectedStepIndex={selectedStepIndex} countUpValues={countUpValues} total={total}
             progressPct={progressPct} completedCount={completedCount} elapsedStr={elapsedStr}
             remainStr={remainStr} allDone={allDone} effectiveAutoMode={effectiveAutoMode}
             errorMap={errorMap} narrationProgress={narrationProgress} onStepClick={handleStepClick} onSwitchToAuto={switchToAuto}
+            onSkipStep={handleSkipStep}
           />
         </div>
         <div className="w-[60%] overflow-y-auto">
