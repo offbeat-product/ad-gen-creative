@@ -1127,8 +1127,9 @@ const PreviewNarration = ({ state, narrationAudioMap, narrationAudioMapB, select
   );
 };
 
-const PreviewBGM = ({ genStepResult }: { genStepResult?: any }) => {
+const PreviewBGM = ({ genStepResult, jobId, onBgmUpdated }: { genStepResult?: any; jobId?: string | null; onBgmUpdated?: () => void }) => {
   const [openIdx, setOpenIdx] = useState(0);
+  const [bgmUrls, setBgmUrls] = useState<Record<string, string | null>>({});
 
   const parsed = (() => {
     if (!genStepResult) return null;
@@ -1137,6 +1138,23 @@ const PreviewBGM = ({ genStepResult }: { genStepResult?: any }) => {
       return r?.bgm_suggestions || null;
     } catch { return null; }
   })();
+
+  // Fetch existing BGM URLs from gen_patterns
+  useEffect(() => {
+    if (!jobId) return;
+    const fetch = async () => {
+      const { data } = await supabase
+        .from('gen_patterns')
+        .select('pattern_id, bgm_url')
+        .eq('job_id', jobId);
+      if (data) {
+        const map: Record<string, string | null> = {};
+        data.forEach(p => { map[p.pattern_id] = p.bgm_url; });
+        setBgmUrls(map);
+      }
+    };
+    fetch();
+  }, [jobId]);
 
   const renderCandidate = (candidate: any, label: string, isPrimary: boolean) => {
     if (!candidate) return null;
@@ -1193,6 +1211,21 @@ const PreviewBGM = ({ genStepResult }: { genStepResult?: any }) => {
             <div className="p-3 pt-0 space-y-3">
               {renderCandidate(item.primary, '第1候補', true)}
               {renderCandidate(item.alternative, '第2候補', false)}
+              {jobId && (
+                <BgmUploader
+                  jobId={jobId}
+                  patternName={item.pattern_name}
+                  existingBgmUrl={bgmUrls[item.pattern_name]}
+                  onUploaded={(url) => {
+                    setBgmUrls(prev => ({ ...prev, [item.pattern_name]: url }));
+                    onBgmUpdated?.();
+                  }}
+                  onDeleted={() => {
+                    setBgmUrls(prev => ({ ...prev, [item.pattern_name]: null }));
+                    onBgmUpdated?.();
+                  }}
+                />
+              )}
             </div>
           )}
         </div>
