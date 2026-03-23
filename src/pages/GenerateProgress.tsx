@@ -542,6 +542,10 @@ const GenerateProgress = () => {
       setErrorMap(newErrors);
       if (latestProcessing >= 0) {
         setActiveIndex(latestProcessing);
+        // Auto-select in-progress step in preview panel if user hasn't manually selected
+        if (userSelectedStepRef.current === null) {
+          setSelectedStepIndex(latestProcessing);
+        }
       } else if (!dummyAnimationStartedRef.current) {
         setActiveIndex(-1);
       }
@@ -553,8 +557,8 @@ const GenerateProgress = () => {
           lastAutoCompletedRef.current = latestCompletedIdx;
           userSelectedStepRef.current = null;
           setSelectedStepIndex(latestCompletedIdx);
-        } else if (userSelectedStepRef.current === null) {
-          // No user selection active — follow auto
+        } else if (userSelectedStepRef.current === null && latestProcessing < 0) {
+          // No user selection active and nothing processing — follow auto
           setSelectedStepIndex(latestCompletedIdx);
         }
       }
