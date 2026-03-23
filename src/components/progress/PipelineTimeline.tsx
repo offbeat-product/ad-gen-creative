@@ -1,12 +1,14 @@
 import { motion } from 'framer-motion';
-import { Check, AlertCircle } from 'lucide-react';
+import { Check, AlertCircle, SkipForward } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import type { PipelineStep } from '@/pages/GenerateProgress';
 
 interface Props {
   pipeline: PipelineStep[];
   activeIndex: number;
   completedIndexes: Set<number>;
+  skippedIndexes: Set<number>;
   selectedStepIndex: number | null;
   countUpValues: Record<number, number>;
   total: number;
@@ -20,6 +22,7 @@ interface Props {
   narrationProgress?: { completed: number; total: number } | null;
   onStepClick: (idx: number) => void;
   onSwitchToAuto: () => void;
+  onSkipStep?: (idx: number) => void;
 }
 
 const PipelineTimeline = ({
