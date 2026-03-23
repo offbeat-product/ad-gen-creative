@@ -1249,24 +1249,89 @@ const PreviewVCon = ({ genStepResult, narrationAudioMap, narrationAudioMapB, sel
   />
 );
 
-const PreviewStyleFrames = () => (
-  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-    {STYLE_FRAMES.map((sf, i) => (
-      <div key={i} className="border rounded-lg p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-xs font-mono">トンマナ {i + 1}</Badge>
-          <p className="text-sm font-medium">{sf.name}</p>
-        </div>
-        <div className="flex gap-2">
-          {sf.colors.map((c, j) => (
-            <div key={j} className="w-8 h-8 rounded-full border" style={{ backgroundColor: c }} />
+const PreviewStyleFrames = ({ genStepResult }: { genStepResult?: any }) => {
+  const parsed = (() => {
+    if (!genStepResult) return null;
+    try {
+      const r = typeof genStepResult === 'string' ? JSON.parse(genStepResult) : genStepResult;
+      return r?.styleframes ?? null;
+    } catch { return null; }
+  })();
+
+  // Real data: show AI-generated styleframe images grouped by pattern
+  if (parsed && Array.isArray(parsed) && parsed.length > 0) {
+    // Group by pattern_name
+    const grouped: Record<string, any[]> = {};
+    for (const sf of parsed) {
+      const pn = sf.pattern_name ?? 'A';
+      if (!grouped[pn]) grouped[pn] = [];
+      grouped[pn].push(sf);
+    }
+    const patternNames = Object.keys(grouped).sort();
+
+    return (
+      <div className="space-y-4">
+        <Badge className="bg-success-wash text-success text-xs">AI生成データ</Badge>
+        <Tabs defaultValue={patternNames[0]}>
+          <TabsList className="w-full flex-wrap h-auto gap-1">
+            {patternNames.map(pn => (
+              <TabsTrigger key={pn} value={pn} className="text-xs font-mono">パターン{pn}</TabsTrigger>
+            ))}
+          </TabsList>
+          {patternNames.map(pn => (
+            <TabsContent key={pn} value={pn}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
+                {grouped[pn].sort((a: any, b: any) => (a.cut_number ?? 0) - (b.cut_number ?? 0)).map((sf: any, i: number) => (
+                  <div key={i} className="border rounded-lg overflow-hidden">
+                    {sf.image_url ? (
+                      <img
+                        src={sf.image_url}
+                        alt={`Cut ${sf.cut_number ?? i + 1}`}
+                        className="w-full object-cover"
+                        style={{ aspectRatio: sf.aspect_ratio === '9:16' ? '9/16' : '16/9' }}
+                      />
+                    ) : (
+                      <ImagePlaceholder label={`Cut ${sf.cut_number ?? i + 1}`} aspect={sf.aspect_ratio === '9:16' ? '9/16' : '16/9'} size="sm" />
+                    )}
+                    <div className="p-2 space-y-1">
+                      <p className="text-xs font-medium">Cut {sf.cut_number ?? i + 1}</p>
+                      {sf.prompt && (
+                        <details className="text-xs text-muted-foreground">
+                          <summary className="cursor-pointer hover:text-foreground">プロンプト</summary>
+                          <p className="mt-1 text-[11px] leading-relaxed">{sf.prompt}</p>
+                        </details>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </TabsContent>
           ))}
-        </div>
-        <ImagePlaceholder label={`スタイルフレーム ${i + 1}`} />
+        </Tabs>
       </div>
-    ))}
-  </div>
-);
+    );
+  }
+
+  // Fallback: dummy display
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {STYLE_FRAMES.map((sf, i) => (
+        <div key={i} className="border rounded-lg p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs font-mono">トンマナ {i + 1}</Badge>
+            <p className="text-sm font-medium">{sf.name}</p>
+          </div>
+          <div className="flex gap-2">
+            {sf.colors.map((c, j) => (
+              <div key={j} className="w-8 h-8 rounded-full border" style={{ backgroundColor: c }} />
+            ))}
+          </div>
+          <ImagePlaceholder label={`スタイルフレーム ${i + 1}`} />
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const PreviewEkonte = ({ total }: { total: number }) => {
   const count = Math.min(total, 6);
