@@ -190,6 +190,13 @@ const buildStateFromJob = (job: any): WizardState => ({
   copyPatterns: job.num_copies ?? 3,
   tonePatterns: job.num_tonmana ?? 2,
   generationMode: (job.generation_mode ?? 'auto') as 'auto' | 'step',
+  creativeStyle: job.settings?.creative_style ?? null,
+  styleOptions: job.settings?.style_options ?? {
+    colorPalette: { primary: '#1E40AF', secondary: '#3B82F6', background: '#DBEAFE' },
+    fontStyle: 'bold_gothic',
+    illustrationStyle: 'flat_design',
+    taste: [],
+  },
 });
 
 /* ─── Gen step type from Supabase ─── */
