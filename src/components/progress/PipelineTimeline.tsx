@@ -164,13 +164,31 @@ const PipelineTimeline = ({
                 </motion.div>
               )}
 
-              {/* Error message */}
-              {hasError && (
-                <p className="text-xs text-destructive mt-0.5 truncate">{errorMap[i]}</p>
+              {/* Error message + Skip button */}
+              {hasError && !isSkipped && (
+                <div className="mt-0.5">
+                  <p className="text-xs text-destructive truncate">{errorMap[i]}</p>
+                  {onSkipStep && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-1.5 h-7 text-xs gap-1 border-orange-300 text-orange-600 hover:bg-orange-50"
+                      onClick={(e) => { e.stopPropagation(); onSkipStep(i); }}
+                    >
+                      <SkipForward className="h-3 w-3" />
+                      スキップして次へ進む
+                    </Button>
+                  )}
+                </div>
+              )}
+
+              {/* Skipped summary */}
+              {isSkipped && (
+                <p className="text-xs text-muted-foreground mt-0.5">スキップしました</p>
               )}
 
               {/* Completed summary */}
-              {isDone && !isRunning && !hasError && (
+              {isDone && !isRunning && !hasError && !isSkipped && (
                 <p className="text-xs text-success mt-0.5 truncate">{step.completedText}</p>
               )}
             </div>
