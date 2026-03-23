@@ -24,6 +24,7 @@ import ActionBar from './ActionBar';
 import VoiceSelector from './VoiceSelector';
 import NarrationAudioPlayer from './NarrationAudioPlayer';
 import VconPreview from './VconPreview';
+import BgmUploader from './BgmUploader';
 
 
 interface Props {
@@ -1127,8 +1128,9 @@ const PreviewNarration = ({ state, narrationAudioMap, narrationAudioMapB, select
   );
 };
 
-const PreviewBGM = ({ genStepResult }: { genStepResult?: any }) => {
+const PreviewBGM = ({ genStepResult, jobId, onBgmUpdated }: { genStepResult?: any; jobId?: string | null; onBgmUpdated?: () => void }) => {
   const [openIdx, setOpenIdx] = useState(0);
+  const [bgmUrls, setBgmUrls] = useState<Record<string, string | null>>({});
 
   const parsed = (() => {
     if (!genStepResult) return null;
@@ -1137,6 +1139,23 @@ const PreviewBGM = ({ genStepResult }: { genStepResult?: any }) => {
       return r?.bgm_suggestions || null;
     } catch { return null; }
   })();
+
+  // Fetch existing BGM URLs from gen_patterns
+  useEffect(() => {
+    if (!jobId) return;
+    const fetch = async () => {
+      const { data } = await supabase
+        .from('gen_patterns')
+        .select('pattern_id, bgm_url')
+        .eq('job_id', jobId);
+      if (data) {
+        const map: Record<string, string | null> = {};
+        data.forEach(p => { map[p.pattern_id] = p.bgm_url; });
+        setBgmUrls(map);
+      }
+    };
+    fetch();
+  }, [jobId]);
 
   const renderCandidate = (candidate: any, label: string, isPrimary: boolean) => {
     if (!candidate) return null;
@@ -1193,6 +1212,21 @@ const PreviewBGM = ({ genStepResult }: { genStepResult?: any }) => {
             <div className="p-3 pt-0 space-y-3">
               {renderCandidate(item.primary, '第1候補', true)}
               {renderCandidate(item.alternative, '第2候補', false)}
+              {jobId && (
+                <BgmUploader
+                  jobId={jobId}
+                  patternName={item.pattern_name}
+                  existingBgmUrl={bgmUrls[item.pattern_name]}
+                  onUploaded={(url) => {
+                    setBgmUrls(prev => ({ ...prev, [item.pattern_name]: url }));
+                    onBgmUpdated?.();
+                  }}
+                  onDeleted={() => {
+                    setBgmUrls(prev => ({ ...prev, [item.pattern_name]: null }));
+                    onBgmUpdated?.();
+                  }}
+                />
+              )}
             </div>
           )}
         </div>
@@ -1201,14 +1235,15 @@ const PreviewBGM = ({ genStepResult }: { genStepResult?: any }) => {
   );
 };
 
-const PreviewVCon = ({ genStepResult, narrationAudioMap, narrationAudioMapB, selectedGender }: {
-  genStepResult?: any; narrationAudioMap?: Record<string, string | null>; narrationAudioMapB?: Record<string, string | null>; selectedGender?: 'male' | 'female';
+const PreviewVCon = ({ genStepResult, narrationAudioMap, narrationAudioMapB, selectedGender, jobId }: {
+  genStepResult?: any; narrationAudioMap?: Record<string, string | null>; narrationAudioMapB?: Record<string, string | null>; selectedGender?: 'male' | 'female'; jobId?: string | null;
 }) => (
   <VconPreview
     genStepResult={genStepResult}
     narrationAudioMap={narrationAudioMap}
     narrationAudioMapB={narrationAudioMapB}
     selectedGender={selectedGender}
+    jobId={jobId}
   />
 );
 
@@ -1712,8 +1747,8 @@ const PreviewPanel = ({
         case 2: mainContent = <PreviewStoryboard isVideo state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} editing={editing} editData={editData} setEditData={setEditData} />; break;
         case 3: mainContent = <PreviewNAScript state={state} genStepResult={displayData} copyStepResult={copyStepResult} appealAxesResult={appealAxesResult} compositionStepResult={compositionStepResult} editing={editing} editData={editData} setEditData={setEditData} />; break;
         case 4: return <PreviewNarration state={state} narrationAudioMap={narrationAudioMap} narrationAudioMapB={narrationAudioMapB} selectedGender={selectedGender} jobId={jobId} appealAxesResult={appealAxesResult} copyStepResult={copyStepResult} compositionStepResult={compositionStepResult} narrationScriptResult={narrationScriptResult} />;
-        case 5: mainContent = <PreviewBGM genStepResult={displayData} />; break;
-        case 6: mainContent = <PreviewVCon genStepResult={displayData} narrationAudioMap={narrationAudioMap} narrationAudioMapB={narrationAudioMapB} selectedGender={selectedGender} />; break;
+        case 5: mainContent = <PreviewBGM genStepResult={displayData} jobId={jobId} onBgmUpdated={onResultUpdated} />; break;
+        case 6: mainContent = <PreviewVCon genStepResult={displayData} narrationAudioMap={narrationAudioMap} narrationAudioMapB={narrationAudioMapB} selectedGender={selectedGender} jobId={jobId} />; break;
         case 7: mainContent = <PreviewStyleFrames />; break;
         case 8: mainContent = <PreviewEkonte total={total} />; break;
         case 9: mainContent = <PreviewFinalVideo total={total} state={state} aspect="16/9" resolution="1920 × 1080" />; break;

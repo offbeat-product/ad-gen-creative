@@ -481,6 +481,8 @@ export type Database = {
         Row: {
           appeal_axis_index: number | null
           appeal_axis_text: string | null
+          bgm_source: string | null
+          bgm_url: string | null
           composition: Json | null
           copy_index: number | null
           copy_text: string | null
@@ -499,6 +501,8 @@ export type Database = {
         Insert: {
           appeal_axis_index?: number | null
           appeal_axis_text?: string | null
+          bgm_source?: string | null
+          bgm_url?: string | null
           composition?: Json | null
           copy_index?: number | null
           copy_text?: string | null
@@ -517,6 +521,8 @@ export type Database = {
         Update: {
           appeal_axis_index?: number | null
           appeal_axis_text?: string | null
+          bgm_source?: string | null
+          bgm_url?: string | null
           composition?: Json | null
           copy_index?: number | null
           copy_text?: string | null
