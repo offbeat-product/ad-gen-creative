@@ -493,6 +493,18 @@ const GenerateProgress = () => {
         if ((gs.status === 'error' || gs.status === 'failed') && !gs.error_message) {
           newErrors[pipelineIdx] = 'ステップが失敗しました';
         }
+        // Timeout detection: if processing/pending for more than 5 minutes, show warning
+        if (gs.status === 'processing' || (gs.status === 'pending' && gs.started_at)) {
+          const startedAt = gs.started_at ? new Date(gs.started_at).getTime() : null;
+          if (startedAt) {
+            const elapsed = Date.now() - startedAt;
+            const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+            if (elapsed > TIMEOUT_MS) {
+              const mins = Math.floor(elapsed / 60000);
+              newErrors[pipelineIdx] = `${mins}分以上応答がありません。n8nワークフローが失敗した可能性があります。`;
+            }
+          }
+        }
       });
 
       // Data-driven steps (text 4 + bgm_suggestion) are always rebuilt from DB; only dummy-step completions are preserved locally
