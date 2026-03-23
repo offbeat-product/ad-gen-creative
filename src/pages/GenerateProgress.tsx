@@ -227,6 +227,10 @@ const safeParse = (v: any): any => {
 const TEXT_STEP_KEYS = ['appeal_axis', 'copy', 'composition', 'narration_script'];
 const DATA_DRIVEN_STEP_KEYS = [...TEXT_STEP_KEYS, 'bgm_suggestion', 'vcon'];
 
+/* Map pipeline stepKey to DB step_key (narration ↔ narration_audio) */
+const pipelineKeyToDbKey = (k: string) => k === 'narration' ? 'narration_audio' : k;
+const dbKeyToPipelineKey = (k: string) => k === 'narration_audio' ? 'narration' : k;
+
 /* ─── Trigger a specific next step webhook ─── */
 
 const triggerWebhook = async (
@@ -1090,7 +1094,8 @@ const GenerateProgress = () => {
     const stepKey = pipeline[idx]?.stepKey;
     if (!stepKey) return;
 
-    const genStep = genStepsData.find(gs => gs.step_key === stepKey);
+    const dbKey = pipelineKeyToDbKey(stepKey);
+    const genStep = genStepsData.find(gs => gs.step_key === dbKey);
     if (!genStep) return;
 
     // 1. Update gen_step status to skipped
@@ -1179,7 +1184,7 @@ const GenerateProgress = () => {
         completed_at: null,
       })
       .eq('job_id', jobId)
-      .eq('step_key', stepKey);
+      .eq('step_key', pipelineKeyToDbKey(stepKey));
 
     // 2. Reset local UI
     setCompletedIndexes(prev => { const s = new Set(prev); s.delete(idx); return s; });
@@ -1197,7 +1202,7 @@ const GenerateProgress = () => {
     if (refMap[stepKey]) refMap[stepKey].current = false;
 
     // 3. Build and call webhook
-    const webhookUrl = WEBHOOK_URLS[stepKey];
+    const webhookUrl = WEBHOOK_URLS[pipelineKeyToDbKey(stepKey)];
     if (!webhookUrl) return;
 
     try {
