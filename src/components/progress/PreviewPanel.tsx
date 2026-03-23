@@ -1436,10 +1436,12 @@ const generateDownloadText = (
 /* ─── Preview Panel ─── */
 
 const PreviewPanel = ({
-  pipeline, selectedStepIndex, completedIndexes, allDone, total, state,
+  pipeline, selectedStepIndex, completedIndexes, skippedIndexes, allDone, total, state,
   waitingForApproval, effectiveAutoMode, genStepResult, appealAxesResult, copyStepResult, compositionStepResult, narrationScriptResult, jobId,
   voiceSelectionPending, voiceGenerating, narrationAudioMap, narrationAudioMapB, selectedGender,
+  errorMap, genStepsData,
   onApprove, onRegenerate, onSwitchToAuto, onNavigateDashboard, onResultUpdated, onTriggerNarrationAudio,
+  onSkipStep, onRetryStep,
 }: Props) => {
   const { toast } = useToast();
   const [editing, setEditing] = useState(false);
