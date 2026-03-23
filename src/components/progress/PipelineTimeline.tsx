@@ -69,7 +69,8 @@ const PipelineTimeline = ({
 
         {pipeline.map((step, i) => {
           const isDone = completedIndexes.has(i);
-          const isRunning = activeIndex === i && !isDone;
+          const isSkipped = skippedIndexes.has(i);
+          const isRunning = activeIndex === i && !isDone && !isSkipped;
           const isSelected = selectedStepIndex === i;
           const hasError = !!errorMap[i];
           const StepIcon = step.icon;
