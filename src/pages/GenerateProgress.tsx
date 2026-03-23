@@ -236,7 +236,7 @@ const safeParse = (v: any): any => {
 /* ─── Text step keys (driven by Supabase only) ─── */
 
 const TEXT_STEP_KEYS = ['appeal_axis', 'copy', 'composition', 'narration_script'];
-const DATA_DRIVEN_STEP_KEYS = [...TEXT_STEP_KEYS, 'bgm_suggestion', 'vcon'];
+const DATA_DRIVEN_STEP_KEYS = [...TEXT_STEP_KEYS, 'bgm_suggestion', 'vcon', 'styleframe'];
 
 /* Map pipeline stepKey to DB step_key (narration ↔ narration_audio) */
 const pipelineKeyToDbKey = (k: string) => k === 'narration' ? 'narration_audio' : k;
