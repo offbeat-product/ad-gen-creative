@@ -375,7 +375,7 @@ const GenerateProgress = () => {
 
   // Map pipeline step keys to indexes
   const stepKeyToIndex = new Map(pipeline.map((p, i) => [p.stepKey, i]));
-  const firstDummyIndex = pipeline.findIndex(s => s.stepType !== 'text');
+  const firstDummyIndex = pipeline.findIndex(s => !DATA_DRIVEN_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
 
   const [activeIndex, setActiveIndex] = useState(-1);
   const [completedIndexes, setCompletedIndexes] = useState<Set<number>>(new Set());
