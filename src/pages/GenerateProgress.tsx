@@ -1356,23 +1356,71 @@ const GenerateProgress = () => {
   }, [jobId, jobData, pipeline, jobMeta, triggerBgmSuggestion, triggerVcon]);
 
   // ── Handle style selection for styleframe ──
-  const handleStyleSelected = useCallback((style: string) => {
+  const handleStyleSelected = useCallback(async (style: string) => {
     setStyleSelectionPending(false);
-    console.log(`[StyleFrame] Selected style: ${style}`);
-    // Start dummy animations for styleframe and beyond
-    dummyAnimationStartedRef.current = true;
-    setDummyPhaseStarted(true);
-    const vconIdx = stepKeyToIndex.get('vcon') ?? -1;
-    const nextDummyIdx = pipeline.findIndex((s, i) => i > vconIdx && !DATA_DRIVEN_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
-    if (nextDummyIdx >= 0) {
-      setTimeout(() => setActiveIndex(nextDummyIdx), 300);
-    } else {
-      setAllDone(true);
-      setShowConfetti(true);
-      clearInterval(timerRef.current);
-      setTimeout(() => setShowConfetti(false), 3500);
+    console.log(`[StyleFrame] Selected style: ${style}, triggering WF8 webhook`);
+
+    if (!jobId || !jobData) return;
+
+    // Set styleframe step as active
+    const sfIdx = stepKeyToIndex.get('styleframe');
+    if (sfIdx !== undefined) {
+      setActiveIndex(sfIdx);
     }
-  }, [pipeline, stepKeyToIndex]);
+
+    try {
+      // Get patterns
+      const { data: patterns } = await supabase
+        .from('gen_patterns')
+        .select('*')
+        .eq('job_id', jobId);
+
+      // Get vcon result
+      const vconStep = genStepsData?.find((s: any) => s.step_key === 'vcon');
+      let vconData = null;
+      if (vconStep?.result) {
+        try {
+          vconData = typeof vconStep.result === 'string' ? JSON.parse(vconStep.result) : vconStep.result;
+        } catch { vconData = vconStep.result; }
+      }
+
+      // Get step1 result for _rules_text and _refs_text
+      const step1 = genStepsData?.find((s: any) => s.step_key === 'appeal_axis');
+      let step1Result: any = null;
+      if (step1?.result) {
+        try {
+          step1Result = typeof step1.result === 'string' ? JSON.parse(step1.result) : step1.result;
+        } catch { step1Result = step1.result; }
+      }
+      const rulesText = step1Result?._rules_text || '';
+      const refsText = step1Result?._refs_text || '';
+
+      // Get style options from wizard state
+      const styleOptions = state.styleOptions || {};
+
+      const response = await fetch(WF8_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          job_id: jobId,
+          creative_type: jobData.creative_type,
+          duration_seconds: jobData.duration_seconds,
+          client_name: jobMeta.clientName,
+          product_name: jobMeta.productName,
+          project_name: jobMeta.projectName,
+          patterns: patterns || [],
+          vcon_data: vconData,
+          creative_style: style,
+          style_options: styleOptions,
+          _rules_text: rulesText,
+          _refs_text: refsText,
+        }),
+      });
+      console.log(`[WF8] Webhook response: ${response.status}`);
+    } catch (e) {
+      console.error('[WF8] Failed:', e);
+    }
+  }, [jobId, jobData, jobMeta, genStepsData, stepKeyToIndex, state]);
 
   const refreshGenSteps = useCallback(async () => {
     if (!jobId) return;
