@@ -137,6 +137,9 @@ const WEBHOOK_URLS: Record<string, string> = {
   copy: 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step2',
   composition: 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step3',
   narration_script: 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step4',
+  narration_audio: 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step5',
+  bgm_suggestion: 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step6',
+  vcon: 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step7',
 };
 
 const WF5_WEBHOOK_URL = 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step5';
