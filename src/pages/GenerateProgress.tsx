@@ -505,6 +505,7 @@ const GenerateProgress = () => {
         newCompleted.forEach(idx => next.add(idx));
         return next;
       });
+      setSkippedIndexes(newSkipped);
       setErrorMap(newErrors);
       if (latestProcessing >= 0) {
         setActiveIndex(latestProcessing);
