@@ -1129,8 +1129,7 @@ const PreviewNarration = ({ state, narrationAudioMap, narrationAudioMapB, select
 };
 
 const PreviewBGM = ({ genStepResult, jobId, onBgmUpdated }: { genStepResult?: any; jobId?: string | null; onBgmUpdated?: () => void }) => {
-  const [openIdx, setOpenIdx] = useState(0);
-  const [bgmUrls, setBgmUrls] = useState<Record<string, string | null>>({});
+  const [bgmUrl, setBgmUrl] = useState<string | null>(null);
 
   const parsed = (() => {
     if (!genStepResult) return null;
@@ -1140,21 +1139,28 @@ const PreviewBGM = ({ genStepResult, jobId, onBgmUpdated }: { genStepResult?: an
     } catch { return null; }
   })();
 
-  // Fetch existing BGM URLs from gen_patterns
+  // Extract 2 shared candidates (primary/alternative) from the first pattern
+  const candidates = (() => {
+    if (!parsed || !Array.isArray(parsed) || parsed.length === 0) return null;
+    const first = parsed[0];
+    return { primary: first?.primary, alternative: first?.alternative };
+  })();
+
+  // Fetch existing BGM URL from gen_patterns (all patterns share same BGM)
   useEffect(() => {
     if (!jobId) return;
-    const fetch = async () => {
+    const fetchBgm = async () => {
       const { data } = await supabase
         .from('gen_patterns')
-        .select('pattern_id, bgm_url')
-        .eq('job_id', jobId);
-      if (data) {
-        const map: Record<string, string | null> = {};
-        data.forEach(p => { map[p.pattern_id] = p.bgm_url; });
-        setBgmUrls(map);
+        .select('bgm_url')
+        .eq('job_id', jobId)
+        .not('bgm_url', 'is', null)
+        .limit(1);
+      if (data && data.length > 0 && data[0].bgm_url) {
+        setBgmUrl(data[0].bgm_url);
       }
     };
-    fetch();
+    fetchBgm();
   }, [jobId]);
 
   const renderCandidate = (candidate: any, label: string, isPrimary: boolean) => {
@@ -1179,7 +1185,7 @@ const PreviewBGM = ({ genStepResult, jobId, onBgmUpdated }: { genStepResult?: an
     );
   };
 
-  if (!parsed || !Array.isArray(parsed) || parsed.length === 0) {
+  if (!candidates) {
     return (
       <div className="space-y-3">
         {BGM_DATA.map((bgm, i) => (
@@ -1197,40 +1203,36 @@ const PreviewBGM = ({ genStepResult, jobId, onBgmUpdated }: { genStepResult?: an
   }
 
   return (
-    <div className="space-y-3">
-      <Badge className="bg-success-wash text-success text-xs mb-2">AI生成データ</Badge>
-      {parsed.map((item: any, i: number) => (
-        <div key={i} className="border border-border rounded-lg overflow-hidden">
-          <button
-            onClick={() => setOpenIdx(openIdx === i ? -1 : i)}
-            className="w-full flex items-center justify-between p-3 text-left hover:bg-accent/50 transition-colors"
-          >
-            <span className="font-medium text-sm">パターン {item.pattern_name}</span>
-            <span className="text-muted-foreground text-xs">{openIdx === i ? '▲' : '▼'}</span>
-          </button>
-          {openIdx === i && (
-            <div className="p-3 pt-0 space-y-3">
-              {renderCandidate(item.primary, '第1候補', true)}
-              {renderCandidate(item.alternative, '第2候補', false)}
-              {jobId && (
-                <BgmUploader
-                  jobId={jobId}
-                  patternName={item.pattern_name}
-                  existingBgmUrl={bgmUrls[item.pattern_name]}
-                  onUploaded={(url) => {
-                    setBgmUrls(prev => ({ ...prev, [item.pattern_name]: url }));
-                    onBgmUpdated?.();
-                  }}
-                  onDeleted={() => {
-                    setBgmUrls(prev => ({ ...prev, [item.pattern_name]: null }));
-                    onBgmUpdated?.();
-                  }}
-                />
-              )}
-            </div>
-          )}
-        </div>
-      ))}
+    <div className="space-y-4">
+      <Badge className="bg-success-wash text-success text-xs">AI生成データ</Badge>
+
+      <p className="text-sm text-muted-foreground">
+        AIが提案した2つのBGM候補です。どちらかを選んでEnvato Elementsからダウンロードし、アップロードしてください。
+        <br />
+        <span className="font-medium text-foreground">※ 全パターン共通のBGMとして使用されます。</span>
+      </p>
+
+      <div className="space-y-3">
+        {renderCandidate(candidates.primary, '第1候補', true)}
+        {renderCandidate(candidates.alternative, '第2候補', false)}
+      </div>
+
+      <Separator />
+
+      {jobId && (
+        <BgmUploader
+          jobId={jobId}
+          existingBgmUrl={bgmUrl}
+          onUploaded={(url) => {
+            setBgmUrl(url);
+            onBgmUpdated?.();
+          }}
+          onDeleted={() => {
+            setBgmUrl(null);
+            onBgmUpdated?.();
+          }}
+        />
+      )}
     </div>
   );
 };
