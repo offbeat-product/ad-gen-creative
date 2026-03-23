@@ -127,11 +127,11 @@ const PipelineTimeline = ({
               <div className="flex items-center gap-2">
                 <StepIcon className={cn(
                   "h-3.5 w-3.5 shrink-0",
-                  hasError ? 'text-destructive' : isDone ? 'text-success' : isRunning ? 'text-secondary' : 'text-muted-foreground',
+                  isSkipped ? 'text-muted-foreground' : hasError ? 'text-destructive' : isDone ? 'text-success' : isRunning ? 'text-secondary' : 'text-muted-foreground',
                 )} />
                 <span className={cn(
                   "text-sm font-medium truncate",
-                  hasError ? 'text-destructive' : !isDone && !isRunning && 'text-muted-foreground',
+                  isSkipped ? 'text-muted-foreground' : hasError ? 'text-destructive' : !isDone && !isRunning && 'text-muted-foreground',
                 )}>
                   {step.label}
                 </span>
