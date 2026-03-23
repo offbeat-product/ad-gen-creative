@@ -1586,6 +1586,7 @@ const GenerateProgress = () => {
             onTriggerNarrationAudio={triggerNarrationAudio}
             errorMap={errorMap} genStepsData={genStepsData}
             onSkipStep={handleSkipStep} onRetryStep={handleRetryStep}
+            styleSelectionPending={styleSelectionPending} onStyleSelected={handleStyleSelected}
           />
         </div>
       </div>
