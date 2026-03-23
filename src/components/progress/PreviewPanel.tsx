@@ -1196,13 +1196,15 @@ const PreviewBGM = ({ genStepResult }: { genStepResult?: any }) => {
   );
 };
 
-const PreviewVCon = () => (
-  <div className="space-y-3">
-    <div className="bg-muted rounded-xl flex items-center justify-center" style={{ aspectRatio: '16/9' }}>
-      <Play className="h-12 w-12 text-muted-foreground" />
-    </div>
-    <p className="text-xs text-muted-foreground">字コンテ + NA + BGMの統合</p>
-  </div>
+const PreviewVCon = ({ genStepResult, narrationAudioMap, narrationAudioMapB, selectedGender }: {
+  genStepResult?: any; narrationAudioMap?: Record<string, string | null>; narrationAudioMapB?: Record<string, string | null>; selectedGender?: 'male' | 'female';
+}) => (
+  <VconPreview
+    genStepResult={genStepResult}
+    narrationAudioMap={narrationAudioMap}
+    narrationAudioMapB={narrationAudioMapB}
+    selectedGender={selectedGender}
+  />
 );
 
 const PreviewStyleFrames = () => (
