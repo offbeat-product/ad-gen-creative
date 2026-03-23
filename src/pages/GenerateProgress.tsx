@@ -621,7 +621,7 @@ const GenerateProgress = () => {
       // ── Check if all text steps completed ──
       const allTextDone = TEXT_STEP_KEYS.every(key => {
         const gs = steps.find((s: any) => s.step_key === key);
-        return gs?.status === 'completed';
+        return gs?.status === 'completed' || gs?.status === 'skipped';
       });
 
       // ── Check if all data-driven steps (including bgm_suggestion) completed ──
