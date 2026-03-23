@@ -466,6 +466,7 @@ const GenerateProgress = () => {
 
       // ── Update pipeline UI from gen_steps data ──
       const newCompleted = new Set<number>();
+      const newSkipped = new Set<number>();
       const newErrors: Record<number, string> = {};
       let latestProcessing = -1;
       let latestCompletedIdx = -1;
@@ -478,11 +479,19 @@ const GenerateProgress = () => {
           newCompleted.add(pipelineIdx);
           if (pipelineIdx > latestCompletedIdx) latestCompletedIdx = pipelineIdx;
         }
+        if (gs.status === 'skipped') {
+          newSkipped.add(pipelineIdx);
+          if (pipelineIdx > latestCompletedIdx) latestCompletedIdx = pipelineIdx;
+        }
         if (gs.status === 'processing') {
           latestProcessing = pipelineIdx;
         }
-        if (gs.status === 'error' && gs.error_message) {
+        if ((gs.status === 'error' || gs.status === 'failed') && gs.error_message) {
           newErrors[pipelineIdx] = gs.error_message;
+        }
+        // Also show a generic error for failed steps without error_message
+        if ((gs.status === 'error' || gs.status === 'failed') && !gs.error_message) {
+          newErrors[pipelineIdx] = 'ステップが失敗しました';
         }
       });
 
