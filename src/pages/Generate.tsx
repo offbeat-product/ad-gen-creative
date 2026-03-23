@@ -10,6 +10,7 @@ import StepProject from '@/components/wizard/StepProject';
 import StepDataCollection from '@/components/wizard/StepDataCollection';
 import StepReference from '@/components/wizard/StepReference';
 import StepPattern from '@/components/wizard/StepPattern';
+import StepCreativeStyle from '@/components/wizard/StepCreativeStyle';
 import StepPatternCount from '@/components/wizard/StepPatternCount';
 
 const STEPS = [
@@ -20,6 +21,7 @@ const STEPS = [
   { label: 'データ収集' },
   { label: '参考素材' },
   { label: '制作パターン' },
+  { label: 'スタイル' },
   { label: 'パターン数' },
 ];
 
@@ -34,7 +36,7 @@ const Generate = () => {
 
   const goNext = useCallback(() => {
     setDirection(1);
-    setCurrentStep(prev => Math.min(prev + 1, 7));
+    setCurrentStep(prev => Math.min(prev + 1, STEPS.length - 1));
   }, []);
 
   const goBack = useCallback(() => {
@@ -56,7 +58,8 @@ const Generate = () => {
       case 4: return true;
       case 5: return true;
       case 6: return state.productionPattern !== null;
-      case 7: return true;
+      case 7: return state.creativeStyle !== null;
+      case 8: return true;
       default: return false;
     }
   };
@@ -69,6 +72,7 @@ const Generate = () => {
     <StepDataCollection key="data" state={state} onComplete={goNext} />,
     <StepReference key="ref" state={state} updateState={updateState} />,
     <StepPattern key="pattern" state={state} updateState={updateState} />,
+    <StepCreativeStyle key="style" state={state} updateState={updateState} />,
     <StepPatternCount key="count" state={state} updateState={updateState} goBack={goBack} />,
   ];
 
@@ -102,7 +106,7 @@ const Generate = () => {
 
       {/* Mobile step indicator */}
       <div className="md:hidden flex items-center justify-between">
-        <span className="text-sm font-medium text-secondary">ステップ {currentStep + 1}/8</span>
+        <span className="text-sm font-medium text-secondary">ステップ {currentStep + 1}/{STEPS.length}</span>
         <span className="text-sm text-muted-foreground">{STEPS[currentStep].label}</span>
       </div>
 
@@ -120,8 +124,8 @@ const Generate = () => {
         </motion.div>
       </AnimatePresence>
 
-      {/* Navigation - not shown on step 5 (auto) or step 8 (has its own) */}
-      {currentStep !== 4 && currentStep !== 7 && (
+      {/* Navigation - not shown on step 5 (auto) or step 9 (has its own) */}
+      {currentStep !== 4 && currentStep !== 8 && (
         <div className="flex justify-between pt-4">
           {currentStep > 0 ? (
             <button onClick={goBack} className="inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium hover:bg-accent transition-colors">

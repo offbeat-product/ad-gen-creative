@@ -105,7 +105,11 @@ export const makeVideoPipeline = (s: WizardState): PipelineStep[] => {
       extra: '字コンテ + NA + BGMの統合',
     },
     {
-      stepKey: 'styleframe', icon: Palette, label: 'スタイルフレーム作成', demoSeconds: 3, stepType: 'visual',
+      stepKey: 'styleframe', icon: Palette,
+      label: s.creativeStyle === 'motion_graphics' ? 'スタイルフレーム作成（モーショングラフィックス）'
+           : s.creativeStyle === 'hybrid' ? 'スタイルフレーム作成（ハイブリッド）'
+           : 'スタイルフレーム作成（実写素材）',
+      demoSeconds: 3, stepType: 'visual',
       runningText: 'スタイルフレーム（トンマナデザイン）を生成しています...',
       completedText: `${s.tonePatterns}パターンのスタイルフレームを生成しました`,
       details: ['① クリーン・コーポレート', '② カジュアル・ポップ'],
@@ -190,6 +194,13 @@ const buildStateFromJob = (job: any): WizardState => ({
   copyPatterns: job.num_copies ?? 3,
   tonePatterns: job.num_tonmana ?? 2,
   generationMode: (job.generation_mode ?? 'auto') as 'auto' | 'step',
+  creativeStyle: job.settings?.creative_style ?? null,
+  styleOptions: job.settings?.style_options ?? {
+    colorPalette: { primary: '#1E40AF', secondary: '#3B82F6', background: '#DBEAFE' },
+    fontStyle: 'bold_gothic',
+    illustrationStyle: 'flat_design',
+    taste: [],
+  },
 });
 
 /* ─── Gen step type from Supabase ─── */
@@ -375,7 +386,8 @@ const GenerateProgress = () => {
     creativeType: 'video', videoDuration: 30, clientId: null, productId: null,
     projectId: null, referenceIds: [], referenceFileNames: {}, referenceUrls: [], productionPattern: 'new',
     baseCreativeId: null, productionCount: 18, appealAxis: 3, copyPatterns: 3, tonePatterns: 2,
-    generationMode: 'auto',
+    generationMode: 'auto', creativeStyle: null,
+    styleOptions: { colorPalette: { primary: '#1E40AF', secondary: '#3B82F6', background: '#DBEAFE' }, fontStyle: 'bold_gothic' as const, illustrationStyle: 'flat_design' as const, taste: [] },
   });
 
   const total = state.appealAxis * state.copyPatterns * state.tonePatterns;

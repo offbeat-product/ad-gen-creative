@@ -67,6 +67,8 @@ const StepPatternCount = ({ state, updateState, goBack }: Props) => {
           client_name: client?.name ?? '',
           product_name: product?.name ?? '',
           project_name: project?.name ?? '',
+          creative_style: state.creativeStyle,
+          style_options: state.styleOptions,
         },
       });
 
@@ -158,6 +160,10 @@ const StepPatternCount = ({ state, updateState, goBack }: Props) => {
           <span className="font-medium">{state.referenceIds.length}件選択済み</span>
           <span className="text-muted-foreground">制作パターン</span>
           <span className="font-medium">{state.productionPattern === 'new' ? '新規制作' : 'パターン展開'}</span>
+          <span className="text-muted-foreground">スタイル</span>
+          <span className="font-medium">
+            {state.creativeStyle === 'photographic' ? '実写素材型' : state.creativeStyle === 'motion_graphics' ? 'モーショングラフィックス型' : state.creativeStyle === 'hybrid' ? 'ハイブリッド型' : '未選択'}
+          </span>
           <span className="text-muted-foreground">合計</span>
           <span className="font-bold text-secondary">{total}本</span>
         </div>

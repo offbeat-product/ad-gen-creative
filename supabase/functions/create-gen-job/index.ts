@@ -54,7 +54,10 @@ serve(async (req) => {
         num_tonmana: body.num_tonmana,
         total_patterns: body.total_patterns,
         generation_mode: body.generation_mode,
-        settings: {},
+        settings: {
+          creative_style: body.creative_style || null,
+          style_options: body.style_options || null,
+        },
       })
       .select()
       .single();
