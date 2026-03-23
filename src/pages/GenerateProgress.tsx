@@ -137,6 +137,9 @@ const WEBHOOK_URLS: Record<string, string> = {
   copy: 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step2',
   composition: 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step3',
   narration_script: 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step4',
+  narration_audio: 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step5',
+  bgm_suggestion: 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step6',
+  vcon: 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step7',
 };
 
 const WF5_WEBHOOK_URL = 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step5';
@@ -483,7 +486,7 @@ const GenerateProgress = () => {
           newSkipped.add(pipelineIdx);
           if (pipelineIdx > latestCompletedIdx) latestCompletedIdx = pipelineIdx;
         }
-        if (gs.status === 'processing') {
+        if (gs.status === 'processing' || gs.status === 'in_progress') {
           latestProcessing = pipelineIdx;
         }
         if ((gs.status === 'error' || gs.status === 'failed') && gs.error_message) {
@@ -494,7 +497,7 @@ const GenerateProgress = () => {
           newErrors[pipelineIdx] = 'ステップが失敗しました';
         }
         // Timeout detection: if processing/pending for more than 5 minutes, show warning
-        if (gs.status === 'processing' || (gs.status === 'pending' && gs.started_at)) {
+        if (gs.status === 'processing' || gs.status === 'in_progress' || (gs.status === 'pending' && gs.started_at)) {
           const startedAt = gs.started_at ? new Date(gs.started_at).getTime() : null;
           if (startedAt) {
             const elapsed = Date.now() - startedAt;
@@ -1156,6 +1159,117 @@ const GenerateProgress = () => {
     console.log(`[Skip] Skipped step ${stepKey}, triggering next step`);
   }, [jobId, jobData, pipeline, genStepsData, jobMeta, state.creativeType, firstDummyIndex, triggerBgmSuggestion, triggerVcon]);
 
+  // ── Handle retry: reset failed step and re-trigger webhook ──
+  const handleRetryStep = useCallback(async (idx: number) => {
+    if (!jobId || !jobData) return;
+
+    const stepKey = pipeline[idx]?.stepKey;
+    if (!stepKey) return;
+
+    // 1. Reset gen_step status
+    await supabase
+      .from('gen_steps')
+      .update({
+        status: 'pending',
+        result: null,
+        error_message: null,
+        started_at: null,
+        completed_at: null,
+      })
+      .eq('job_id', jobId)
+      .eq('step_key', stepKey);
+
+    // 2. Reset local UI
+    setCompletedIndexes(prev => { const s = new Set(prev); s.delete(idx); return s; });
+    setSkippedIndexes(prev => { const s = new Set(prev); s.delete(idx); return s; });
+    setErrorMap(prev => { const n = { ...prev }; delete n[idx]; return n; });
+
+    // Reset webhook dedup refs
+    const refMap: Record<string, React.MutableRefObject<boolean>> = {
+      copy: step2TriggeredRef,
+      composition: step3TriggeredRef,
+      narration_script: step4TriggeredRef,
+      bgm_suggestion: wf6TriggeredRef,
+      vcon: wf7TriggeredRef,
+    };
+    if (refMap[stepKey]) refMap[stepKey].current = false;
+
+    // 3. Build and call webhook
+    const webhookUrl = WEBHOOK_URLS[stepKey];
+    if (!webhookUrl) return;
+
+    try {
+      // For bgm_suggestion and vcon, use dedicated trigger functions
+      if (stepKey === 'bgm_suggestion') {
+        wf6TriggeredRef.current = true;
+        await triggerBgmSuggestion();
+        return;
+      }
+      if (stepKey === 'vcon') {
+        wf7TriggeredRef.current = true;
+        await triggerVcon();
+        return;
+      }
+
+      // For text steps, build body with previous results
+      const { data: allSteps } = await supabase
+        .from('gen_steps')
+        .select('step_key, result')
+        .eq('job_id', jobId)
+        .eq('status', 'completed');
+
+      const previousResults: Record<string, any> = {};
+      allSteps?.forEach((s: any) => {
+        previousResults[s.step_key] = typeof s.result === 'string' ? safeParse(s.result) : s.result;
+      });
+
+      const step1Result = previousResults['appeal_axis'] || {};
+      const knowledgeFields = {
+        _rules_text: step1Result._rules_text || '',
+        _refs_text: step1Result._refs_text || '',
+        _patterns_text: step1Result._patterns_text || '',
+      };
+
+      let body: any = {
+        job_id: jobId,
+        creative_type: jobData.creative_type,
+        duration_seconds: jobData.duration_seconds,
+        num_appeal_axes: jobData.num_appeal_axes,
+        num_copies: jobData.num_copies,
+        num_tonmana: jobData.num_tonmana,
+        client_name: jobMeta.clientName,
+        product_name: jobMeta.productName,
+        project_name: jobMeta.projectName,
+      };
+
+      if (stepKey === 'copy') {
+        body.previous_results = { appeal_axes: step1Result?.appeal_axes || [], ...knowledgeFields };
+      } else if (stepKey === 'composition') {
+        body.previous_results = { copies: (previousResults['copy'] || {})?.copies || [], ...knowledgeFields };
+      } else if (stepKey === 'narration_script') {
+        body.previous_results = {
+          appeal_axes: step1Result?.appeal_axes || [],
+          copies: (previousResults['copy'] || {})?.copies || [],
+          compositions: (previousResults['composition'] || {})?.compositions || [],
+          ...knowledgeFields,
+        };
+      } else if (stepKey === 'narration_audio') {
+        // For narration_audio, use the WF5 format
+        body = { job_id: jobId, voice_id_a: '', voice_id_b: '' };
+      }
+
+      console.log(`[Retry] Calling ${stepKey} webhook...`);
+      await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      console.log(`[Retry] ${stepKey} webhook called successfully`);
+    } catch (e) {
+      console.error(`[Retry] Failed to call ${stepKey} webhook:`, e);
+    }
+  }, [jobId, jobData, pipeline, jobMeta, triggerBgmSuggestion, triggerVcon]);
+
   const refreshGenSteps = useCallback(async () => {
     if (!jobId) return;
     const { data: steps } = await supabase
@@ -1246,7 +1360,12 @@ const GenerateProgress = () => {
   }, [jobId, pipeline, stepKeyToIndex, effectiveAutoMode]);
 
   const handleStepClick = (idx: number) => {
-    if (completedIndexes.has(idx)) {
+    // Allow clicking on completed, skipped, errored, or in-progress steps
+    const pipelineStep = pipeline[idx];
+    const genStep = pipelineStep ? genStepsData.find(gs => gs.step_key === pipelineStep.stepKey) : null;
+    const hasStatus = completedIndexes.has(idx) || skippedIndexes.has(idx) || !!errorMap[idx] ||
+      (genStep && (genStep.status === 'processing' || genStep.status === 'in_progress'));
+    if (hasStatus || completedIndexes.has(idx)) {
       userSelectedStepRef.current = idx;
       setSelectedStepIndex(idx);
       setMobileTimelineOpen(false);
@@ -1372,6 +1491,7 @@ const GenerateProgress = () => {
         <div className="flex-1 overflow-y-auto">
           <PreviewPanel
             pipeline={pipeline} selectedStepIndex={selectedStepIndex} completedIndexes={completedIndexes}
+            skippedIndexes={skippedIndexes}
             allDone={allDone} total={total} state={state} waitingForApproval={waitingForApproval}
             effectiveAutoMode={effectiveAutoMode} genStepResult={selectedGenStepResult} appealAxesResult={appealAxesStepResult}
             copyStepResult={copyStepResult} compositionStepResult={compositionStepResult} narrationScriptResult={narrationScriptStepResult}
@@ -1381,6 +1501,8 @@ const GenerateProgress = () => {
             voiceSelectionPending={voiceSelectionPending} voiceGenerating={voiceGenerating}
             narrationAudioMap={narrationAudioMap} narrationAudioMapB={narrationAudioMapB} selectedGender={selectedGender}
             onTriggerNarrationAudio={triggerNarrationAudio}
+            errorMap={errorMap} genStepsData={genStepsData}
+            onSkipStep={handleSkipStep} onRetryStep={handleRetryStep}
           />
         </div>
       </div>
@@ -1401,6 +1523,7 @@ const GenerateProgress = () => {
         <div className="w-[60%] overflow-y-auto">
           <PreviewPanel
             pipeline={pipeline} selectedStepIndex={selectedStepIndex} completedIndexes={completedIndexes}
+            skippedIndexes={skippedIndexes}
             allDone={allDone} total={total} state={state} waitingForApproval={waitingForApproval}
             effectiveAutoMode={effectiveAutoMode} genStepResult={selectedGenStepResult} appealAxesResult={appealAxesStepResult}
             copyStepResult={copyStepResult} compositionStepResult={compositionStepResult} narrationScriptResult={narrationScriptStepResult}
@@ -1410,6 +1533,8 @@ const GenerateProgress = () => {
             voiceSelectionPending={voiceSelectionPending} voiceGenerating={voiceGenerating}
             narrationAudioMap={narrationAudioMap} narrationAudioMapB={narrationAudioMapB} selectedGender={selectedGender}
             onTriggerNarrationAudio={triggerNarrationAudio}
+            errorMap={errorMap} genStepsData={genStepsData}
+            onSkipStep={handleSkipStep} onRetryStep={handleRetryStep}
           />
         </div>
       </div>
