@@ -475,7 +475,9 @@ const GenerateProgress = () => {
       let latestCompletedIdx = -1;
 
       steps.forEach((gs: any) => {
-        const pipelineIdx = stepKeyToIndex.get(gs.step_key);
+        // Map DB step_key 'narration_audio' to pipeline stepKey 'narration'
+        const mappedKey = gs.step_key === 'narration_audio' ? 'narration' : gs.step_key;
+        const pipelineIdx = stepKeyToIndex.get(mappedKey);
         if (pipelineIdx === undefined) return;
 
         if (gs.status === 'completed') {
