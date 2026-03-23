@@ -1123,6 +1123,8 @@ const PreviewNarration = ({ state, narrationAudioMap, narrationAudioMapB, select
 };
 
 const PreviewBGM = ({ genStepResult }: { genStepResult?: any }) => {
+  const [openIdx, setOpenIdx] = useState(0);
+
   const parsed = (() => {
     if (!genStepResult) return null;
     try {
@@ -1131,30 +1133,10 @@ const PreviewBGM = ({ genStepResult }: { genStepResult?: any }) => {
     } catch { return null; }
   })();
 
-  if (!parsed || !Array.isArray(parsed) || parsed.length === 0) {
-    // Fallback dummy
-    return (
-      <div className="space-y-3">
-        {BGM_DATA.map((bgm, i) => (
-          <div key={i} className="border rounded-lg p-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium">{bgm.name}</p>
-              <Badge variant="outline">BPM {bgm.bpm}</Badge>
-            </div>
-            <p className="text-xs text-muted-foreground">{bgm.genre}</p>
-            <AudioPlayer label={bgm.name} />
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  const [openIdx, setOpenIdx] = useState(0);
-
   const renderCandidate = (candidate: any, label: string, isPrimary: boolean) => {
     if (!candidate) return null;
     return (
-      <div className={cn('rounded-lg p-4 space-y-2', isPrimary ? 'border-l-4 border-l-[#7C7AFF] border border-border' : 'border-l-4 border-l-muted-foreground/30 border border-border')}>
+      <div className={cn('rounded-lg p-4 space-y-2', isPrimary ? 'border-l-4 border-l-secondary border border-border' : 'border-l-4 border-l-muted-foreground/30 border border-border')}>
         <p className="text-sm font-bold">{label}: {candidate.description}</p>
         <div className="flex flex-wrap gap-1.5">
           {candidate.mood && <Badge variant="outline" className="text-xs">Mood: {candidate.mood}</Badge>}
@@ -1172,6 +1154,23 @@ const PreviewBGM = ({ genStepResult }: { genStepResult?: any }) => {
       </div>
     );
   };
+
+  if (!parsed || !Array.isArray(parsed) || parsed.length === 0) {
+    return (
+      <div className="space-y-3">
+        {BGM_DATA.map((bgm, i) => (
+          <div key={i} className="border rounded-lg p-4 space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium">{bgm.name}</p>
+              <Badge variant="outline">BPM {bgm.bpm}</Badge>
+            </div>
+            <p className="text-xs text-muted-foreground">{bgm.genre}</p>
+            <AudioPlayer label={bgm.name} />
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
