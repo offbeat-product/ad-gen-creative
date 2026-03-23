@@ -26,10 +26,10 @@ interface Props {
 }
 
 const PipelineTimeline = ({
-  pipeline, activeIndex, completedIndexes, selectedStepIndex,
+  pipeline, activeIndex, completedIndexes, skippedIndexes, selectedStepIndex,
   countUpValues, total, progressPct, completedCount,
   elapsedStr, remainStr, allDone, effectiveAutoMode,
-  errorMap = {}, narrationProgress, onStepClick, onSwitchToAuto,
+  errorMap = {}, narrationProgress, onStepClick, onSwitchToAuto, onSkipStep,
 }: Props) => {
   return (
     <div className="space-y-4">
