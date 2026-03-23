@@ -86,10 +86,11 @@ const PipelineTimeline = ({
               className={cn(
                 "relative mb-1.5 last:mb-0 rounded-lg px-3 py-2 ml-2 transition-all duration-200",
                 isDone && "cursor-pointer hover:bg-success-wash/50",
+                isSkipped && "opacity-60",
                 isSelected && isDone && "bg-secondary-wash border-l-[3px] border-secondary",
                 isRunning && "bg-secondary-wash/30",
-                hasError && "bg-destructive/5",
-                !isDone && !isRunning && !hasError && "opacity-60",
+                hasError && !isSkipped && "bg-destructive/5",
+                !isDone && !isRunning && !hasError && !isSkipped && "opacity-60",
               )}
             >
               {/* Timeline dot */}
