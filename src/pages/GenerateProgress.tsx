@@ -1246,7 +1246,12 @@ const GenerateProgress = () => {
   }, [jobId, pipeline, stepKeyToIndex, effectiveAutoMode]);
 
   const handleStepClick = (idx: number) => {
-    if (completedIndexes.has(idx)) {
+    // Allow clicking on completed, skipped, errored, or in-progress steps
+    const pipelineStep = pipeline[idx];
+    const genStep = pipelineStep ? genStepsData.find(gs => gs.step_key === pipelineStep.stepKey) : null;
+    const hasStatus = completedIndexes.has(idx) || skippedIndexes.has(idx) || !!errorMap[idx] ||
+      (genStep && (genStep.status === 'processing' || genStep.status === 'in_progress'));
+    if (hasStatus || completedIndexes.has(idx)) {
       userSelectedStepRef.current = idx;
       setSelectedStepIndex(idx);
       setMobileTimelineOpen(false);
