@@ -94,10 +94,9 @@ export const makeVideoPipeline = (s: WizardState): PipelineStep[] => {
       extra: '音声タイプ: 女性ナチュラル',
     },
     {
-      stepKey: 'bgm', icon: Music, label: 'BGM提案', demoSeconds: 2, stepType: 'audio',
-      runningText: '有料素材ライブラリからBGMを自動抽出しています...',
-      completedText: '3曲のBGM候補を抽出しました',
-      details: ['① アップテンポ・ポジティブ（BPM 120）', '② エモーショナル・ドラマティック（BPM 90）', '③ クール・テクノ（BPM 130）'],
+      stepKey: 'bgm_suggestion', icon: Music, label: 'BGM提案', demoSeconds: 2, stepType: 'text',
+      runningText: 'AIが最適なBGMを選定しています...',
+      completedText: 'BGM候補を提案しました',
     },
     {
       stepKey: 'vcon', icon: Play, label: 'Vコン作成', demoSeconds: 5, stepType: 'visual',
