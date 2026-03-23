@@ -1292,7 +1292,11 @@ const PreviewStyleFrames = ({ genStepResult }: { genStepResult?: any }) => {
   const parsed = (() => {
     if (!genStepResult) return null;
     try {
-      const r = typeof genStepResult === 'string' ? JSON.parse(genStepResult) : genStepResult;
+      let r = typeof genStepResult === 'string' ? JSON.parse(genStepResult) : genStepResult;
+      // Handle double-encoded JSON
+      if (typeof r === 'string') {
+        try { r = JSON.parse(r); } catch {}
+      }
       return r?.styleframes ?? null;
     } catch { return null; }
   })();

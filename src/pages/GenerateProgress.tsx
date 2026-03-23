@@ -236,7 +236,7 @@ const safeParse = (v: any): any => {
 /* ─── Text step keys (driven by Supabase only) ─── */
 
 const TEXT_STEP_KEYS = ['appeal_axis', 'copy', 'composition', 'narration_script'];
-const DATA_DRIVEN_STEP_KEYS = [...TEXT_STEP_KEYS, 'bgm_suggestion', 'vcon'];
+const DATA_DRIVEN_STEP_KEYS = [...TEXT_STEP_KEYS, 'bgm_suggestion', 'vcon', 'styleframe'];
 
 /* Map pipeline stepKey to DB step_key (narration ↔ narration_audio) */
 const pipelineKeyToDbKey = (k: string) => k === 'narration' ? 'narration_audio' : k;
@@ -634,7 +634,7 @@ const GenerateProgress = () => {
 
         // Also check bgm_suggestion and vcon steps for approval
         if (!foundApproval) {
-          for (const extraKey of ['bgm_suggestion', 'vcon']) {
+          for (const extraKey of ['bgm_suggestion', 'vcon', 'styleframe']) {
             const gs = steps.find((s: any) => s.step_key === extraKey);
             const pIdx = stepKeyToIndex.get(extraKey);
             if (gs?.status === 'completed' && pIdx !== undefined && !dummyAnimationStartedRef.current) {
@@ -946,6 +946,22 @@ const GenerateProgress = () => {
       return;
     }
 
+    // Styleframe approved → start dummy animations for ekonte and beyond
+    if (narrationStepKey === 'styleframe') {
+      dummyAnimationStartedRef.current = true;
+      setDummyPhaseStarted(true);
+      const nextDummyIdx = pipeline.findIndex((s, i) => i > idx && !DATA_DRIVEN_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
+      if (nextDummyIdx >= 0) {
+        setTimeout(() => setActiveIndex(nextDummyIdx), 300);
+      } else {
+        setAllDone(true);
+        setShowConfetti(true);
+        clearInterval(timerRef.current);
+        setTimeout(() => setShowConfetti(false), 3500);
+      }
+      return;
+    }
+
     if (idx + 1 < pipeline.length) {
       setTimeout(() => setActiveIndex(idx + 1), 300);
     } else {
@@ -968,6 +984,25 @@ const GenerateProgress = () => {
     }
 
     const stepKey = pipeline[idx]?.stepKey;
+
+    // Styleframe regenerate: reset step, show style selection UI again
+    if (stepKey === 'styleframe') {
+      const confirmed = window.confirm('この工程を再生成しますか？現在の結果は上書きされます。');
+      if (!confirmed) return;
+      await supabase
+        .from('gen_steps')
+        .update({ status: 'pending', result: null, error_message: null, started_at: null, completed_at: null })
+        .eq('job_id', jobId)
+        .eq('step_key', 'styleframe');
+      setCompletedIndexes(prev => { const s = new Set(prev); s.delete(idx); return s; });
+      setWaitingForApproval(-1);
+      setErrorMap(prev => { const n = { ...prev }; delete n[idx]; return n; });
+      dummyAnimationStartedRef.current = false;
+      setDummyPhaseStarted(false);
+      setStyleSelectionPending(true);
+      return;
+    }
+
     if (!stepKey || !TEXT_STEP_KEYS.includes(stepKey)) {
       // Non-text step: just re-run dummy animation
       setCompletedIndexes(prev => { const s = new Set(prev); s.delete(idx); return s; });
@@ -1180,7 +1215,17 @@ const GenerateProgress = () => {
         triggerVcon();
       }
     } else if (stepKey === 'vcon') {
-      // Vcon skipped → start dummy animations
+      // Vcon skipped → show style selection (step mode) or start dummy
+      if (!effectiveAutoMode) {
+        setStyleSelectionPending(true);
+      } else {
+        dummyAnimationStartedRef.current = true;
+        setDummyPhaseStarted(true);
+        const nextDummyIdx = pipeline.findIndex((s, i) => i > idx && !DATA_DRIVEN_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
+        if (nextDummyIdx >= 0) setTimeout(() => setActiveIndex(nextDummyIdx), 300);
+      }
+    } else if (stepKey === 'styleframe') {
+      // Styleframe skipped → start dummy animations for ekonte and beyond
       dummyAnimationStartedRef.current = true;
       setDummyPhaseStarted(true);
       const nextDummyIdx = pipeline.findIndex((s, i) => i > idx && !DATA_DRIVEN_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
@@ -1226,6 +1271,14 @@ const GenerateProgress = () => {
     if (refMap[stepKey]) refMap[stepKey].current = false;
 
     // 3. Build and call webhook
+    // Styleframe retry: show style selection UI
+    if (stepKey === 'styleframe') {
+      dummyAnimationStartedRef.current = false;
+      setDummyPhaseStarted(false);
+      setStyleSelectionPending(true);
+      return;
+    }
+
     const webhookUrl = WEBHOOK_URLS[pipelineKeyToDbKey(stepKey)];
     if (!webhookUrl) return;
 
