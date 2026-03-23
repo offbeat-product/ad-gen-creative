@@ -483,7 +483,7 @@ const GenerateProgress = () => {
           newSkipped.add(pipelineIdx);
           if (pipelineIdx > latestCompletedIdx) latestCompletedIdx = pipelineIdx;
         }
-        if (gs.status === 'processing') {
+        if (gs.status === 'processing' || gs.status === 'in_progress') {
           latestProcessing = pipelineIdx;
         }
         if ((gs.status === 'error' || gs.status === 'failed') && gs.error_message) {
