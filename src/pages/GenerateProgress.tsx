@@ -1342,10 +1342,12 @@ const GenerateProgress = () => {
                 <div className="px-4 pb-3 max-h-[40vh] overflow-y-auto">
                   <PipelineTimeline
                     pipeline={pipeline} activeIndex={activeIndex} completedIndexes={completedIndexes}
+                    skippedIndexes={skippedIndexes}
                     selectedStepIndex={selectedStepIndex} countUpValues={countUpValues} total={total}
                     progressPct={progressPct} completedCount={completedCount} elapsedStr={elapsedStr}
                     remainStr={remainStr} allDone={allDone} effectiveAutoMode={effectiveAutoMode}
-                     errorMap={errorMap} narrationProgress={narrationProgress} onStepClick={handleStepClick} onSwitchToAuto={switchToAuto}
+                    errorMap={errorMap} narrationProgress={narrationProgress} onStepClick={handleStepClick} onSwitchToAuto={switchToAuto}
+                    onSkipStep={handleSkipStep}
                   />
                 </div>
               </motion.div>
