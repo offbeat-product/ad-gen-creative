@@ -1580,9 +1580,9 @@ const PreviewPanel = ({
   pipeline, selectedStepIndex, completedIndexes, skippedIndexes, allDone, total, state,
   waitingForApproval, effectiveAutoMode, genStepResult, appealAxesResult, copyStepResult, compositionStepResult, narrationScriptResult, jobId,
   voiceSelectionPending, voiceGenerating, narrationAudioMap, narrationAudioMapB, selectedGender,
-  errorMap, genStepsData,
+  errorMap, genStepsData, styleSelectionPending,
   onApprove, onRegenerate, onSwitchToAuto, onNavigateDashboard, onResultUpdated, onTriggerNarrationAudio,
-  onSkipStep, onRetryStep,
+  onSkipStep, onRetryStep, onStyleSelected,
 }: Props) => {
   const { toast } = useToast();
   const [editing, setEditing] = useState(false);
