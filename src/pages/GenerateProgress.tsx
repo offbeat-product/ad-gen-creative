@@ -1271,6 +1271,14 @@ const GenerateProgress = () => {
     if (refMap[stepKey]) refMap[stepKey].current = false;
 
     // 3. Build and call webhook
+    // Styleframe retry: show style selection UI
+    if (stepKey === 'styleframe') {
+      dummyAnimationStartedRef.current = false;
+      setDummyPhaseStarted(false);
+      setStyleSelectionPending(true);
+      return;
+    }
+
     const webhookUrl = WEBHOOK_URLS[pipelineKeyToDbKey(stepKey)];
     if (!webhookUrl) return;
 
