@@ -494,7 +494,7 @@ const GenerateProgress = () => {
           newErrors[pipelineIdx] = 'ステップが失敗しました';
         }
         // Timeout detection: if processing/pending for more than 5 minutes, show warning
-        if (gs.status === 'processing' || (gs.status === 'pending' && gs.started_at)) {
+        if (gs.status === 'processing' || gs.status === 'in_progress' || (gs.status === 'pending' && gs.started_at)) {
           const startedAt = gs.started_at ? new Date(gs.started_at).getTime() : null;
           if (startedAt) {
             const elapsed = Date.now() - startedAt;
