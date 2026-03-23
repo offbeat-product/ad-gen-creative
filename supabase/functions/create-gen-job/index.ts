@@ -106,6 +106,11 @@ serve(async (req) => {
         step_key: "vcon",
         step_label: "Vコン作成",
       });
+      steps.push({
+        step_number: 8,
+        step_key: "styleframe",
+        step_label: "スタイルフレーム作成",
+      });
     }
 
     const { error: stepsError } = await adminClient.from("gen_steps").insert(
