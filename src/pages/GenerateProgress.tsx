@@ -419,6 +419,7 @@ const GenerateProgress = () => {
     step3TriggeredRef.current = false;
     step4TriggeredRef.current = false;
     wf6TriggeredRef.current = false;
+    wf7TriggeredRef.current = false;
     dummyAnimationStartedRef.current = false;
     setActiveIndex(-1);
     setCompletedIndexes(new Set());
