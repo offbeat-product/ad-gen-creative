@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, SkipBack, Volume2, VolumeX, ChevronDown, ChevronUp, Mic, Music } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -56,6 +56,22 @@ const formatTime = (s: number) => {
   const m = Math.floor(s / 60);
   const sec = Math.floor(s % 60);
   return `${m}:${sec.toString().padStart(2, '0')}`;
+};
+
+/* ─── Deduplicate patterns by base letter ─── */
+// If patterns are A-1, A-2, B-1, B-2, group by base letter (A, B) and take first of each
+const getBaseLetter = (name: string) => name.replace(/[-_]\d+$/, '');
+
+const deduplicatePatterns = (patterns: VconPattern[]): VconPattern[] => {
+  const seen = new Map<string, VconPattern>();
+  for (const p of patterns) {
+    const base = getBaseLetter(p.pattern_name);
+    if (!seen.has(base)) {
+      // Use base letter as the display name
+      seen.set(base, { ...p, pattern_name: base });
+    }
+  }
+  return Array.from(seen.values());
 };
 
 /* ─── Vcon Screen ─── */
@@ -168,7 +184,10 @@ const CutListItem = ({ cut, isActive, isPast, isExpanded, onClick, onToggle }: {
 
 const VconPreview = ({ genStepResult, narrationAudioMap, narrationAudioMapB, selectedGender, jobId }: Props) => {
   const parsed = safeParse(genStepResult);
-  const vconData: VconPattern[] = parsed?.vcon_data ?? [];
+  const rawVconData: VconPattern[] = parsed?.vcon_data ?? [];
+  
+  // Deduplicate patterns by base letter (A-1,A-2 → A)
+  const vconData = useMemo(() => deduplicatePatterns(rawVconData), [rawVconData]);
 
   const [selectedPattern, setSelectedPattern] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
@@ -180,8 +199,8 @@ const VconPreview = ({ genStepResult, narrationAudioMap, narrationAudioMapB, sel
   const narrationAudioRef = useRef<HTMLAudioElement>(null);
   const bgmAudioRef = useRef<HTMLAudioElement>(null);
 
-  // BGM URLs from gen_patterns
-  const [bgmUrlMap, setBgmUrlMap] = useState<Record<string, string | null>>({});
+  // BGM URL from gen_patterns (shared across all patterns)
+  const [sharedBgmUrl, setSharedBgmUrl] = useState<string | null>(null);
 
   const pattern = vconData[selectedPattern];
   const totalDuration = pattern?.total_duration ?? 30;
@@ -192,21 +211,25 @@ const VconPreview = ({ genStepResult, narrationAudioMap, narrationAudioMapB, sel
 
   // Get narration audio URL for this pattern
   const patternName = pattern?.pattern_name ?? '';
-  const narrationUrl = narrationAudioMap?.[patternName] ?? narrationAudioMap?.[`${patternName}1`] ?? null;
-  const bgmUrl = bgmUrlMap[patternName] ?? null;
+  // Try multiple key formats: "A", "A1", pattern_id from gen_patterns
+  const narrationUrl = narrationAudioMap?.[patternName] 
+    ?? narrationAudioMap?.[`${patternName}1`]
+    ?? narrationAudioMap?.[`${patternName}-1`]
+    ?? null;
+  const bgmUrl = sharedBgmUrl;
 
-  // Fetch BGM URLs from gen_patterns
+  // Fetch shared BGM URL from gen_patterns (all patterns share same BGM)
   useEffect(() => {
     if (!jobId) return;
     const fetchBgm = async () => {
       const { data } = await supabase
         .from('gen_patterns')
-        .select('pattern_id, bgm_url')
-        .eq('job_id', jobId);
-      if (data) {
-        const map: Record<string, string | null> = {};
-        data.forEach(p => { map[p.pattern_id] = p.bgm_url; });
-        setBgmUrlMap(map);
+        .select('bgm_url')
+        .eq('job_id', jobId)
+        .not('bgm_url', 'is', null)
+        .limit(1);
+      if (data && data.length > 0 && data[0].bgm_url) {
+        setSharedBgmUrl(data[0].bgm_url);
       }
     };
     fetchBgm();

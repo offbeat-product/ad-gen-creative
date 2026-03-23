@@ -50,6 +50,7 @@ interface Props {
   selectedGender?: 'male' | 'female';
   errorMap?: Record<number, string>;
   genStepsData?: any[];
+  styleSelectionPending?: boolean;
   onApprove: (idx: number) => void;
   onRegenerate: (idx: number) => void;
   onSwitchToAuto: () => void;
@@ -58,6 +59,7 @@ interface Props {
   onTriggerNarrationAudio?: (voiceIdA: string, voiceIdB: string, gender: 'male' | 'female') => void;
   onSkipStep?: (idx: number) => void;
   onRetryStep?: (idx: number) => void;
+  onStyleSelected?: (style: string) => void;
 }
 
 /* ─── Pattern naming helpers ─── */
@@ -1249,24 +1251,126 @@ const PreviewVCon = ({ genStepResult, narrationAudioMap, narrationAudioMapB, sel
   />
 );
 
-const PreviewStyleFrames = () => (
-  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-    {STYLE_FRAMES.map((sf, i) => (
-      <div key={i} className="border rounded-lg p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-xs font-mono">トンマナ {i + 1}</Badge>
-          <p className="text-sm font-medium">{sf.name}</p>
-        </div>
-        <div className="flex gap-2">
-          {sf.colors.map((c, j) => (
-            <div key={j} className="w-8 h-8 rounded-full border" style={{ backgroundColor: c }} />
-          ))}
-        </div>
-        <ImagePlaceholder label={`スタイルフレーム ${i + 1}`} />
+/* ─── Style Selection UI (inline for progress page) ─── */
+
+const CREATIVE_STYLES = [
+  { id: 'photographic', title: '🎬 実写素材型', desc: '写実的な広告写真をAIで生成' },
+  { id: 'motion_graphics', title: '🎨 モーショングラフィックス型', desc: 'テロップ演出・イラスト・装飾をAIで生成' },
+  { id: 'hybrid', title: '🔀 ハイブリッド型', desc: '実写+テロップの組み合わせ' },
+];
+
+const StyleSelectionForStyleframe = ({ onSelect }: { onSelect: (style: string) => void }) => {
+  const [selected, setSelected] = useState<string>('photographic');
+  return (
+    <div className="space-y-6">
+      <p className="text-sm text-muted-foreground">クリエイティブスタイルを選択してください。</p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {CREATIVE_STYLES.map(s => (
+          <button
+            key={s.id}
+            onClick={() => setSelected(s.id)}
+            className={cn(
+              'rounded-xl border-2 p-4 text-left transition-all',
+              selected === s.id
+                ? 'border-secondary bg-secondary/5'
+                : 'border-border hover:border-muted-foreground/30',
+            )}
+          >
+            <p className="text-sm font-bold mb-1">{s.title}</p>
+            <p className="text-xs text-muted-foreground">{s.desc}</p>
+          </button>
+        ))}
       </div>
-    ))}
-  </div>
-);
+      <Button variant="brand" onClick={() => onSelect(selected)} className="w-full">
+        🚀 スタイルフレームを生成
+      </Button>
+    </div>
+  );
+};
+
+const PreviewStyleFrames = ({ genStepResult }: { genStepResult?: any }) => {
+  const parsed = (() => {
+    if (!genStepResult) return null;
+    try {
+      const r = typeof genStepResult === 'string' ? JSON.parse(genStepResult) : genStepResult;
+      return r?.styleframes ?? null;
+    } catch { return null; }
+  })();
+
+  // Real data: show AI-generated styleframe images grouped by pattern
+  if (parsed && Array.isArray(parsed) && parsed.length > 0) {
+    // Group by pattern_name
+    const grouped: Record<string, any[]> = {};
+    for (const sf of parsed) {
+      const pn = sf.pattern_name ?? 'A';
+      if (!grouped[pn]) grouped[pn] = [];
+      grouped[pn].push(sf);
+    }
+    const patternNames = Object.keys(grouped).sort();
+
+    return (
+      <div className="space-y-4">
+        <Badge className="bg-success-wash text-success text-xs">AI生成データ</Badge>
+        <Tabs defaultValue={patternNames[0]}>
+          <TabsList className="w-full flex-wrap h-auto gap-1">
+            {patternNames.map(pn => (
+              <TabsTrigger key={pn} value={pn} className="text-xs font-mono">パターン{pn}</TabsTrigger>
+            ))}
+          </TabsList>
+          {patternNames.map(pn => (
+            <TabsContent key={pn} value={pn}>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
+                {grouped[pn].sort((a: any, b: any) => (a.cut_number ?? 0) - (b.cut_number ?? 0)).map((sf: any, i: number) => (
+                  <div key={i} className="border rounded-lg overflow-hidden">
+                    {sf.image_url ? (
+                      <img
+                        src={sf.image_url}
+                        alt={`Cut ${sf.cut_number ?? i + 1}`}
+                        className="w-full object-cover"
+                        style={{ aspectRatio: sf.aspect_ratio === '9:16' ? '9/16' : '16/9' }}
+                      />
+                    ) : (
+                      <ImagePlaceholder label={`Cut ${sf.cut_number ?? i + 1}`} aspect={sf.aspect_ratio === '9:16' ? '9/16' : '16/9'} size="sm" />
+                    )}
+                    <div className="p-2 space-y-1">
+                      <p className="text-xs font-medium">Cut {sf.cut_number ?? i + 1}</p>
+                      {sf.prompt && (
+                        <details className="text-xs text-muted-foreground">
+                          <summary className="cursor-pointer hover:text-foreground">プロンプト</summary>
+                          <p className="mt-1 text-[11px] leading-relaxed">{sf.prompt}</p>
+                        </details>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </TabsContent>
+          ))}
+        </Tabs>
+      </div>
+    );
+  }
+
+  // Fallback: dummy display
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {STYLE_FRAMES.map((sf, i) => (
+        <div key={i} className="border rounded-lg p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs font-mono">トンマナ {i + 1}</Badge>
+            <p className="text-sm font-medium">{sf.name}</p>
+          </div>
+          <div className="flex gap-2">
+            {sf.colors.map((c, j) => (
+              <div key={j} className="w-8 h-8 rounded-full border" style={{ backgroundColor: c }} />
+            ))}
+          </div>
+          <ImagePlaceholder label={`スタイルフレーム ${i + 1}`} />
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const PreviewEkonte = ({ total }: { total: number }) => {
   const count = Math.min(total, 6);
@@ -1476,9 +1580,9 @@ const PreviewPanel = ({
   pipeline, selectedStepIndex, completedIndexes, skippedIndexes, allDone, total, state,
   waitingForApproval, effectiveAutoMode, genStepResult, appealAxesResult, copyStepResult, compositionStepResult, narrationScriptResult, jobId,
   voiceSelectionPending, voiceGenerating, narrationAudioMap, narrationAudioMapB, selectedGender,
-  errorMap, genStepsData,
+  errorMap, genStepsData, styleSelectionPending,
   onApprove, onRegenerate, onSwitchToAuto, onNavigateDashboard, onResultUpdated, onTriggerNarrationAudio,
-  onSkipStep, onRetryStep,
+  onSkipStep, onRetryStep, onStyleSelected,
 }: Props) => {
   const { toast } = useToast();
   const [editing, setEditing] = useState(false);
@@ -1529,6 +1633,25 @@ const PreviewPanel = ({
   };
 
   // Show voice selection or voice generating state
+  // Show style selection UI for styleframe step
+  if (styleSelectionPending && onStyleSelected) {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="px-6 pt-5 pb-3">
+          <div className="flex items-center gap-3">
+            <Sparkles className="h-5 w-5 text-secondary" />
+            <h2 className="text-lg font-bold font-display">スタイルフレーム作成</h2>
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">Vコンが完了しました。スタイルフレームのクリエイティブスタイルを選択してください。</p>
+        </div>
+        <Separator />
+        <div className="flex-1 overflow-y-auto px-6 py-6">
+          <StyleSelectionForStyleframe onSelect={onStyleSelected} />
+        </div>
+      </div>
+    );
+  }
+
   if (voiceSelectionPending && onTriggerNarrationAudio) {
     return (
       <div className="flex flex-col h-full">
@@ -1751,7 +1874,7 @@ const PreviewPanel = ({
         case 4: return <PreviewNarration state={state} narrationAudioMap={narrationAudioMap} narrationAudioMapB={narrationAudioMapB} selectedGender={selectedGender} jobId={jobId} appealAxesResult={appealAxesResult} copyStepResult={copyStepResult} compositionStepResult={compositionStepResult} narrationScriptResult={narrationScriptResult} />;
         case 5: mainContent = <PreviewBGM genStepResult={displayData} jobId={jobId} onBgmUpdated={onResultUpdated} />; break;
         case 6: mainContent = <PreviewVCon genStepResult={displayData} narrationAudioMap={narrationAudioMap} narrationAudioMapB={narrationAudioMapB} selectedGender={selectedGender} jobId={jobId} />; break;
-        case 7: mainContent = <PreviewStyleFrames />; break;
+        case 7: mainContent = <PreviewStyleFrames genStepResult={displayData} />; break;
         case 8: mainContent = <PreviewEkonte total={total} />; break;
         case 9: mainContent = <PreviewFinalVideo total={total} state={state} aspect="16/9" resolution="1920 × 1080" />; break;
         case 10: mainContent = <PreviewFinalVideo total={total} state={state} aspect="9/16" resolution="1080 × 1920" />; break;

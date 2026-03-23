@@ -424,6 +424,7 @@ const GenerateProgress = () => {
   const [narrationAudioMap, setNarrationAudioMap] = useState<Record<string, string | null>>({});
   const [narrationAudioMapB, setNarrationAudioMapB] = useState<Record<string, string | null>>({});
   const [selectedGender, setSelectedGender] = useState<'male' | 'female'>('male');
+  const [styleSelectionPending, setStyleSelectionPending] = useState(false);
 
   // ── Webhook dedup refs (per step) ──
   const step2TriggeredRef = useRef(false);
@@ -922,8 +923,15 @@ const GenerateProgress = () => {
       return;
     }
 
-    // Vcon approved → start dummy animations
+    // Vcon approved → show style selection (step mode) or auto-proceed
     if (narrationStepKey === 'vcon') {
+      if (!effectiveAutoMode) {
+        // Step mode: show style selection UI
+        setStyleSelectionPending(true);
+        setWaitingForApproval(-1);
+        return;
+      }
+      // Auto mode: skip style selection, proceed with dummy animations
       dummyAnimationStartedRef.current = true;
       setDummyPhaseStarted(true);
       const nextDummyIdx = pipeline.findIndex((s, i) => i > idx && !DATA_DRIVEN_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
@@ -1293,6 +1301,25 @@ const GenerateProgress = () => {
     }
   }, [jobId, jobData, pipeline, jobMeta, triggerBgmSuggestion, triggerVcon]);
 
+  // ── Handle style selection for styleframe ──
+  const handleStyleSelected = useCallback((style: string) => {
+    setStyleSelectionPending(false);
+    console.log(`[StyleFrame] Selected style: ${style}`);
+    // Start dummy animations for styleframe and beyond
+    dummyAnimationStartedRef.current = true;
+    setDummyPhaseStarted(true);
+    const vconIdx = stepKeyToIndex.get('vcon') ?? -1;
+    const nextDummyIdx = pipeline.findIndex((s, i) => i > vconIdx && !DATA_DRIVEN_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
+    if (nextDummyIdx >= 0) {
+      setTimeout(() => setActiveIndex(nextDummyIdx), 300);
+    } else {
+      setAllDone(true);
+      setShowConfetti(true);
+      clearInterval(timerRef.current);
+      setTimeout(() => setShowConfetti(false), 3500);
+    }
+  }, [pipeline, stepKeyToIndex]);
+
   const refreshGenSteps = useCallback(async () => {
     if (!jobId) return;
     const { data: steps } = await supabase
@@ -1526,6 +1553,7 @@ const GenerateProgress = () => {
             onTriggerNarrationAudio={triggerNarrationAudio}
             errorMap={errorMap} genStepsData={genStepsData}
             onSkipStep={handleSkipStep} onRetryStep={handleRetryStep}
+            styleSelectionPending={styleSelectionPending} onStyleSelected={handleStyleSelected}
           />
         </div>
       </div>
@@ -1558,6 +1586,7 @@ const GenerateProgress = () => {
             onTriggerNarrationAudio={triggerNarrationAudio}
             errorMap={errorMap} genStepsData={genStepsData}
             onSkipStep={handleSkipStep} onRetryStep={handleRetryStep}
+            styleSelectionPending={styleSelectionPending} onStyleSelected={handleStyleSelected}
           />
         </div>
       </div>
