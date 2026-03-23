@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, Pause, SkipBack, Volume2, VolumeX, ChevronDown, ChevronUp } from 'lucide-react';
+import { Play, Pause, SkipBack, Volume2, VolumeX, ChevronDown, ChevronUp, Mic, Music } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Slider } from '@/components/ui/slider';
+import { supabase } from '@/integrations/supabase/client';
 
 /* ─── Types ─── */
 
@@ -33,6 +35,7 @@ interface Props {
   narrationAudioMap?: Record<string, string | null>;
   narrationAudioMapB?: Record<string, string | null>;
   selectedGender?: 'male' | 'female';
+  jobId?: string | null;
 }
 
 /* ─── Safe parse ─── */
@@ -109,13 +112,13 @@ const CutListItem = ({ cut, isActive, isPast, isExpanded, onClick, onToggle }: {
 }) => (
   <div className={cn(
     'rounded-lg transition-all border',
-    isActive ? 'border-l-[3px] border-l-[#7C7AFF] bg-[#7C7AFF]/5 border-[#7C7AFF]/20' : isPast ? 'border-border bg-accent/30' : 'border-border',
+    isActive ? 'border-l-[3px] border-l-secondary bg-secondary/5 border-secondary/20' : isPast ? 'border-border bg-accent/30' : 'border-border',
   )}>
     <button
       onClick={onClick}
       className="w-full flex items-center gap-2 px-3 py-2 text-left"
     >
-      <span className={cn('text-xs font-mono w-5', isActive ? 'text-[#7C7AFF] font-bold' : isPast ? 'text-success' : 'text-muted-foreground')}>
+      <span className={cn('text-xs font-mono w-5', isActive ? 'text-secondary font-bold' : isPast ? 'text-success' : 'text-muted-foreground')}>
         {isActive ? '▶' : isPast ? '✅' : '○'}
       </span>
       <span className="text-xs font-mono text-muted-foreground w-8 shrink-0">C{cut.cut_number}</span>
@@ -163,7 +166,7 @@ const CutListItem = ({ cut, isActive, isPast, isExpanded, onClick, onToggle }: {
 
 /* ─── Main Component ─── */
 
-const VconPreview = ({ genStepResult, narrationAudioMap, narrationAudioMapB, selectedGender }: Props) => {
+const VconPreview = ({ genStepResult, narrationAudioMap, narrationAudioMapB, selectedGender, jobId }: Props) => {
   const parsed = safeParse(genStepResult);
   const vconData: VconPattern[] = parsed?.vcon_data ?? [];
 
@@ -171,9 +174,14 @@ const VconPreview = ({ genStepResult, narrationAudioMap, narrationAudioMapB, sel
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [expandedCut, setExpandedCut] = useState<number | null>(null);
-  const [audioMuted, setAudioMuted] = useState(true);
+  const [narrationVolume, setNarrationVolume] = useState(1.0);
+  const [bgmVolume, setBgmVolume] = useState(0.3);
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const narrationAudioRef = useRef<HTMLAudioElement>(null);
+  const bgmAudioRef = useRef<HTMLAudioElement>(null);
+
+  // BGM URLs from gen_patterns
+  const [bgmUrlMap, setBgmUrlMap] = useState<Record<string, string | null>>({});
 
   const pattern = vconData[selectedPattern];
   const totalDuration = pattern?.total_duration ?? 30;
@@ -182,9 +190,27 @@ const VconPreview = ({ genStepResult, narrationAudioMap, narrationAudioMapB, sel
   // Find current cut
   const currentCut = cuts.find(c => currentTime >= c.time_start && currentTime < c.time_end) ?? null;
 
-  // Get audio URL for this pattern
+  // Get narration audio URL for this pattern
   const patternName = pattern?.pattern_name ?? '';
-  const audioUrl = narrationAudioMap?.[patternName] ?? narrationAudioMap?.[`${patternName}1`] ?? null;
+  const narrationUrl = narrationAudioMap?.[patternName] ?? narrationAudioMap?.[`${patternName}1`] ?? null;
+  const bgmUrl = bgmUrlMap[patternName] ?? null;
+
+  // Fetch BGM URLs from gen_patterns
+  useEffect(() => {
+    if (!jobId) return;
+    const fetchBgm = async () => {
+      const { data } = await supabase
+        .from('gen_patterns')
+        .select('pattern_id, bgm_url')
+        .eq('job_id', jobId);
+      if (data) {
+        const map: Record<string, string | null> = {};
+        data.forEach(p => { map[p.pattern_id] = p.bgm_url; });
+        setBgmUrlMap(map);
+      }
+    };
+    fetchBgm();
+  }, [jobId]);
 
   // Cleanup on unmount / pattern change
   useEffect(() => {
@@ -200,15 +226,23 @@ const VconPreview = ({ genStepResult, narrationAudioMap, narrationAudioMapB, sel
     setExpandedCut(null);
   }, [selectedPattern]);
 
+  // Sync volumes
+  useEffect(() => {
+    if (narrationAudioRef.current) narrationAudioRef.current.volume = narrationVolume;
+  }, [narrationVolume]);
+
+  useEffect(() => {
+    if (bgmAudioRef.current) bgmAudioRef.current.volume = bgmVolume;
+  }, [bgmVolume]);
+
   const stopPlayback = useCallback(() => {
     setIsPlaying(false);
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = undefined;
     }
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
+    narrationAudioRef.current?.pause();
+    bgmAudioRef.current?.pause();
   }, []);
 
   const startPlayback = useCallback((fromTime?: number) => {
@@ -216,10 +250,18 @@ const VconPreview = ({ genStepResult, narrationAudioMap, narrationAudioMapB, sel
     setCurrentTime(startT);
     setIsPlaying(true);
 
-    // Sync audio
-    if (audioRef.current && audioUrl && !audioMuted) {
-      audioRef.current.currentTime = startT;
-      audioRef.current.play().catch(() => {});
+    // Sync narration audio
+    if (narrationAudioRef.current && narrationUrl) {
+      narrationAudioRef.current.currentTime = startT;
+      narrationAudioRef.current.volume = narrationVolume;
+      narrationAudioRef.current.play().catch(() => {});
+    }
+
+    // Sync BGM audio
+    if (bgmAudioRef.current && bgmUrl) {
+      bgmAudioRef.current.currentTime = startT;
+      bgmAudioRef.current.volume = bgmVolume;
+      bgmAudioRef.current.play().catch(() => {});
     }
 
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -233,7 +275,7 @@ const VconPreview = ({ genStepResult, narrationAudioMap, narrationAudioMapB, sel
         setCurrentTime(elapsed);
       }
     }, 100);
-  }, [currentTime, totalDuration, stopPlayback, audioUrl, audioMuted]);
+  }, [currentTime, totalDuration, stopPlayback, narrationUrl, bgmUrl, narrationVolume, bgmVolume]);
 
   const togglePlay = useCallback(() => {
     if (isPlaying) {
@@ -293,7 +335,7 @@ const VconPreview = ({ genStepResult, narrationAudioMap, narrationAudioMapB, sel
       <VconScreen cut={currentCut} visible={isPlaying || currentTime > 0} />
 
       {/* Controls */}
-      <div className="space-y-2">
+      <div className="space-y-3">
         {/* Progress bar */}
         <div
           className="h-2 w-full rounded-full bg-muted cursor-pointer overflow-hidden"
@@ -309,7 +351,7 @@ const VconPreview = ({ genStepResult, narrationAudioMap, narrationAudioMapB, sel
           />
         </div>
 
-        {/* Buttons */}
+        {/* Buttons + time */}
         <div className="flex items-center gap-3">
           <button
             onClick={togglePlay}
@@ -323,17 +365,55 @@ const VconPreview = ({ genStepResult, narrationAudioMap, narrationAudioMapB, sel
           >
             <SkipBack className="h-3.5 w-3.5" />
           </button>
-          <span className="text-sm text-muted-foreground tabular-nums flex-1">
+          <span className="text-sm text-muted-foreground tabular-nums">
             {formatTime(currentTime)} / {formatTime(totalDuration)}
           </span>
-          <button
-            onClick={() => setAudioMuted(!audioMuted)}
-            className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-            title={audioMuted ? '音声をオン' : '音声をオフ'}
-          >
-            {audioMuted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
-          </button>
         </div>
+
+        {/* Volume controls */}
+        <div className="flex items-center gap-4 flex-wrap">
+          {/* Narration volume */}
+          <div className="flex items-center gap-2 flex-1 min-w-[140px]">
+            <Mic className={cn('h-3.5 w-3.5 shrink-0', narrationUrl ? 'text-secondary' : 'text-muted-foreground/40')} />
+            <span className="text-xs text-muted-foreground w-12 shrink-0">
+              {narrationUrl ? 'NA' : 'NA未生成'}
+            </span>
+            <Slider
+              value={[narrationVolume * 100]}
+              onValueChange={([v]) => setNarrationVolume(v / 100)}
+              max={100}
+              step={1}
+              disabled={!narrationUrl}
+              className="flex-1"
+            />
+            <span className="text-xs text-muted-foreground tabular-nums w-8">{Math.round(narrationVolume * 100)}%</span>
+          </div>
+
+          {/* BGM volume */}
+          <div className="flex items-center gap-2 flex-1 min-w-[140px]">
+            <Music className={cn('h-3.5 w-3.5 shrink-0', bgmUrl ? 'text-secondary' : 'text-muted-foreground/40')} />
+            <span className="text-xs text-muted-foreground w-12 shrink-0">
+              {bgmUrl ? 'BGM' : 'BGM未選択'}
+            </span>
+            <Slider
+              value={[bgmVolume * 100]}
+              onValueChange={([v]) => setBgmVolume(v / 100)}
+              max={100}
+              step={1}
+              disabled={!bgmUrl}
+              className="flex-1"
+            />
+            <span className="text-xs text-muted-foreground tabular-nums w-8">{Math.round(bgmVolume * 100)}%</span>
+          </div>
+        </div>
+
+        {/* Audio info */}
+        {(narrationUrl || bgmUrl) && (
+          <div className="text-xs text-muted-foreground space-y-0.5">
+            {narrationUrl && <p>🎙 ナレーション: パターン{patternName}</p>}
+            {bgmUrl && <p>🎵 BGM: {bgmUrl.split('/').pop()} (Envato Elements)</p>}
+          </div>
+        )}
       </div>
 
       {/* Cut list */}
@@ -360,14 +440,12 @@ const VconPreview = ({ genStepResult, narrationAudioMap, narrationAudioMapB, sel
         </div>
       </div>
 
-      {/* Hidden audio element */}
-      {audioUrl && (
-        <audio
-          ref={audioRef}
-          src={audioUrl}
-          muted={audioMuted}
-          preload="auto"
-        />
+      {/* Hidden audio elements */}
+      {narrationUrl && (
+        <audio ref={narrationAudioRef} src={narrationUrl} preload="auto" />
+      )}
+      {bgmUrl && (
+        <audio ref={bgmAudioRef} src={bgmUrl} preload="auto" loop />
       )}
     </div>
   );
