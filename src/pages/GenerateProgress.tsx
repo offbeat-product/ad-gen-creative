@@ -740,6 +740,48 @@ const GenerateProgress = () => {
     }
   }, [jobId, jobData, jobMeta, genStepsData, stepKeyToIndex]);
 
+  // ── WF7: Trigger Vcon generation ──
+  const triggerVcon = useCallback(async () => {
+    if (!jobId || !jobData) return;
+
+    const vconIdx = stepKeyToIndex.get('vcon');
+    if (vconIdx !== undefined) {
+      setActiveIndex(vconIdx);
+    }
+
+    try {
+      const { data: patterns } = await supabase
+        .from('gen_patterns')
+        .select('pattern_id, appeal_axis_text, copy_text, composition, narration_script')
+        .eq('job_id', jobId)
+        .order('pattern_id', { ascending: true });
+
+      const step1 = genStepsData.find(s => s.step_key === 'appeal_axis');
+      const step1Result = step1?.result
+        ? (typeof step1.result === 'string' ? safeParse(step1.result) : step1.result)
+        : {};
+      const rulesText = step1Result?._rules_text || '';
+
+      const response = await fetch(WF7_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          job_id: jobId,
+          creative_type: jobData.creative_type,
+          duration_seconds: jobData.duration_seconds,
+          client_name: jobMeta.clientName,
+          product_name: jobMeta.productName,
+          project_name: jobMeta.projectName,
+          patterns: patterns || [],
+          _rules_text: rulesText,
+        }),
+      });
+      console.log('[WF7] Response status:', response.status);
+    } catch (e) {
+      console.error('[WF7] Failed:', e);
+    }
+  }, [jobId, jobData, jobMeta, genStepsData, stepKeyToIndex]);
+
   // ── Handle approve: trigger next webhook (step mode) or advance dummy ──
   const handleApprove = useCallback(async (idx: number) => {
     setWaitingForApproval(-1);
