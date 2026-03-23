@@ -923,8 +923,15 @@ const GenerateProgress = () => {
       return;
     }
 
-    // Vcon approved → start dummy animations
+    // Vcon approved → show style selection (step mode) or auto-proceed
     if (narrationStepKey === 'vcon') {
+      if (!effectiveAutoMode) {
+        // Step mode: show style selection UI
+        setStyleSelectionPending(true);
+        setWaitingForApproval(-1);
+        return;
+      }
+      // Auto mode: skip style selection, proceed with dummy animations
       dummyAnimationStartedRef.current = true;
       setDummyPhaseStarted(true);
       const nextDummyIdx = pipeline.findIndex((s, i) => i > idx && !DATA_DRIVEN_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
