@@ -1202,7 +1202,7 @@ const GenerateProgress = () => {
     if (refMap[stepKey]) refMap[stepKey].current = false;
 
     // 3. Build and call webhook
-    const webhookUrl = WEBHOOK_URLS[stepKey];
+    const webhookUrl = WEBHOOK_URLS[pipelineKeyToDbKey(stepKey)];
     if (!webhookUrl) return;
 
     try {
