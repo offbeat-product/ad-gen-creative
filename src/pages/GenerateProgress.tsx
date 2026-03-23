@@ -106,9 +106,7 @@ export const makeVideoPipeline = (s: WizardState): PipelineStep[] => {
     },
     {
       stepKey: 'styleframe', icon: Palette,
-      label: s.creativeStyle === 'motion_graphics' ? 'スタイルフレーム作成（モーショングラフィックス）'
-           : s.creativeStyle === 'hybrid' ? 'スタイルフレーム作成（ハイブリッド）'
-           : 'スタイルフレーム作成（実写素材）',
+      label: 'スタイルフレーム作成',
       demoSeconds: 3, stepType: 'visual',
       runningText: 'スタイルフレーム（トンマナデザイン）を生成しています...',
       completedText: `${s.tonePatterns}パターンのスタイルフレームを生成しました`,
@@ -426,6 +424,7 @@ const GenerateProgress = () => {
   const [narrationAudioMapB, setNarrationAudioMapB] = useState<Record<string, string | null>>({});
   const [selectedGender, setSelectedGender] = useState<'male' | 'female'>('male');
   const [styleSelectionPending, setStyleSelectionPending] = useState(false);
+  const styleSelectionPendingRef = useRef(false);
 
   // ── Webhook dedup refs (per step) ──
   const step2TriggeredRef = useRef(false);
@@ -461,6 +460,9 @@ const GenerateProgress = () => {
   }, [jobId]);
 
   const effectiveAutoMode = (jobData?.generation_mode === 'auto') || switchedToAuto;
+
+  // Keep ref in sync for polling closure
+  useEffect(() => { styleSelectionPendingRef.current = styleSelectionPending; }, [styleSelectionPending]);
 
   // Elapsed timer
   useEffect(() => {
@@ -634,7 +636,7 @@ const GenerateProgress = () => {
         }
 
         // Also check bgm_suggestion and vcon steps for approval
-        if (!foundApproval) {
+        if (!foundApproval && !styleSelectionPendingRef.current) {
           for (const extraKey of ['bgm_suggestion', 'vcon', 'styleframe']) {
             const gs = steps.find((s: any) => s.step_key === extraKey);
             const pIdx = stepKeyToIndex.get(extraKey);
