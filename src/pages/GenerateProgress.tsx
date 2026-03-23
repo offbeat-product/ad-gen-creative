@@ -607,8 +607,7 @@ const GenerateProgress = () => {
       // ── Check if all data-driven steps (including bgm_suggestion) completed ──
       const allDataDone = DATA_DRIVEN_STEP_KEYS.every(key => {
         const gs = steps.find((s: any) => s.step_key === key);
-        // bgm_suggestion may not exist for image jobs
-        if (!gs && key === 'bgm_suggestion' && state.creativeType !== 'video') return true;
+        if (!gs && (key === 'bgm_suggestion' || key === 'vcon') && state.creativeType !== 'video') return true;
         return gs?.status === 'completed';
       });
 
