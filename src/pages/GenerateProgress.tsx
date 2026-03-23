@@ -1292,7 +1292,7 @@ const GenerateProgress = () => {
   const patternLabel = state.productionPattern === 'new' ? '新規制作' : 'パターン展開';
   const summaryLine = `${typeLabel} / ${jobMeta.clientName} / ${jobMeta.productName} / ${jobMeta.projectName} / ${patternLabel} / 合計${total}本`;
 
-  const completedCount = completedIndexes.size;
+  const completedCount = completedIndexes.size + skippedIndexes.size;
   const progressPct = Math.round((completedCount / pipeline.length) * 100);
   const elapsedStr = `${Math.floor(elapsed / 60000)}:${String(Math.floor((elapsed % 60000) / 1000)).padStart(2, '0')}`;
   const avgPerStep = completedCount > 0 ? elapsed / completedCount : 0;
