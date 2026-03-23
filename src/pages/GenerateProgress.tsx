@@ -1491,6 +1491,7 @@ const GenerateProgress = () => {
         <div className="flex-1 overflow-y-auto">
           <PreviewPanel
             pipeline={pipeline} selectedStepIndex={selectedStepIndex} completedIndexes={completedIndexes}
+            skippedIndexes={skippedIndexes}
             allDone={allDone} total={total} state={state} waitingForApproval={waitingForApproval}
             effectiveAutoMode={effectiveAutoMode} genStepResult={selectedGenStepResult} appealAxesResult={appealAxesStepResult}
             copyStepResult={copyStepResult} compositionStepResult={compositionStepResult} narrationScriptResult={narrationScriptStepResult}
@@ -1500,6 +1501,8 @@ const GenerateProgress = () => {
             voiceSelectionPending={voiceSelectionPending} voiceGenerating={voiceGenerating}
             narrationAudioMap={narrationAudioMap} narrationAudioMapB={narrationAudioMapB} selectedGender={selectedGender}
             onTriggerNarrationAudio={triggerNarrationAudio}
+            errorMap={errorMap} genStepsData={genStepsData}
+            onSkipStep={handleSkipStep} onRetryStep={handleRetryStep}
           />
         </div>
       </div>
