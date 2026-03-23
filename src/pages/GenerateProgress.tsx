@@ -852,8 +852,18 @@ const GenerateProgress = () => {
       return;
     }
 
-    // BGM suggestion approved → start dummy animations
+    // BGM suggestion approved → trigger WF7 (Vcon)
     if (narrationStepKey === 'bgm_suggestion') {
+      if (state.creativeType === 'video' && !wf7TriggeredRef.current) {
+        wf7TriggeredRef.current = true;
+        triggerVcon();
+      }
+      // Polling will detect vcon completion and advance
+      return;
+    }
+
+    // Vcon approved → start dummy animations
+    if (narrationStepKey === 'vcon') {
       dummyAnimationStartedRef.current = true;
       setDummyPhaseStarted(true);
       const nextDummyIdx = pipeline.findIndex((s, i) => i > idx && !DATA_DRIVEN_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
@@ -876,7 +886,7 @@ const GenerateProgress = () => {
       clearInterval(timerRef.current);
       setTimeout(() => setShowConfetti(false), 3500);
     }
-  }, [pipeline, jobId, jobData, genStepsData, jobMeta, firstDummyIndex, state.creativeType, triggerBgmSuggestion]);
+  }, [pipeline, jobId, jobData, genStepsData, jobMeta, firstDummyIndex, state.creativeType, triggerBgmSuggestion, triggerVcon]);
 
   const handleRegenerate = useCallback(async (idx: number) => {
     if (!jobId || !jobData) {
