@@ -580,35 +580,51 @@ const GenerateProgress = () => {
         return gs?.status === 'completed';
       });
 
-      return allTextDone;
+      // ── Check if all data-driven steps (including bgm_suggestion) completed ──
+      const allDataDone = DATA_DRIVEN_STEP_KEYS.every(key => {
+        const gs = steps.find((s: any) => s.step_key === key);
+        // bgm_suggestion may not exist for image jobs
+        if (!gs && key === 'bgm_suggestion' && state.creativeType !== 'video') return true;
+        return gs?.status === 'completed';
+      });
+
+      return { allTextDone, allDataDone };
     };
 
     doPoll();
 
     const interval = setInterval(async () => {
-      const allTextDone = await doPoll();
+      const result = await doPoll();
+      if (!result) return;
+      const { allTextDone, allDataDone } = result;
+
+      // For video: after all text steps done, show voice selection
       if (allTextDone && !dummyAnimationStartedRef.current) {
-        // In auto mode, start dummy animations immediately (or show voice selection for video)
         if (isJobAutoMode) {
           if (state.creativeType === 'video' && !voiceSelectionPending && !voiceGenerating && Object.keys(narrationAudioMap).length === 0) {
-            // Show voice selection for video before starting dummy animations
             setVoiceSelectionPending(true);
             setWaitingForApproval(-1);
-          } else if (state.creativeType !== 'video' || Object.values(narrationAudioMap).some(v => v)) {
-            dummyAnimationStartedRef.current = true;
-            setDummyPhaseStarted(true);
-            clearInterval(interval);
-            if (firstDummyIndex >= 0 && firstDummyIndex < pipeline.length) {
-              setTimeout(() => setActiveIndex(firstDummyIndex), 500);
-            } else {
-              setAllDone(true);
-              setShowConfetti(true);
-              clearInterval(timerRef.current);
-              setTimeout(() => setShowConfetti(false), 3500);
-            }
           }
         }
-        // In step mode, keep polling but don't start dummy yet (wait for approval)
+      }
+
+      // After all data-driven steps done (text + bgm), start dummy animations
+      if (allDataDone && !dummyAnimationStartedRef.current) {
+        // Check narration audio is also done for video
+        const narrationDone = state.creativeType !== 'video' || Object.values(narrationAudioMap).some(v => v);
+        if (narrationDone && isJobAutoMode) {
+          dummyAnimationStartedRef.current = true;
+          setDummyPhaseStarted(true);
+          clearInterval(interval);
+          if (firstDummyIndex >= 0 && firstDummyIndex < pipeline.length) {
+            setTimeout(() => setActiveIndex(firstDummyIndex), 500);
+          } else {
+            setAllDone(true);
+            setShowConfetti(true);
+            clearInterval(timerRef.current);
+            setTimeout(() => setShowConfetti(false), 3500);
+          }
+        }
       }
     }, 3000);
 
