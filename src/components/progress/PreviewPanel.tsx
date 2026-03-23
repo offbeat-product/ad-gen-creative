@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Sparkles, Image, Play, Music as MusicIcon, Pause,
-  Check, X, Plus, Trash2,
+  Check, X, Plus, Trash2, SkipForward, AlertCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
