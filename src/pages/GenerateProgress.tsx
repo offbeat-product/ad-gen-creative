@@ -1301,6 +1301,25 @@ const GenerateProgress = () => {
     }
   }, [jobId, jobData, pipeline, jobMeta, triggerBgmSuggestion, triggerVcon]);
 
+  // ── Handle style selection for styleframe ──
+  const handleStyleSelected = useCallback((style: string) => {
+    setStyleSelectionPending(false);
+    console.log(`[StyleFrame] Selected style: ${style}`);
+    // Start dummy animations for styleframe and beyond
+    dummyAnimationStartedRef.current = true;
+    setDummyPhaseStarted(true);
+    const vconIdx = stepKeyToIndex.get('vcon') ?? -1;
+    const nextDummyIdx = pipeline.findIndex((s, i) => i > vconIdx && !DATA_DRIVEN_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
+    if (nextDummyIdx >= 0) {
+      setTimeout(() => setActiveIndex(nextDummyIdx), 300);
+    } else {
+      setAllDone(true);
+      setShowConfetti(true);
+      clearInterval(timerRef.current);
+      setTimeout(() => setShowConfetti(false), 3500);
+    }
+  }, [pipeline, stepKeyToIndex]);
+
   const refreshGenSteps = useCallback(async () => {
     if (!jobId) return;
     const { data: steps } = await supabase
