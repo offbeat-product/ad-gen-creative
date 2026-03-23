@@ -571,14 +571,25 @@ const GenerateProgress = () => {
           if (gs?.status === 'processing' || gs?.status === 'pending') break;
         }
 
-        // Also check bgm_suggestion step for approval
+        // Also check bgm_suggestion and vcon steps for approval
         if (!foundApproval) {
-          const bgmGs = steps.find((s: any) => s.step_key === 'bgm_suggestion');
-          const bgmIdx = stepKeyToIndex.get('bgm_suggestion');
-          if (bgmGs?.status === 'completed' && bgmIdx !== undefined && !dummyAnimationStartedRef.current) {
-            setWaitingForApproval(bgmIdx);
-            if (userSelectedStepRef.current === null) setSelectedStepIndex(bgmIdx);
-            foundApproval = true;
+          for (const extraKey of ['bgm_suggestion', 'vcon']) {
+            const gs = steps.find((s: any) => s.step_key === extraKey);
+            const pIdx = stepKeyToIndex.get(extraKey);
+            if (gs?.status === 'completed' && pIdx !== undefined && !dummyAnimationStartedRef.current) {
+              // Only show approval if the next data-driven step is pending or doesn't exist
+              const nextKeys = DATA_DRIVEN_STEP_KEYS.slice(DATA_DRIVEN_STEP_KEYS.indexOf(extraKey) + 1);
+              const nextPending = nextKeys.find(nk => {
+                const ngs = steps.find((s: any) => s.step_key === nk);
+                return !ngs || ngs.status === 'pending';
+              });
+              if (nextPending || nextKeys.length === 0) {
+                setWaitingForApproval(pIdx);
+                if (userSelectedStepRef.current === null) setSelectedStepIndex(pIdx);
+                foundApproval = true;
+                break;
+              }
+            }
           }
         }
 
