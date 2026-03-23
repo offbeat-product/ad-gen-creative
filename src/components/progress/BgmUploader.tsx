@@ -8,7 +8,6 @@ import { useToast } from '@/hooks/use-toast';
 
 interface Props {
   jobId: string;
-  patternName: string;
   existingBgmUrl?: string | null;
   onUploaded: (url: string) => void;
   onDeleted: () => void;
@@ -17,7 +16,7 @@ interface Props {
 const ACCEPTED_FORMATS = '.mp3,.wav,.m4a';
 const MAX_SIZE_MB = 50;
 
-const BgmUploader = ({ jobId, patternName, existingBgmUrl, onUploaded, onDeleted }: Props) => {
+const BgmUploader = ({ jobId, existingBgmUrl, onUploaded, onDeleted }: Props) => {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -45,7 +44,7 @@ const BgmUploader = ({ jobId, patternName, existingBgmUrl, onUploaded, onDeleted
     }
 
     setUploading(true);
-    const path = `bgm/${jobId}/${patternName}_${Date.now()}.${ext}`;
+    const path = `bgm/${jobId}/shared_${Date.now()}.${ext}`;
 
     const { error } = await supabase.storage
       .from('audios')
@@ -60,19 +59,18 @@ const BgmUploader = ({ jobId, patternName, existingBgmUrl, onUploaded, onDeleted
     const { data: urlData } = supabase.storage.from('audios').getPublicUrl(path);
     const publicUrl = urlData.publicUrl;
 
-    // Update gen_patterns
+    // Update ALL gen_patterns for this job (shared BGM)
     await supabase
       .from('gen_patterns')
       .update({ bgm_url: publicUrl, bgm_source: 'envato_elements' })
-      .eq('job_id', jobId)
-      .eq('pattern_id', patternName);
+      .eq('job_id', jobId);
 
     setBgmUrl(publicUrl);
     setFileName(file.name);
     setUploading(false);
     onUploaded(publicUrl);
-    toast({ title: 'BGMをアップロードしました' });
-  }, [jobId, patternName, onUploaded, toast]);
+    toast({ title: 'BGMをアップロードしました（全パターン共通）' });
+  }, [jobId, onUploaded, toast]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -87,11 +85,11 @@ const BgmUploader = ({ jobId, patternName, existingBgmUrl, onUploaded, onDeleted
   };
 
   const handleDelete = async () => {
+    // Clear BGM from ALL patterns
     await supabase
       .from('gen_patterns')
       .update({ bgm_url: null, bgm_source: null })
-      .eq('job_id', jobId)
-      .eq('pattern_id', patternName);
+      .eq('job_id', jobId);
 
     setBgmUrl(null);
     setFileName(null);
@@ -129,10 +127,10 @@ const BgmUploader = ({ jobId, patternName, existingBgmUrl, onUploaded, onDeleted
   if (bgmUrl) {
     const displayName = fileName || bgmUrl.split('/').pop() || 'BGM';
     return (
-      <div className="space-y-2 mt-3">
+      <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Music className="h-4 w-4 text-secondary" />
-          <span className="text-sm font-medium">BGMアップロード済み</span>
+          <span className="text-sm font-medium">BGMアップロード済み（全パターン共通）</span>
           <Badge variant="outline" className="text-xs">Envato Elements</Badge>
         </div>
         <div className="bg-muted rounded-lg p-3 flex items-center gap-3">
@@ -158,10 +156,10 @@ const BgmUploader = ({ jobId, patternName, existingBgmUrl, onUploaded, onDeleted
   }
 
   return (
-    <div className="mt-3 space-y-2">
+    <div className="space-y-2">
       <div className="flex items-center gap-2">
         <Music className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm font-medium">BGMをアップロード</span>
+        <span className="text-sm font-medium">BGMをアップロード（全パターン共通）</span>
       </div>
       <div
         className={cn(
