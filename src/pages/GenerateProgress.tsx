@@ -632,7 +632,7 @@ const GenerateProgress = () => {
         }
 
         // Also check bgm_suggestion and vcon steps for approval
-        if (!foundApproval) {
+        if (!foundApproval && !styleSelectionPending) {
           for (const extraKey of ['bgm_suggestion', 'vcon', 'styleframe']) {
             const gs = steps.find((s: any) => s.step_key === extraKey);
             const pIdx = stepKeyToIndex.get(extraKey);
