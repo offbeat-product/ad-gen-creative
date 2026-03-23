@@ -30,6 +30,7 @@ interface Props {
   pipeline: PipelineStep[];
   selectedStepIndex: number | null;
   completedIndexes: Set<number>;
+  skippedIndexes?: Set<number>;
   allDone: boolean;
   total: number;
   state: WizardState;
@@ -46,12 +47,16 @@ interface Props {
   narrationAudioMap?: Record<string, string | null>;
   narrationAudioMapB?: Record<string, string | null>;
   selectedGender?: 'male' | 'female';
+  errorMap?: Record<number, string>;
+  genStepsData?: any[];
   onApprove: (idx: number) => void;
   onRegenerate: (idx: number) => void;
   onSwitchToAuto: () => void;
   onNavigateDashboard: () => void;
   onResultUpdated?: () => void;
   onTriggerNarrationAudio?: (voiceIdA: string, voiceIdB: string, gender: 'male' | 'female') => void;
+  onSkipStep?: (idx: number) => void;
+  onRetryStep?: (idx: number) => void;
 }
 
 /* ─── Pattern naming helpers ─── */
