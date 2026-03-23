@@ -628,7 +628,7 @@ const GenerateProgress = () => {
       const allDataDone = DATA_DRIVEN_STEP_KEYS.every(key => {
         const gs = steps.find((s: any) => s.step_key === key);
         if (!gs && (key === 'bgm_suggestion' || key === 'vcon') && state.creativeType !== 'video') return true;
-        return gs?.status === 'completed';
+        return gs?.status === 'completed' || gs?.status === 'skipped';
       });
 
       return { allTextDone, allDataDone };
