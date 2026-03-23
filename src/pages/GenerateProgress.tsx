@@ -227,6 +227,10 @@ const safeParse = (v: any): any => {
 const TEXT_STEP_KEYS = ['appeal_axis', 'copy', 'composition', 'narration_script'];
 const DATA_DRIVEN_STEP_KEYS = [...TEXT_STEP_KEYS, 'bgm_suggestion', 'vcon'];
 
+/* Map pipeline stepKey to DB step_key (narration ↔ narration_audio) */
+const pipelineKeyToDbKey = (k: string) => k === 'narration' ? 'narration_audio' : k;
+const dbKeyToPipelineKey = (k: string) => k === 'narration_audio' ? 'narration' : k;
+
 /* ─── Trigger a specific next step webhook ─── */
 
 const triggerWebhook = async (
