@@ -1816,7 +1816,7 @@ const PreviewPanel = ({
         case 4: return <PreviewNarration state={state} narrationAudioMap={narrationAudioMap} narrationAudioMapB={narrationAudioMapB} selectedGender={selectedGender} jobId={jobId} appealAxesResult={appealAxesResult} copyStepResult={copyStepResult} compositionStepResult={compositionStepResult} narrationScriptResult={narrationScriptResult} />;
         case 5: mainContent = <PreviewBGM genStepResult={displayData} jobId={jobId} onBgmUpdated={onResultUpdated} />; break;
         case 6: mainContent = <PreviewVCon genStepResult={displayData} narrationAudioMap={narrationAudioMap} narrationAudioMapB={narrationAudioMapB} selectedGender={selectedGender} jobId={jobId} />; break;
-        case 7: mainContent = <PreviewStyleFrames />; break;
+        case 7: mainContent = <PreviewStyleFrames genStepResult={displayData} />; break;
         case 8: mainContent = <PreviewEkonte total={total} />; break;
         case 9: mainContent = <PreviewFinalVideo total={total} state={state} aspect="16/9" resolution="1920 × 1080" />; break;
         case 10: mainContent = <PreviewFinalVideo total={total} state={state} aspect="9/16" resolution="1080 × 1920" />; break;
