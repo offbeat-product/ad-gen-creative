@@ -34,7 +34,7 @@ const STEP_LABELS: Record<string, string> = {
   composition: '構成案・字コンテ作成',
   narration_script: 'NA原稿作成',
   narration_audio: 'ナレーション作成',
-  bgm: 'BGM提案',
+  bgm_suggestion: 'BGM提案',
   vcon: 'Vコン作成',
   styleframe: 'スタイルフレーム作成',
   storyboard: '絵コンテ作成',
