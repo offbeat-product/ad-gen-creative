@@ -1288,12 +1288,14 @@ const StyleSelectionForStyleframe = ({ onSelect }: { onSelect: (style: string) =
   );
 };
 
-const PreviewStyleFrames = ({ genStepResult }: { genStepResult?: any }) => {
+const PreviewStyleFrames = ({ genStepResult, jobId }: { genStepResult?: any; jobId?: string | null }) => {
+  const [vconCuts, setVconCuts] = useState<Record<string, any[]>>({});
+  const [tonmanaGroups, setTonmanaGroups] = useState<Record<string, { name: string; frames: any[] }>>({});
+
   const parsed = (() => {
     if (!genStepResult) return null;
     try {
       let r = typeof genStepResult === 'string' ? JSON.parse(genStepResult) : genStepResult;
-      // Handle double-encoded JSON
       if (typeof r === 'string') {
         try { r = JSON.parse(r); } catch {}
       }
@@ -1301,56 +1303,244 @@ const PreviewStyleFrames = ({ genStepResult }: { genStepResult?: any }) => {
     } catch { return null; }
   })();
 
-  // Real data: show AI-generated styleframe images grouped by pattern
+  // Fetch vcon data and gen_patterns tonmana info
+  useEffect(() => {
+    if (!jobId) return;
+    const fetchData = async () => {
+      // Fetch vcon step result for telop/annotations
+      const { data: vconStep } = await supabase
+        .from('gen_steps')
+        .select('result')
+        .eq('job_id', jobId)
+        .eq('step_key', 'vcon')
+        .single();
+
+      if (vconStep?.result) {
+        const vconResult = typeof vconStep.result === 'string'
+          ? JSON.parse(vconStep.result) : vconStep.result;
+        const vconData = vconResult?.vcon_data || [];
+        const cutsMap: Record<string, any[]> = {};
+        for (const pattern of vconData) {
+          cutsMap[pattern.pattern_name] = pattern.cuts || [];
+          // Also store with base letter for matching
+          const base = pattern.pattern_name.replace(/[-_]\d+$/, '');
+          if (!cutsMap[base]) cutsMap[base] = pattern.cuts || [];
+        }
+        setVconCuts(cutsMap);
+      }
+
+      // Fetch gen_patterns for tonmana grouping
+      const { data: patterns } = await supabase
+        .from('gen_patterns')
+        .select('pattern_id, tonmana_index, tonmana_name')
+        .eq('job_id', jobId);
+
+      if (patterns && patterns.length > 0) {
+        // Group by tonmana_index
+        const groups: Record<number, { name: string; patternIds: Set<string> }> = {};
+        for (const p of patterns) {
+          const ti = p.tonmana_index ?? 1;
+          if (!groups[ti]) {
+            groups[ti] = { name: p.tonmana_name ?? `トンマナ ${ti}`, patternIds: new Set() };
+          }
+          // Extract base letter from pattern_id (e.g., "A-1" → "A", "A1" → "A")
+          const base = p.pattern_id.replace(/[-_]?\d+$/, '');
+          groups[ti].patternIds.add(base);
+          groups[ti].patternIds.add(p.pattern_id);
+        }
+        setTonmanaGroups(
+          Object.fromEntries(
+            Object.entries(groups).map(([k, v]) => [k, { name: v.name, patternIds: v.patternIds }])
+          ) as any
+        );
+      }
+    };
+    fetchData();
+  }, [jobId]);
+
+  // Helper to find vcon cut for a given pattern + cut_number
+  const getVconCut = (patternName: string, cutNumber: number) => {
+    const base = patternName.replace(/[-_]\d+$/, '');
+    const cuts = vconCuts[patternName] || vconCuts[base] || [];
+    return cuts.find((c: any) => c.cut_number === cutNumber) ?? null;
+  };
+
+  // Render a single styleframe card with design overlay
+  const renderFrameCard = (sf: any) => {
+    const vconCut = getVconCut(sf.pattern_name ?? 'A', sf.cut_number ?? 1);
+    const telop = vconCut?.telop || '';
+    const annotations = vconCut?.annotations || [];
+
+    return (
+      <div key={`${sf.pattern_name}-${sf.cut_number}`} className="border rounded-lg overflow-hidden">
+        <div className="relative overflow-hidden" style={{ aspectRatio: sf.aspect_ratio === '9:16' ? '9/16' : '16/9' }}>
+          {/* Background: AI generated image */}
+          {sf.image_url ? (
+            <img
+              src={sf.image_url}
+              alt={`Cut ${sf.cut_number ?? 1}`}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <ImagePlaceholder label={`Cut ${sf.cut_number ?? 1}`} aspect={sf.aspect_ratio === '9:16' ? '9/16' : '16/9'} size="sm" />
+          )}
+
+          {/* Overlay: dark gradient for text visibility */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+
+          {/* Main telop overlay */}
+          {telop && (
+            <div className="absolute inset-0 flex items-center justify-center px-3">
+              <p
+                className="text-center whitespace-pre-line leading-tight drop-shadow-lg"
+                style={{
+                  color: '#fff',
+                  fontSize: 'clamp(0.875rem, 2.5vw, 1.5rem)',
+                  fontWeight: 'bold',
+                  textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
+                }}
+              >
+                {telop}
+              </p>
+            </div>
+          )}
+
+          {/* Annotations (※ notes) — bottom left */}
+          {annotations.length > 0 && (
+            <div className="absolute bottom-2 left-2 right-2">
+              {annotations.map((annotation: string, i: number) => (
+                <p key={i} className="leading-tight" style={{ color: 'rgba(255,255,255,0.7)', fontSize: '10px' }}>
+                  {annotation}
+                </p>
+              ))}
+            </div>
+          )}
+
+          {/* Logo placeholder — top right */}
+          <div className="absolute top-2 right-2 rounded border border-white/30 bg-white/10 backdrop-blur-sm px-2 py-1">
+            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '9px' }}>LOGO</span>
+          </div>
+        </div>
+
+        <div className="p-2 space-y-1">
+          <p className="text-xs font-medium">Cut {sf.cut_number ?? 1}{vconCut?.section ? ` — ${vconCut.section}` : ''}</p>
+          {sf.prompt && (
+            <details className="text-xs text-muted-foreground">
+              <summary className="cursor-pointer hover:text-foreground">プロンプト</summary>
+              <p className="mt-1 text-[11px] leading-relaxed">{sf.prompt}</p>
+            </details>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   if (parsed && Array.isArray(parsed) && parsed.length > 0) {
-    // Group by pattern_name
+    // Check if we have tonmana grouping from gen_patterns
+    const hasTonmana = Object.keys(tonmanaGroups).length > 1;
+
+    if (hasTonmana) {
+      // Group frames by tonmana
+      const tonmanaKeys = Object.keys(tonmanaGroups).sort((a, b) => Number(a) - Number(b));
+      const framesByTonmana: Record<string, any[]> = {};
+
+      for (const key of tonmanaKeys) {
+        framesByTonmana[key] = [];
+      }
+
+      for (const sf of parsed) {
+        const pn = sf.pattern_name ?? 'A';
+        const base = pn.replace(/[-_]?\d+$/, '');
+        // Find which tonmana this pattern belongs to by suffix
+        // e.g., "A-1" → tonmana 1, "A-2" → tonmana 2
+        const suffixMatch = pn.match(/[-_](\d+)$/);
+        const suffix = suffixMatch ? suffixMatch[1] : null;
+
+        let assigned = false;
+        if (suffix && framesByTonmana[suffix]) {
+          framesByTonmana[suffix].push(sf);
+          assigned = true;
+        }
+
+        if (!assigned) {
+          // Try matching by gen_patterns patternIds
+          for (const [key, group] of Object.entries(tonmanaGroups)) {
+            if ((group as any).patternIds?.has(pn) || (group as any).patternIds?.has(base)) {
+              if (!framesByTonmana[key]) framesByTonmana[key] = [];
+              framesByTonmana[key].push(sf);
+              assigned = true;
+              break;
+            }
+          }
+        }
+
+        if (!assigned) {
+          // Default to first tonmana
+          const firstKey = tonmanaKeys[0];
+          if (firstKey) {
+            framesByTonmana[firstKey].push(sf);
+          }
+        }
+      }
+
+      return (
+        <div className="space-y-4">
+          <Badge className="bg-success-wash text-success text-xs">AI生成データ</Badge>
+          <Tabs defaultValue={tonmanaKeys[0]}>
+            <TabsList className="w-full flex-wrap h-auto gap-1">
+              {tonmanaKeys.map(key => (
+                <TabsTrigger key={key} value={key} className="text-xs">
+                  トンマナ {key}{(tonmanaGroups[key] as any)?.name ? ` — ${(tonmanaGroups[key] as any).name}` : ''}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {tonmanaKeys.map(key => (
+              <TabsContent key={key} value={key}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
+                  {(framesByTonmana[key] || [])
+                    .sort((a: any, b: any) => (a.cut_number ?? 0) - (b.cut_number ?? 0))
+                    .map((sf: any) => renderFrameCard(sf))}
+                </div>
+              </TabsContent>
+            ))}
+          </Tabs>
+        </div>
+      );
+    }
+
+    // Fallback: no tonmana info, group by pattern (deduplicated by base letter)
     const grouped: Record<string, any[]> = {};
     for (const sf of parsed) {
       const pn = sf.pattern_name ?? 'A';
-      if (!grouped[pn]) grouped[pn] = [];
-      grouped[pn].push(sf);
+      const base = pn.replace(/[-_]\d+$/, '');
+      if (!grouped[base]) grouped[base] = [];
+      grouped[base].push(sf);
     }
     const patternNames = Object.keys(grouped).sort();
 
     return (
       <div className="space-y-4">
         <Badge className="bg-success-wash text-success text-xs">AI生成データ</Badge>
-        <Tabs defaultValue={patternNames[0]}>
-          <TabsList className="w-full flex-wrap h-auto gap-1">
+        {patternNames.length > 1 ? (
+          <Tabs defaultValue={patternNames[0]}>
+            <TabsList className="w-full flex-wrap h-auto gap-1">
+              {patternNames.map(pn => (
+                <TabsTrigger key={pn} value={pn} className="text-xs font-mono">トンマナ {pn}</TabsTrigger>
+              ))}
+            </TabsList>
             {patternNames.map(pn => (
-              <TabsTrigger key={pn} value={pn} className="text-xs font-mono">パターン{pn}</TabsTrigger>
+              <TabsContent key={pn} value={pn}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
+                  {grouped[pn].sort((a: any, b: any) => (a.cut_number ?? 0) - (b.cut_number ?? 0)).map((sf: any) => renderFrameCard(sf))}
+                </div>
+              </TabsContent>
             ))}
-          </TabsList>
-          {patternNames.map(pn => (
-            <TabsContent key={pn} value={pn}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
-                {grouped[pn].sort((a: any, b: any) => (a.cut_number ?? 0) - (b.cut_number ?? 0)).map((sf: any, i: number) => (
-                  <div key={i} className="border rounded-lg overflow-hidden">
-                    {sf.image_url ? (
-                      <img
-                        src={sf.image_url}
-                        alt={`Cut ${sf.cut_number ?? i + 1}`}
-                        className="w-full object-cover"
-                        style={{ aspectRatio: sf.aspect_ratio === '9:16' ? '9/16' : '16/9' }}
-                      />
-                    ) : (
-                      <ImagePlaceholder label={`Cut ${sf.cut_number ?? i + 1}`} aspect={sf.aspect_ratio === '9:16' ? '9/16' : '16/9'} size="sm" />
-                    )}
-                    <div className="p-2 space-y-1">
-                      <p className="text-xs font-medium">Cut {sf.cut_number ?? i + 1}</p>
-                      {sf.prompt && (
-                        <details className="text-xs text-muted-foreground">
-                          <summary className="cursor-pointer hover:text-foreground">プロンプト</summary>
-                          <p className="mt-1 text-[11px] leading-relaxed">{sf.prompt}</p>
-                        </details>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </TabsContent>
-          ))}
-        </Tabs>
+          </Tabs>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {parsed.sort((a: any, b: any) => (a.cut_number ?? 0) - (b.cut_number ?? 0)).map((sf: any) => renderFrameCard(sf))}
+          </div>
+        )}
       </div>
     );
   }
