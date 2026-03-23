@@ -641,13 +641,14 @@ const GenerateProgress = () => {
             const gs = steps.find((s: any) => s.step_key === extraKey);
             const pIdx = stepKeyToIndex.get(extraKey);
             if (gs?.status === 'completed' && pIdx !== undefined && !dummyAnimationStartedRef.current) {
-              // Only show approval if the next data-driven step is pending or doesn't exist
-              const nextKeys = DATA_DRIVEN_STEP_KEYS.slice(DATA_DRIVEN_STEP_KEYS.indexOf(extraKey) + 1);
-              const nextPending = nextKeys.find(nk => {
-                const ngs = steps.find((s: any) => s.step_key === nk);
-                return !ngs || ngs.status === 'pending';
-              });
-              if (nextPending || nextKeys.length === 0) {
+              // Only show approval when the IMMEDIATE next data-driven step is pending (or there is no next step)
+              const currentDataIdx = DATA_DRIVEN_STEP_KEYS.indexOf(extraKey);
+              const immediateNextKey = DATA_DRIVEN_STEP_KEYS[currentDataIdx + 1];
+              const immediateNextStep = immediateNextKey
+                ? steps.find((s: any) => s.step_key === immediateNextKey)
+                : null;
+
+              if (!immediateNextKey || !immediateNextStep || immediateNextStep.status === 'pending') {
                 setWaitingForApproval(pIdx);
                 if (userSelectedStepRef.current === null) setSelectedStepIndex(pIdx);
                 foundApproval = true;
