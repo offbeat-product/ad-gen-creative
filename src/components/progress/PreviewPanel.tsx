@@ -23,7 +23,7 @@ import type { WizardState } from '@/data/wizard-data';
 import ActionBar from './ActionBar';
 import VoiceSelector from './VoiceSelector';
 import NarrationAudioPlayer from './NarrationAudioPlayer';
-
+import VconPreview from './VconPreview';
 
 
 interface Props {
