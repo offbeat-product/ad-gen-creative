@@ -538,6 +538,14 @@ const GenerateProgress = () => {
           step4TriggeredRef.current = true;
           triggerWebhook('narration_script', jobData, steps as GenStepRow[], jobMeta);
         }
+
+        // BGM completed & Vcon pending → trigger WF7
+        const bgmStep = steps.find((s: any) => s.step_key === 'bgm_suggestion');
+        const vconStep = steps.find((s: any) => s.step_key === 'vcon');
+        if (bgmStep?.status === 'completed' && vconStep?.status === 'pending' && !wf7TriggeredRef.current) {
+          wf7TriggeredRef.current = true;
+          triggerVcon();
+        }
       }
 
       // ── Step mode: detect newly completed step → set waitingForApproval ──
