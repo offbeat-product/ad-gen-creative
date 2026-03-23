@@ -733,13 +733,23 @@ const GenerateProgress = () => {
       }
     }
 
-    // Non-text step (including narration audio step): advance to next dummy step
+    // Non-text step (including narration audio step): advance
     const narrationStepKey = pipeline[idx]?.stepKey;
     if (narrationStepKey === 'narration') {
-      // Narration audio approved → start dummy animations
+      // Narration audio approved → trigger WF6 if not already, then wait for bgm_suggestion
+      if (state.creativeType === 'video' && !wf6TriggeredRef.current) {
+        wf6TriggeredRef.current = true;
+        triggerBgmSuggestion();
+      }
+      // Polling will detect bgm_suggestion completion and advance
+      return;
+    }
+
+    // BGM suggestion approved → start dummy animations
+    if (narrationStepKey === 'bgm_suggestion') {
       dummyAnimationStartedRef.current = true;
       setDummyPhaseStarted(true);
-      const nextDummyIdx = pipeline.findIndex((s, i) => i > idx && !TEXT_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
+      const nextDummyIdx = pipeline.findIndex((s, i) => i > idx && !DATA_DRIVEN_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
       if (nextDummyIdx >= 0) {
         setTimeout(() => setActiveIndex(nextDummyIdx), 300);
       } else {
