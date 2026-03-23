@@ -95,7 +95,11 @@ const PipelineTimeline = ({
             >
               {/* Timeline dot */}
               <div className="absolute -left-8 top-2.5 flex items-center justify-center">
-                {hasError ? (
+                {isSkipped ? (
+                  <div className="w-[26px] h-[26px] rounded-full bg-muted flex items-center justify-center">
+                    <SkipForward className="h-3.5 w-3.5 text-muted-foreground" />
+                  </div>
+                ) : hasError ? (
                   <div className="w-[26px] h-[26px] rounded-full bg-destructive flex items-center justify-center">
                     <AlertCircle className="h-3.5 w-3.5 text-destructive-foreground" />
                   </div>
