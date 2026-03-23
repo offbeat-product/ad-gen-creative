@@ -1215,7 +1215,17 @@ const GenerateProgress = () => {
         triggerVcon();
       }
     } else if (stepKey === 'vcon') {
-      // Vcon skipped → start dummy animations
+      // Vcon skipped → show style selection (step mode) or start dummy
+      if (!effectiveAutoMode) {
+        setStyleSelectionPending(true);
+      } else {
+        dummyAnimationStartedRef.current = true;
+        setDummyPhaseStarted(true);
+        const nextDummyIdx = pipeline.findIndex((s, i) => i > idx && !DATA_DRIVEN_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
+        if (nextDummyIdx >= 0) setTimeout(() => setActiveIndex(nextDummyIdx), 300);
+      }
+    } else if (stepKey === 'styleframe') {
+      // Styleframe skipped → start dummy animations for ekonte and beyond
       dummyAnimationStartedRef.current = true;
       setDummyPhaseStarted(true);
       const nextDummyIdx = pipeline.findIndex((s, i) => i > idx && !DATA_DRIVEN_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
