@@ -20,7 +20,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const VIDEO_STEPS = [
   'appeal_axis', 'copy', 'composition', 'narration_script',
-  'narration_audio', 'bgm', 'vcon', 'styleframe',
+  'narration_audio', 'bgm_suggestion', 'vcon', 'styleframe',
   'storyboard', 'video_horizontal', 'video_vertical',
 ];
 

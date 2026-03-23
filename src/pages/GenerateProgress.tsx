@@ -556,8 +556,8 @@ const GenerateProgress = () => {
                 break;
               }
             } else {
-              // Last text step (narration_script) completed → wait for approval to start dummy phase
-              if (!dummyAnimationStartedRef.current) {
+              // Last text step (narration_script) completed → wait for approval to start voice selection
+              if (!dummyAnimationStartedRef.current && !voiceSelectionPending && !voiceGenerating) {
                 setWaitingForApproval(pIdx);
                 if (userSelectedStepRef.current === null) setSelectedStepIndex(pIdx);
                 foundApproval = true;
@@ -565,10 +565,20 @@ const GenerateProgress = () => {
               break;
             }
           }
-          // If this step is still processing or pending, stop looking
           if (gs?.status === 'processing' || gs?.status === 'pending') break;
         }
-        // If no approval needed (all triggered already), clear it
+
+        // Also check bgm_suggestion step for approval
+        if (!foundApproval) {
+          const bgmGs = steps.find((s: any) => s.step_key === 'bgm_suggestion');
+          const bgmIdx = stepKeyToIndex.get('bgm_suggestion');
+          if (bgmGs?.status === 'completed' && bgmIdx !== undefined && !dummyAnimationStartedRef.current) {
+            setWaitingForApproval(bgmIdx);
+            if (userSelectedStepRef.current === null) setSelectedStepIndex(bgmIdx);
+            foundApproval = true;
+          }
+        }
+
         if (!foundApproval) {
           setWaitingForApproval(-1);
         }
