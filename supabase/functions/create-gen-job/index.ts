@@ -67,7 +67,7 @@ serve(async (req) => {
       });
     }
 
-    // 2. Insert gen_steps (text steps only)
+    // 2. Insert gen_steps (text steps + bgm_suggestion for video)
     const steps = [
       { step_number: 1, step_key: "appeal_axis", step_label: "訴求軸作成" },
       { step_number: 2, step_key: "copy", step_label: "コピー作成" },
@@ -85,6 +85,15 @@ serve(async (req) => {
         step_label: "NA原稿作成",
       },
     ];
+
+    // Add BGM suggestion step for video only
+    if (body.creative_type === "video") {
+      steps.push({
+        step_number: 5,
+        step_key: "bgm_suggestion",
+        step_label: "BGM提案",
+      });
+    }
 
     const { error: stepsError } = await adminClient.from("gen_steps").insert(
       steps.map((s) => ({
