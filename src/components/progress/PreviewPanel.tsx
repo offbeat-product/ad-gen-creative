@@ -1235,14 +1235,15 @@ const PreviewBGM = ({ genStepResult, jobId, onBgmUpdated }: { genStepResult?: an
   );
 };
 
-const PreviewVCon = ({ genStepResult, narrationAudioMap, narrationAudioMapB, selectedGender }: {
-  genStepResult?: any; narrationAudioMap?: Record<string, string | null>; narrationAudioMapB?: Record<string, string | null>; selectedGender?: 'male' | 'female';
+const PreviewVCon = ({ genStepResult, narrationAudioMap, narrationAudioMapB, selectedGender, jobId }: {
+  genStepResult?: any; narrationAudioMap?: Record<string, string | null>; narrationAudioMapB?: Record<string, string | null>; selectedGender?: 'male' | 'female'; jobId?: string | null;
 }) => (
   <VconPreview
     genStepResult={genStepResult}
     narrationAudioMap={narrationAudioMap}
     narrationAudioMapB={narrationAudioMapB}
     selectedGender={selectedGender}
+    jobId={jobId}
   />
 );
 
