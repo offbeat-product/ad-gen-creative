@@ -946,6 +946,22 @@ const GenerateProgress = () => {
       return;
     }
 
+    // Styleframe approved → start dummy animations for ekonte and beyond
+    if (narrationStepKey === 'styleframe') {
+      dummyAnimationStartedRef.current = true;
+      setDummyPhaseStarted(true);
+      const nextDummyIdx = pipeline.findIndex((s, i) => i > idx && !DATA_DRIVEN_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
+      if (nextDummyIdx >= 0) {
+        setTimeout(() => setActiveIndex(nextDummyIdx), 300);
+      } else {
+        setAllDone(true);
+        setShowConfetti(true);
+        clearInterval(timerRef.current);
+        setTimeout(() => setShowConfetti(false), 3500);
+      }
+      return;
+    }
+
     if (idx + 1 < pipeline.length) {
       setTimeout(() => setActiveIndex(idx + 1), 300);
     } else {
