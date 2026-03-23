@@ -1184,7 +1184,7 @@ const GenerateProgress = () => {
         completed_at: null,
       })
       .eq('job_id', jobId)
-      .eq('step_key', stepKey);
+      .eq('step_key', pipelineKeyToDbKey(stepKey));
 
     // 2. Reset local UI
     setCompletedIndexes(prev => { const s = new Set(prev); s.delete(idx); return s; });
