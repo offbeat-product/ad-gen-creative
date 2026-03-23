@@ -382,7 +382,8 @@ const GenerateProgress = () => {
     creativeType: 'video', videoDuration: 30, clientId: null, productId: null,
     projectId: null, referenceIds: [], referenceFileNames: {}, referenceUrls: [], productionPattern: 'new',
     baseCreativeId: null, productionCount: 18, appealAxis: 3, copyPatterns: 3, tonePatterns: 2,
-    generationMode: 'auto',
+    generationMode: 'auto', creativeStyle: null,
+    styleOptions: { colorPalette: { primary: '#1E40AF', secondary: '#3B82F6', background: '#DBEAFE' }, fontStyle: 'bold_gothic' as const, illustrationStyle: 'flat_design' as const, taste: [] },
   });
 
   const total = state.appealAxis * state.copyPatterns * state.tonePatterns;
