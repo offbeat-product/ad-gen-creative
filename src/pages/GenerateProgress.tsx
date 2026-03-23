@@ -149,6 +149,7 @@ const WEBHOOK_URLS: Record<string, string> = {
 const WF5_WEBHOOK_URL = 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step5';
 const WF6_WEBHOOK_URL = 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step6';
 const WF7_WEBHOOK_URL = 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step7';
+const WF8_WEBHOOK_URL = 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step8';
 
 /* ─── Confetti ─── */
 
