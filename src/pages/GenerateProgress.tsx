@@ -984,6 +984,25 @@ const GenerateProgress = () => {
     }
 
     const stepKey = pipeline[idx]?.stepKey;
+
+    // Styleframe regenerate: reset step, show style selection UI again
+    if (stepKey === 'styleframe') {
+      const confirmed = window.confirm('この工程を再生成しますか？現在の結果は上書きされます。');
+      if (!confirmed) return;
+      await supabase
+        .from('gen_steps')
+        .update({ status: 'pending', result: null, error_message: null, started_at: null, completed_at: null })
+        .eq('job_id', jobId)
+        .eq('step_key', 'styleframe');
+      setCompletedIndexes(prev => { const s = new Set(prev); s.delete(idx); return s; });
+      setWaitingForApproval(-1);
+      setErrorMap(prev => { const n = { ...prev }; delete n[idx]; return n; });
+      dummyAnimationStartedRef.current = false;
+      setDummyPhaseStarted(false);
+      setStyleSelectionPending(true);
+      return;
+    }
+
     if (!stepKey || !TEXT_STEP_KEYS.includes(stepKey)) {
       // Non-text step: just re-run dummy animation
       setCompletedIndexes(prev => { const s = new Set(prev); s.delete(idx); return s; });
