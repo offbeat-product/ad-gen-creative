@@ -1464,8 +1464,32 @@ const PreviewPanel = ({
     }
   })();
   const isVideo = state.creativeType === 'video';
-  const noSelection = selectedStepIndex === null || !completedIndexes.has(selectedStepIndex);
   const showApprovalBar = !effectiveAutoMode && waitingForApproval >= 0 && !voiceSelectionPending;
+
+  // Determine the status of the selected step from genStepsData
+  const selectedStepStatus = (() => {
+    if (selectedStepIndex === null) return null;
+    const pipelineStep = pipeline[selectedStepIndex];
+    if (!pipelineStep || !genStepsData) return null;
+    const gs = genStepsData.find((s: any) => s.step_key === pipelineStep.stepKey);
+    return gs?.status ?? null;
+  })();
+
+  const selectedStepError = selectedStepIndex !== null ? errorMap?.[selectedStepIndex] : null;
+  const isSelectedCompleted = selectedStepIndex !== null && completedIndexes.has(selectedStepIndex);
+  const isSelectedSkipped = selectedStepIndex !== null && skippedIndexes?.has(selectedStepIndex);
+  const isSelectedInProgress = selectedStepStatus === 'processing' || selectedStepStatus === 'in_progress';
+  const isSelectedFailed = selectedStepStatus === 'failed' || selectedStepStatus === 'error';
+
+  const STEP_RUNNING_MESSAGES: Record<string, string> = {
+    appeal_axis: 'AIが訴求軸を生成しています...',
+    copy: '各訴求軸に対するコピーを生成しています...',
+    composition: '構成案・字コンテを生成しています...',
+    narration_script: 'NA原稿を生成しています...',
+    narration_audio: 'AI音声でNA原稿を読み上げています...',
+    bgm_suggestion: 'AIが最適なBGMを選定しています...',
+    vcon: 'AIがVコン設計データを生成しています...',
+  };
 
   // Show voice selection or voice generating state
   if (voiceSelectionPending && onTriggerNarrationAudio) {
@@ -1496,6 +1520,88 @@ const PreviewPanel = ({
     );
   }
 
+  // Show in_progress state for selected step
+  if (selectedStepIndex !== null && isSelectedInProgress) {
+    const step = pipeline[selectedStepIndex];
+    return (
+      <div className="flex flex-col h-full">
+        <div className="px-6 pt-5 pb-3">
+          <div className="flex items-center gap-3">
+            <step.icon className="h-5 w-5 text-secondary" />
+            <h2 className="text-lg font-bold font-display">{step.label}</h2>
+            <Badge className="ml-auto bg-secondary text-secondary-foreground">生成中</Badge>
+          </div>
+        </div>
+        <Separator />
+        <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
+          <Loader2 className="h-12 w-12 text-secondary animate-spin mb-4" />
+          <p className="text-lg font-medium mb-2">{step.label}を生成中...</p>
+          <p className="text-sm text-muted-foreground">
+            {STEP_RUNNING_MESSAGES[step.stepKey] || 'AIが処理を実行しています...'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show failed state for selected step
+  if (selectedStepIndex !== null && isSelectedFailed) {
+    const step = pipeline[selectedStepIndex];
+    return (
+      <div className="flex flex-col h-full">
+        <div className="px-6 pt-5 pb-3">
+          <div className="flex items-center gap-3">
+            <step.icon className="h-5 w-5 text-destructive" />
+            <h2 className="text-lg font-bold font-display">{step.label}</h2>
+            <Badge className="ml-auto bg-destructive text-destructive-foreground">エラー</Badge>
+          </div>
+        </div>
+        <Separator />
+        <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
+          <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+          <p className="text-lg font-medium mb-2">ステップの実行に失敗しました</p>
+          <p className="text-sm text-muted-foreground mb-6">
+            {selectedStepError || 'ステップが失敗しました'}
+          </p>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" onClick={() => onRetryStep?.(selectedStepIndex)}>
+              <RefreshCw className="h-3.5 w-3.5 mr-1" />再生成
+            </Button>
+            <Button
+              variant="outline"
+              className="border-warning text-warning hover:bg-warning/10"
+              onClick={() => onSkipStep?.(selectedStepIndex)}
+            >
+              <SkipForward className="h-3.5 w-3.5 mr-1" />スキップして次へ進む
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show skipped state for selected step
+  if (selectedStepIndex !== null && isSelectedSkipped) {
+    const step = pipeline[selectedStepIndex];
+    return (
+      <div className="flex flex-col h-full">
+        <div className="px-6 pt-5 pb-3">
+          <div className="flex items-center gap-3">
+            <step.icon className="h-5 w-5 text-muted-foreground" />
+            <h2 className="text-lg font-bold font-display">{step.label}</h2>
+            <Badge variant="outline" className="ml-auto">スキップ</Badge>
+          </div>
+        </div>
+        <Separator />
+        <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
+          <SkipForward className="h-12 w-12 text-muted-foreground mb-4" />
+          <p className="text-lg font-medium text-muted-foreground">このステップはスキップされました</p>
+        </div>
+      </div>
+    );
+  }
+
+  const noSelection = selectedStepIndex === null || !isSelectedCompleted;
   if (noSelection && !allDone && !showApprovalBar) return <EmptyState />;
 
   const step = selectedStepIndex !== null ? pipeline[selectedStepIndex] : null;
