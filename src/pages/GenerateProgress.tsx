@@ -380,6 +380,7 @@ const GenerateProgress = () => {
 
   const [activeIndex, setActiveIndex] = useState(-1);
   const [completedIndexes, setCompletedIndexes] = useState<Set<number>>(new Set());
+  const [skippedIndexes, setSkippedIndexes] = useState<Set<number>>(new Set());
   const [waitingForApproval, setWaitingForApproval] = useState(-1);
   const [countUpValues, setCountUpValues] = useState<Record<number, number>>({});
   const [allDone, setAllDone] = useState(false);
