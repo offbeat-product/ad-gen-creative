@@ -645,10 +645,8 @@ const GenerateProgress = () => {
     if (activeIndex < 0 || activeIndex >= pipeline.length) return;
     if (completedIndexes.has(activeIndex)) return;
 
-    // If we have a jobId, NEVER animate text steps — they are driven by Supabase data only
-    if (jobId && pipeline[activeIndex].stepType === 'text') return;
-    // Also guard by stepKey for text 4 steps (belt-and-suspenders)
-    if (jobId && TEXT_STEP_KEYS.includes(pipeline[activeIndex].stepKey)) return;
+    // If we have a jobId, NEVER animate data-driven steps — they are driven by Supabase data only
+    if (jobId && DATA_DRIVEN_STEP_KEYS.includes(pipeline[activeIndex].stepKey)) return;
     // Never dummy-animate the narration step when voice is generating — it's driven by polling
     if (jobId && pipeline[activeIndex].stepKey === 'narration' && voiceGenerating) return;
 
