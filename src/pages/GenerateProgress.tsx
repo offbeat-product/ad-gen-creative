@@ -481,12 +481,12 @@ const GenerateProgress = () => {
         }
       });
 
-      // Text 4 steps are always rebuilt from DB only; only dummy-step completions are preserved locally
+      // Data-driven steps (text 4 + bgm_suggestion) are always rebuilt from DB; only dummy-step completions are preserved locally
       setCompletedIndexes(prev => {
         const next = new Set<number>();
         prev.forEach(idx => {
           const step = pipeline[idx];
-          if (step && !TEXT_STEP_KEYS.includes(step.stepKey)) next.add(idx);
+          if (step && !DATA_DRIVEN_STEP_KEYS.includes(step.stepKey)) next.add(idx);
         });
         newCompleted.forEach(idx => next.add(idx));
         return next;
