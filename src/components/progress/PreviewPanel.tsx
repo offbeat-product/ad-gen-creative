@@ -1634,6 +1634,7 @@ const PreviewPanel = ({
     narration_audio: 'AI音声でNA原稿を読み上げています...',
     bgm_suggestion: 'AIが最適なBGMを選定しています...',
     vcon: 'AIがVコン設計データを生成しています...',
+    styleframe: 'AIがスタイルフレームを生成しています...',
   };
 
   // Show voice selection or voice generating state
