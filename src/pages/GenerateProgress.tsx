@@ -926,6 +926,52 @@ const GenerateProgress = () => {
     if (steps) setGenStepsData(steps as GenStepRow[]);
   }, [jobId]);
 
+  // ── WF6: Trigger BGM suggestion ──
+  const triggerBgmSuggestion = useCallback(async () => {
+    if (!jobId || !jobData) return;
+
+    // Set bgm_suggestion step as active
+    const bgmIdx = stepKeyToIndex.get('bgm_suggestion');
+    if (bgmIdx !== undefined) {
+      setActiveIndex(bgmIdx);
+    }
+
+    try {
+      // Get patterns data
+      const { data: patterns } = await supabase
+        .from('gen_patterns')
+        .select('pattern_id, appeal_axis_text, copy_text, composition, narration_script')
+        .eq('job_id', jobId)
+        .order('pattern_id', { ascending: true });
+
+      // Get _rules_text from step1 result
+      const step1 = genStepsData.find(s => s.step_key === 'appeal_axis');
+      const step1Result = step1?.result
+        ? (typeof step1.result === 'string' ? safeParse(step1.result) : step1.result)
+        : {};
+      const rulesText = step1Result?._rules_text || '';
+
+      const response = await fetch(WF6_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          job_id: jobId,
+          creative_type: jobData.creative_type,
+          duration_seconds: jobData.duration_seconds,
+          client_name: jobMeta.clientName,
+          product_name: jobMeta.productName,
+          project_name: jobMeta.projectName,
+          patterns: patterns || [],
+          _rules_text: rulesText,
+        }),
+      });
+      console.log('[WF6] Response status:', response.status);
+    } catch (e) {
+      console.error('[WF6] Failed:', e);
+    }
+    // Polling will detect bgm_suggestion step completion from gen_steps
+  }, [jobId, jobData, jobMeta, genStepsData, stepKeyToIndex]);
+
   // ── WF5: Trigger narration audio generation ──
   const triggerNarrationAudio = useCallback(async (voiceIdA: string, voiceIdB: string, gender: 'male' | 'female') => {
     if (!jobId) return;
