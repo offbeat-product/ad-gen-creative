@@ -1375,10 +1375,12 @@ const GenerateProgress = () => {
         <div className="w-[40%] border-r border-border overflow-y-auto p-4">
           <PipelineTimeline
             pipeline={pipeline} activeIndex={activeIndex} completedIndexes={completedIndexes}
+            skippedIndexes={skippedIndexes}
             selectedStepIndex={selectedStepIndex} countUpValues={countUpValues} total={total}
             progressPct={progressPct} completedCount={completedCount} elapsedStr={elapsedStr}
             remainStr={remainStr} allDone={allDone} effectiveAutoMode={effectiveAutoMode}
             errorMap={errorMap} narrationProgress={narrationProgress} onStepClick={handleStepClick} onSwitchToAuto={switchToAuto}
+            onSkipStep={handleSkipStep}
           />
         </div>
         <div className="w-[60%] overflow-y-auto">
