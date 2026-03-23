@@ -1094,7 +1094,8 @@ const GenerateProgress = () => {
     const stepKey = pipeline[idx]?.stepKey;
     if (!stepKey) return;
 
-    const genStep = genStepsData.find(gs => gs.step_key === stepKey);
+    const dbKey = pipelineKeyToDbKey(stepKey);
+    const genStep = genStepsData.find(gs => gs.step_key === dbKey);
     if (!genStep) return;
 
     // 1. Update gen_step status to skipped
