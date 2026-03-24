@@ -675,7 +675,7 @@ const GenerateProgress = () => {
       // ── Check if all data-driven steps (including bgm_suggestion) completed ──
       const allDataDone = DATA_DRIVEN_STEP_KEYS.every(key => {
         const gs = steps.find((s: any) => s.step_key === key);
-        if (!gs && (key === 'bgm_suggestion' || key === 'vcon' || key === 'styleframe') && state.creativeType !== 'video') return true;
+        if (!gs && (key === 'bgm_suggestion' || key === 'vcon' || key === 'styleframe' || key === 'ekonte') && state.creativeType !== 'video') return true;
         return gs?.status === 'completed' || gs?.status === 'skipped';
       });
 
