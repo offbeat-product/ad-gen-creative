@@ -2077,7 +2077,7 @@ const PreviewPanel = ({
         </div>
         <Separator />
         <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
-          <PenTool className="h-12 w-12 text-muted-foreground mb-4" />
+          <Image className="h-12 w-12 text-muted-foreground mb-4" />
           <p className="text-lg font-medium mb-2">絵コンテはまだ開始されていません</p>
           <p className="text-sm text-muted-foreground">スタイルフレームを承認すると絵コンテの生成が開始されます。</p>
         </div>
