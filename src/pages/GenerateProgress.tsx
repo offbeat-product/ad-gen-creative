@@ -443,6 +443,7 @@ const GenerateProgress = () => {
     step4TriggeredRef.current = false;
     wf6TriggeredRef.current = false;
     wf7TriggeredRef.current = false;
+    wf9TriggeredRef.current = false;
     dummyAnimationStartedRef.current = false;
     setActiveIndex(-1);
     setSkippedIndexes(new Set());
