@@ -1039,7 +1039,8 @@ const GenerateProgress = () => {
 
     // Styleframe approved → trigger WF9 (Ekonte)
     if (narrationStepKey === 'styleframe') {
-      if (state.creativeType === 'video' && !wf9TriggeredRef.current) {
+      if (state.creativeType === 'video') {
+        // Reset ref in case of re-trigger (ekonte still pending)
         wf9TriggeredRef.current = true;
         advanceToStep('ekonte');
         triggerEkonte();
