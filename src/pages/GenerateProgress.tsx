@@ -547,25 +547,37 @@ const GenerateProgress = () => {
       });
       setSkippedIndexes(newSkipped);
       setErrorMap(newErrors);
+      // When a webhook was triggered but the next step hasn't started processing yet,
+      // keep the UI on that next step instead of resetting
+      const pendingNextStepKey = wf9TriggeredRef.current ? 'ekonte'
+        : wf7TriggeredRef.current && !newCompleted.has(stepKeyToIndex.get('vcon') ?? -1) ? 'vcon'
+        : null;
+      const pendingNextIdx = pendingNextStepKey ? stepKeyToIndex.get(pendingNextStepKey) : undefined;
+
       if (latestProcessing >= 0) {
         setActiveIndex(latestProcessing);
-        // Auto-select in-progress step in preview panel if user hasn't manually selected
         if (userSelectedStepRef.current === null) {
           setSelectedStepIndex(latestProcessing);
+        }
+      } else if (pendingNextIdx !== undefined && !newCompleted.has(pendingNextIdx)) {
+        // A webhook was triggered for this step but it hasn't started processing yet — hold UI here
+        setActiveIndex(pendingNextIdx);
+        if (userSelectedStepRef.current === null) {
+          setSelectedStepIndex(pendingNextIdx);
         }
       } else if (!dummyAnimationStartedRef.current) {
         setActiveIndex(-1);
       }
-      // Only auto-update selected step if user hasn't manually selected one,
-      // or if a NEW step just completed (reset user selection on new completion)
+
       if (latestCompletedIdx >= 0) {
         if (latestCompletedIdx > lastAutoCompletedRef.current) {
-          // A new step just completed — auto-navigate and clear user selection
           lastAutoCompletedRef.current = latestCompletedIdx;
-          userSelectedStepRef.current = null;
-          setSelectedStepIndex(latestCompletedIdx);
-        } else if (userSelectedStepRef.current === null && latestProcessing < 0) {
-          // No user selection active and nothing processing — follow auto
+          // Don't reset selection if we're holding on a pending next step
+          if (pendingNextIdx === undefined || newCompleted.has(pendingNextIdx)) {
+            userSelectedStepRef.current = null;
+            setSelectedStepIndex(latestCompletedIdx);
+          }
+        } else if (userSelectedStepRef.current === null && latestProcessing < 0 && pendingNextIdx === undefined) {
           setSelectedStepIndex(latestCompletedIdx);
         }
       }
