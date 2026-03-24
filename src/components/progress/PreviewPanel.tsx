@@ -2064,13 +2064,14 @@ const PreviewPanel = ({
     );
   }
 
-  if (selectedStepIndex !== null && step?.stepKey === 'ekonte' && selectedStepStatus === 'pending' && !isSelectedInProgress && !isSelectedCompleted) {
+  const ekonteStep = selectedStepIndex !== null ? pipeline[selectedStepIndex] : null;
+  if (selectedStepIndex !== null && ekonteStep?.stepKey === 'ekonte' && selectedStepStatus === 'pending' && !isSelectedInProgress && !isSelectedCompleted) {
     return (
       <div className="flex flex-col h-full">
         <div className="px-6 pt-5 pb-3">
           <div className="flex items-center gap-3">
-            <step.icon className="h-5 w-5 text-secondary" />
-            <h2 className="text-lg font-bold font-display">{step.label}</h2>
+            <ekonteStep.icon className="h-5 w-5 text-secondary" />
+            <h2 className="text-lg font-bold font-display">{ekonteStep.label}</h2>
             <Badge className="ml-auto bg-muted text-muted-foreground">待機中</Badge>
           </div>
         </div>
