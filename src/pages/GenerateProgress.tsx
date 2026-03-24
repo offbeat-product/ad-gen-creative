@@ -1027,8 +1027,17 @@ const GenerateProgress = () => {
       return;
     }
 
-    // Styleframe approved → start dummy animations for ekonte and beyond
+    // Styleframe approved → trigger WF9 (Ekonte)
     if (narrationStepKey === 'styleframe') {
+      if (state.creativeType === 'video' && !wf9TriggeredRef.current) {
+        wf9TriggeredRef.current = true;
+        triggerEkonte();
+      }
+      return;
+    }
+
+    // Ekonte approved → start dummy animations for remaining steps
+    if (narrationStepKey === 'ekonte') {
       dummyAnimationStartedRef.current = true;
       setDummyPhaseStarted(true);
       const nextDummyIdx = pipeline.findIndex((s, i) => i > idx && !DATA_DRIVEN_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
