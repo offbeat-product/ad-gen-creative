@@ -148,6 +148,7 @@ const WF5_WEBHOOK_URL = 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step5';
 const WF6_WEBHOOK_URL = 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step6';
 const WF7_WEBHOOK_URL = 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step7';
 const WF8_WEBHOOK_URL = 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step8';
+const WF9_WEBHOOK_URL = 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-step9';
 
 /* ─── Confetti ─── */
 
@@ -235,7 +236,7 @@ const safeParse = (v: any): any => {
 /* ─── Text step keys (driven by Supabase only) ─── */
 
 const TEXT_STEP_KEYS = ['appeal_axis', 'copy', 'composition', 'narration_script'];
-const DATA_DRIVEN_STEP_KEYS = [...TEXT_STEP_KEYS, 'bgm_suggestion', 'vcon', 'styleframe'];
+const DATA_DRIVEN_STEP_KEYS = [...TEXT_STEP_KEYS, 'bgm_suggestion', 'vcon', 'styleframe', 'ekonte'];
 
 /* Map pipeline stepKey to DB step_key (narration ↔ narration_audio) */
 const pipelineKeyToDbKey = (k: string) => k === 'narration' ? 'narration_audio' : k;
@@ -432,6 +433,7 @@ const GenerateProgress = () => {
   const step4TriggeredRef = useRef(false);
   const wf6TriggeredRef = useRef(false);
   const wf7TriggeredRef = useRef(false);
+  const wf9TriggeredRef = useRef(false);
   const dummyAnimationStartedRef = useRef(false);
 
   // Reset dedup refs and UI state on jobId change
@@ -441,6 +443,7 @@ const GenerateProgress = () => {
     step4TriggeredRef.current = false;
     wf6TriggeredRef.current = false;
     wf7TriggeredRef.current = false;
+    wf9TriggeredRef.current = false;
     dummyAnimationStartedRef.current = false;
     setActiveIndex(-1);
     setSkippedIndexes(new Set());
@@ -857,6 +860,80 @@ const GenerateProgress = () => {
     }
   }, [jobId, jobData, jobMeta, genStepsData, stepKeyToIndex]);
 
+  // ── WF9: Trigger Ekonte generation ──
+  const triggerEkonte = useCallback(async () => {
+    if (!jobId || !jobData) return;
+
+    const ekonteIdx = stepKeyToIndex.get('ekonte');
+    if (ekonteIdx !== undefined) {
+      setActiveIndex(ekonteIdx);
+    }
+
+    try {
+      const { data: patterns } = await supabase
+        .from('gen_patterns')
+        .select('*')
+        .eq('job_id', jobId);
+
+      // Get styleframe result
+      const sfStep = genStepsData?.find((s: any) => s.step_key === 'styleframe');
+      let sfData = null;
+      if (sfStep?.result) {
+        try {
+          sfData = typeof sfStep.result === 'string' ? JSON.parse(sfStep.result) : sfStep.result;
+        } catch { sfData = sfStep.result; }
+      }
+
+      // Get vcon result
+      const vconStep = genStepsData?.find((s: any) => s.step_key === 'vcon');
+      let vconData = null;
+      if (vconStep?.result) {
+        try {
+          vconData = typeof vconStep.result === 'string' ? JSON.parse(vconStep.result) : vconStep.result;
+        } catch { vconData = vconStep.result; }
+      }
+
+      // Get step1 result for knowledge
+      const step1 = genStepsData?.find((s: any) => s.step_key === 'appeal_axis');
+      let step1Result: any = null;
+      if (step1?.result) {
+        try {
+          step1Result = typeof step1.result === 'string' ? JSON.parse(step1.result) : step1.result;
+        } catch { step1Result = step1.result; }
+      }
+      const rulesText = step1Result?._rules_text || '';
+      const refsText = step1Result?._refs_text || '';
+
+      // Get creative style from job settings
+      const settings = jobData.settings as any;
+      const creativeStyle = settings?.creative_style || 'photographic';
+      const styleOptions = settings?.style_options || {};
+
+      const response = await fetch(WF9_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          job_id: jobId,
+          creative_type: jobData.creative_type,
+          duration_seconds: jobData.duration_seconds,
+          client_name: jobMeta.clientName,
+          product_name: jobMeta.productName,
+          project_name: jobMeta.projectName,
+          patterns: patterns || [],
+          vcon_data: vconData,
+          styleframe_data: sfData,
+          creative_style: creativeStyle,
+          style_options: styleOptions,
+          _rules_text: rulesText,
+          _refs_text: refsText,
+        }),
+      });
+      console.log('[WF9] Response status:', response.status);
+    } catch (e) {
+      console.error('[WF9] Failed:', e);
+    }
+  }, [jobId, jobData, jobMeta, genStepsData, stepKeyToIndex]);
+
   // ── Handle approve: trigger next webhook (step mode) or advance dummy ──
   const handleApprove = useCallback(async (idx: number) => {
     setWaitingForApproval(-1);
@@ -950,8 +1027,17 @@ const GenerateProgress = () => {
       return;
     }
 
-    // Styleframe approved → start dummy animations for ekonte and beyond
+    // Styleframe approved → trigger WF9 (Ekonte)
     if (narrationStepKey === 'styleframe') {
+      if (state.creativeType === 'video' && !wf9TriggeredRef.current) {
+        wf9TriggeredRef.current = true;
+        triggerEkonte();
+      }
+      return;
+    }
+
+    // Ekonte approved → start dummy animations for remaining steps
+    if (narrationStepKey === 'ekonte') {
       dummyAnimationStartedRef.current = true;
       setDummyPhaseStarted(true);
       const nextDummyIdx = pipeline.findIndex((s, i) => i > idx && !DATA_DRIVEN_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
@@ -974,7 +1060,7 @@ const GenerateProgress = () => {
       clearInterval(timerRef.current);
       setTimeout(() => setShowConfetti(false), 3500);
     }
-  }, [pipeline, jobId, jobData, genStepsData, jobMeta, firstDummyIndex, state.creativeType, triggerBgmSuggestion, triggerVcon]);
+  }, [pipeline, jobId, jobData, genStepsData, jobMeta, firstDummyIndex, state.creativeType, triggerBgmSuggestion, triggerVcon, triggerEkonte]);
 
   const handleRegenerate = useCallback(async (idx: number) => {
     if (!jobId || !jobData) {
@@ -1229,7 +1315,13 @@ const GenerateProgress = () => {
         if (nextDummyIdx >= 0) setTimeout(() => setActiveIndex(nextDummyIdx), 300);
       }
     } else if (stepKey === 'styleframe') {
-      // Styleframe skipped → start dummy animations for ekonte and beyond
+      // Styleframe skipped → trigger WF9 (Ekonte)
+      if (state.creativeType === 'video' && !wf9TriggeredRef.current) {
+        wf9TriggeredRef.current = true;
+        triggerEkonte();
+      }
+    } else if (stepKey === 'ekonte') {
+      // Ekonte skipped → start dummy animations
       dummyAnimationStartedRef.current = true;
       setDummyPhaseStarted(true);
       const nextDummyIdx = pipeline.findIndex((s, i) => i > idx && !DATA_DRIVEN_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
@@ -1237,7 +1329,7 @@ const GenerateProgress = () => {
     }
 
     console.log(`[Skip] Skipped step ${stepKey}, triggering next step`);
-  }, [jobId, jobData, pipeline, genStepsData, jobMeta, state.creativeType, firstDummyIndex, triggerBgmSuggestion, triggerVcon]);
+  }, [jobId, jobData, pipeline, genStepsData, jobMeta, state.creativeType, firstDummyIndex, triggerBgmSuggestion, triggerVcon, triggerEkonte]);
 
   // ── Handle retry: reset failed step and re-trigger webhook ──
   const handleRetryStep = useCallback(async (idx: number) => {
@@ -1298,6 +1390,11 @@ const GenerateProgress = () => {
         await triggerVcon();
         return;
       }
+      if (stepKey === 'ekonte') {
+        wf9TriggeredRef.current = true;
+        await triggerEkonte();
+        return;
+      }
 
       // For text steps, build body with previous results
       const { data: allSteps } = await supabase
@@ -1356,7 +1453,7 @@ const GenerateProgress = () => {
     } catch (e) {
       console.error(`[Retry] Failed to call ${stepKey} webhook:`, e);
     }
-  }, [jobId, jobData, pipeline, jobMeta, triggerBgmSuggestion, triggerVcon]);
+  }, [jobId, jobData, pipeline, jobMeta, triggerBgmSuggestion, triggerVcon, triggerEkonte]);
 
   // ── Handle style selection for styleframe ──
   const handleStyleSelected = useCallback(async (style: string) => {
