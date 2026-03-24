@@ -638,12 +638,17 @@ const GenerateProgress = () => {
           if (gs?.status === 'processing' || gs?.status === 'pending') break;
         }
 
-        // Also check bgm_suggestion and vcon steps for approval
+        // Also check bgm_suggestion, vcon, styleframe, ekonte steps for approval
         if (!foundApproval && !styleSelectionPendingRef.current) {
           for (const extraKey of ['bgm_suggestion', 'vcon', 'styleframe', 'ekonte']) {
             const gs = steps.find((s: any) => s.step_key === extraKey);
             const pIdx = stepKeyToIndex.get(extraKey);
             if (gs?.status === 'completed' && pIdx !== undefined && !dummyAnimationStartedRef.current) {
+              // Skip showing approval if next step webhook was already triggered
+              if (extraKey === 'bgm_suggestion' && wf7TriggeredRef.current) continue;
+              if (extraKey === 'vcon' && styleSelectionPendingRef.current) continue;
+              if (extraKey === 'styleframe' && wf9TriggeredRef.current) continue;
+
               // Only show approval when the IMMEDIATE next data-driven step is pending (or there is no next step)
               const currentDataIdx = DATA_DRIVEN_STEP_KEYS.indexOf(extraKey);
               const immediateNextKey = DATA_DRIVEN_STEP_KEYS[currentDataIdx + 1];
