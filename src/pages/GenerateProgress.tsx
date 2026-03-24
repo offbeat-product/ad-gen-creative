@@ -1390,6 +1390,11 @@ const GenerateProgress = () => {
         await triggerVcon();
         return;
       }
+      if (stepKey === 'ekonte') {
+        wf9TriggeredRef.current = true;
+        await triggerEkonte();
+        return;
+      }
 
       // For text steps, build body with previous results
       const { data: allSteps } = await supabase
