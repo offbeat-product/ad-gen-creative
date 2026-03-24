@@ -1448,7 +1448,7 @@ const GenerateProgress = () => {
     } catch (e) {
       console.error(`[Retry] Failed to call ${stepKey} webhook:`, e);
     }
-  }, [jobId, jobData, pipeline, jobMeta, triggerBgmSuggestion, triggerVcon]);
+  }, [jobId, jobData, pipeline, jobMeta, triggerBgmSuggestion, triggerVcon, triggerEkonte]);
 
   // ── Handle style selection for styleframe ──
   const handleStyleSelected = useCallback(async (style: string) => {
