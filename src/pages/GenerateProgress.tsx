@@ -860,6 +860,80 @@ const GenerateProgress = () => {
     }
   }, [jobId, jobData, jobMeta, genStepsData, stepKeyToIndex]);
 
+  // ── WF9: Trigger Ekonte generation ──
+  const triggerEkonte = useCallback(async () => {
+    if (!jobId || !jobData) return;
+
+    const ekonteIdx = stepKeyToIndex.get('ekonte');
+    if (ekonteIdx !== undefined) {
+      setActiveIndex(ekonteIdx);
+    }
+
+    try {
+      const { data: patterns } = await supabase
+        .from('gen_patterns')
+        .select('*')
+        .eq('job_id', jobId);
+
+      // Get styleframe result
+      const sfStep = genStepsData?.find((s: any) => s.step_key === 'styleframe');
+      let sfData = null;
+      if (sfStep?.result) {
+        try {
+          sfData = typeof sfStep.result === 'string' ? JSON.parse(sfStep.result) : sfStep.result;
+        } catch { sfData = sfStep.result; }
+      }
+
+      // Get vcon result
+      const vconStep = genStepsData?.find((s: any) => s.step_key === 'vcon');
+      let vconData = null;
+      if (vconStep?.result) {
+        try {
+          vconData = typeof vconStep.result === 'string' ? JSON.parse(vconStep.result) : vconStep.result;
+        } catch { vconData = vconStep.result; }
+      }
+
+      // Get step1 result for knowledge
+      const step1 = genStepsData?.find((s: any) => s.step_key === 'appeal_axis');
+      let step1Result: any = null;
+      if (step1?.result) {
+        try {
+          step1Result = typeof step1.result === 'string' ? JSON.parse(step1.result) : step1.result;
+        } catch { step1Result = step1.result; }
+      }
+      const rulesText = step1Result?._rules_text || '';
+      const refsText = step1Result?._refs_text || '';
+
+      // Get creative style from job settings
+      const settings = jobData.settings as any;
+      const creativeStyle = settings?.creative_style || 'photographic';
+      const styleOptions = settings?.style_options || {};
+
+      const response = await fetch(WF9_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          job_id: jobId,
+          creative_type: jobData.creative_type,
+          duration_seconds: jobData.duration_seconds,
+          client_name: jobMeta.clientName,
+          product_name: jobMeta.productName,
+          project_name: jobMeta.projectName,
+          patterns: patterns || [],
+          vcon_data: vconData,
+          styleframe_data: sfData,
+          creative_style: creativeStyle,
+          style_options: styleOptions,
+          _rules_text: rulesText,
+          _refs_text: refsText,
+        }),
+      });
+      console.log('[WF9] Response status:', response.status);
+    } catch (e) {
+      console.error('[WF9] Failed:', e);
+    }
+  }, [jobId, jobData, jobMeta, genStepsData, stepKeyToIndex]);
+
   // ── Handle approve: trigger next webhook (step mode) or advance dummy ──
   const handleApprove = useCallback(async (idx: number) => {
     setWaitingForApproval(-1);
