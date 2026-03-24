@@ -934,6 +934,16 @@ const GenerateProgress = () => {
     }
   }, [jobId, jobData, jobMeta, genStepsData, stepKeyToIndex]);
 
+  // Helper: advance UI to next step (timeline + preview)
+  const advanceToStep = useCallback((stepKey: string) => {
+    const nextIdx = stepKeyToIndex.get(stepKey);
+    if (nextIdx !== undefined) {
+      setActiveIndex(nextIdx);
+      userSelectedStepRef.current = null;
+      setSelectedStepIndex(nextIdx);
+    }
+  }, [stepKeyToIndex]);
+
   // ── Handle approve: trigger next webhook (step mode) or advance dummy ──
   const handleApprove = useCallback(async (idx: number) => {
     setWaitingForApproval(-1);
@@ -955,9 +965,9 @@ const GenerateProgress = () => {
         const ref = refMap[nextKey];
         if (ref && !ref.current) {
           ref.current = true;
+          advanceToStep(nextKey);
           await triggerWebhook(nextKey, jobData, genStepsData, jobMeta);
         }
-        // Don't advance activeIndex — polling will detect the next step's processing/completed status
         return;
       }
 
@@ -988,9 +998,9 @@ const GenerateProgress = () => {
       // Narration audio approved → trigger WF6 if not already, then wait for bgm_suggestion
       if (state.creativeType === 'video' && !wf6TriggeredRef.current) {
         wf6TriggeredRef.current = true;
+        advanceToStep('bgm_suggestion');
         triggerBgmSuggestion();
       }
-      // Polling will detect bgm_suggestion completion and advance
       return;
     }
 
@@ -998,9 +1008,9 @@ const GenerateProgress = () => {
     if (narrationStepKey === 'bgm_suggestion') {
       if (state.creativeType === 'video' && !wf7TriggeredRef.current) {
         wf7TriggeredRef.current = true;
+        advanceToStep('vcon');
         triggerVcon();
       }
-      // Polling will detect vcon completion and advance
       return;
     }
 
@@ -1031,6 +1041,7 @@ const GenerateProgress = () => {
     if (narrationStepKey === 'styleframe') {
       if (state.creativeType === 'video' && !wf9TriggeredRef.current) {
         wf9TriggeredRef.current = true;
+        advanceToStep('ekonte');
         triggerEkonte();
       }
       return;
@@ -1060,7 +1071,7 @@ const GenerateProgress = () => {
       clearInterval(timerRef.current);
       setTimeout(() => setShowConfetti(false), 3500);
     }
-  }, [pipeline, jobId, jobData, genStepsData, jobMeta, firstDummyIndex, state.creativeType, triggerBgmSuggestion, triggerVcon, triggerEkonte]);
+  }, [pipeline, jobId, jobData, genStepsData, jobMeta, firstDummyIndex, state.creativeType, triggerBgmSuggestion, triggerVcon, triggerEkonte, advanceToStep]);
 
   const handleRegenerate = useCallback(async (idx: number) => {
     if (!jobId || !jobData) {
