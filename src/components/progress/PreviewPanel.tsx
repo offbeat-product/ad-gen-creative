@@ -1533,14 +1533,119 @@ const PreviewStyleFrames = ({ genStepResult, jobId }: { genStepResult?: any; job
   );
 };
 
-const PreviewEkonte = ({ total }: { total: number }) => {
-  const count = Math.min(total, 6);
+const PreviewEkonte = ({ genStepResult, jobId }: { genStepResult: any; jobId?: string | null }) => {
+  const [vconData, setVconData] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!jobId) return;
+    (async () => {
+      const { data } = await supabase
+        .from('gen_steps')
+        .select('result')
+        .eq('job_id', jobId)
+        .eq('step_key', 'vcon')
+        .single();
+      if (data?.result) {
+        const parsed = typeof data.result === 'string' ? JSON.parse(data.result as string) : data.result;
+        setVconData((parsed as any)?.vcon_data || []);
+      }
+    })();
+  }, [jobId]);
+
+  // Parse ekonte result
+  const parsed = (() => {
+    if (!genStepResult) return [];
+    const raw = typeof genStepResult === 'string' ? JSON.parse(genStepResult) : genStepResult;
+    return raw?.ekonte_frames || raw?.styleframes || raw?.frames || [];
+  })();
+
+  // Group by tonmana
+  const framesByTonmana: Record<number, { name: string; frames: any[] }> = {};
+  for (const sf of parsed) {
+    const ti = sf.tonmana_id ?? sf.tonmana_index ?? 1;
+    if (!framesByTonmana[ti]) {
+      framesByTonmana[ti] = { name: sf.tonmana_name ?? `トンマナ ${ti}`, frames: [] };
+    }
+    framesByTonmana[ti].frames.push(sf);
+  }
+  const tonmanaIds = Object.keys(framesByTonmana).map(Number).sort();
+
+  // Get vcon cut data for telop overlay
+  const getVconCut = (patternName: string, cutNumber: number) => {
+    const pattern = vconData.find((v: any) => v.pattern_name === patternName);
+    if (!pattern) return null;
+    return pattern.cuts?.find((c: any) => c.cut_number === cutNumber) || null;
+  };
+
+  if (parsed.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        <Image className="h-12 w-12 mx-auto mb-3 opacity-30" />
+        <p>絵コンテデータがありません</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-2 gap-3">
-      {Array.from({ length: count }).map((_, i) => (
-        <ImagePlaceholder key={i} label={`シーン ${i + 1}`} aspect="16/9" size="sm" />
-      ))}
-    </div>
+    <Tabs defaultValue={String(tonmanaIds[0] ?? 1)} className="space-y-4">
+      {tonmanaIds.length > 1 && (
+        <TabsList>
+          {tonmanaIds.map(ti => (
+            <TabsTrigger key={ti} value={String(ti)}>トンマナ {ti}</TabsTrigger>
+          ))}
+        </TabsList>
+      )}
+      {tonmanaIds.map(ti => {
+        const group = framesByTonmana[ti];
+        const sorted = [...group.frames].sort((a, b) => (a.cut_number ?? 0) - (b.cut_number ?? 0));
+        return (
+          <TabsContent key={ti} value={String(ti)} className="space-y-3">
+            {tonmanaIds.length > 1 && (
+              <p className="text-sm text-muted-foreground font-medium">{group.name}</p>
+            )}
+            <div className="grid grid-cols-3 gap-3">
+              {sorted.map((frame: any, fi: number) => {
+                const vconCut = getVconCut(frame.pattern_name, frame.cut_number);
+                const telop = frame.telop || vconCut?.telop || '';
+                const annotations = frame.annotations || vconCut?.annotations || [];
+                return (
+                  <div key={fi} className="border border-border rounded-lg overflow-hidden">
+                    <div className="relative aspect-video">
+                      {frame.image_url ? (
+                        <img src={frame.image_url} alt={`Cut ${frame.cut_number}`} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-muted flex items-center justify-center">
+                          <Image className="w-10 h-10 text-muted-foreground/30" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                      {telop && (
+                        <div className="absolute inset-0 flex items-center justify-center px-2">
+                          <p className="text-white text-xs font-bold text-center leading-tight drop-shadow-lg whitespace-pre-line"
+                             style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}>
+                            {telop}
+                          </p>
+                        </div>
+                      )}
+                      {annotations.length > 0 && (
+                        <div className="absolute bottom-1 left-1 right-1">
+                          {annotations.map((a: string, ai: number) => (
+                            <p key={ai} className="text-white/70 text-[8px] leading-tight">{a}</p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-2">
+                      <p className="text-xs font-medium truncate">Cut {frame.cut_number}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </TabsContent>
+        );
+      })}
+    </Tabs>
   );
 };
 
@@ -1792,6 +1897,7 @@ const PreviewPanel = ({
     bgm_suggestion: 'AIが最適なBGMを選定しています...',
     vcon: 'AIがVコン設計データを生成しています...',
     styleframe: 'AIがスタイルフレームを生成しています...',
+    ekonte: 'AIが絵コンテを生成しています...',
   };
 
   // Show voice selection or voice generating state
@@ -2037,7 +2143,7 @@ const PreviewPanel = ({
         case 5: mainContent = <PreviewBGM genStepResult={displayData} jobId={jobId} onBgmUpdated={onResultUpdated} />; break;
         case 6: mainContent = <PreviewVCon genStepResult={displayData} narrationAudioMap={narrationAudioMap} narrationAudioMapB={narrationAudioMapB} selectedGender={selectedGender} jobId={jobId} />; break;
         case 7: mainContent = <PreviewStyleFrames genStepResult={displayData} jobId={jobId} />; break;
-        case 8: mainContent = <PreviewEkonte total={total} />; break;
+        case 8: mainContent = <PreviewEkonte genStepResult={displayData} jobId={jobId} />; break;
         case 9: mainContent = <PreviewFinalVideo total={total} state={state} aspect="16/9" resolution="1920 × 1080" />; break;
         case 10: mainContent = <PreviewFinalVideo total={total} state={state} aspect="9/16" resolution="1080 × 1920" />; break;
         default: return null;

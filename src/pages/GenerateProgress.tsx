@@ -640,7 +640,7 @@ const GenerateProgress = () => {
 
         // Also check bgm_suggestion and vcon steps for approval
         if (!foundApproval && !styleSelectionPendingRef.current) {
-          for (const extraKey of ['bgm_suggestion', 'vcon', 'styleframe']) {
+          for (const extraKey of ['bgm_suggestion', 'vcon', 'styleframe', 'ekonte']) {
             const gs = steps.find((s: any) => s.step_key === extraKey);
             const pIdx = stepKeyToIndex.get(extraKey);
             if (gs?.status === 'completed' && pIdx !== undefined && !dummyAnimationStartedRef.current) {
@@ -675,7 +675,7 @@ const GenerateProgress = () => {
       // ── Check if all data-driven steps (including bgm_suggestion) completed ──
       const allDataDone = DATA_DRIVEN_STEP_KEYS.every(key => {
         const gs = steps.find((s: any) => s.step_key === key);
-        if (!gs && (key === 'bgm_suggestion' || key === 'vcon' || key === 'styleframe') && state.creativeType !== 'video') return true;
+        if (!gs && (key === 'bgm_suggestion' || key === 'vcon' || key === 'styleframe' || key === 'ekonte') && state.creativeType !== 'video') return true;
         return gs?.status === 'completed' || gs?.status === 'skipped';
       });
 
