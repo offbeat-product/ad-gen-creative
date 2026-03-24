@@ -1315,7 +1315,13 @@ const GenerateProgress = () => {
         if (nextDummyIdx >= 0) setTimeout(() => setActiveIndex(nextDummyIdx), 300);
       }
     } else if (stepKey === 'styleframe') {
-      // Styleframe skipped → start dummy animations for ekonte and beyond
+      // Styleframe skipped → trigger WF9 (Ekonte)
+      if (state.creativeType === 'video' && !wf9TriggeredRef.current) {
+        wf9TriggeredRef.current = true;
+        triggerEkonte();
+      }
+    } else if (stepKey === 'ekonte') {
+      // Ekonte skipped → start dummy animations
       dummyAnimationStartedRef.current = true;
       setDummyPhaseStarted(true);
       const nextDummyIdx = pipeline.findIndex((s, i) => i > idx && !DATA_DRIVEN_STEP_KEYS.includes(s.stepKey) && s.stepKey !== 'narration');
@@ -1323,7 +1329,7 @@ const GenerateProgress = () => {
     }
 
     console.log(`[Skip] Skipped step ${stepKey}, triggering next step`);
-  }, [jobId, jobData, pipeline, genStepsData, jobMeta, state.creativeType, firstDummyIndex, triggerBgmSuggestion, triggerVcon]);
+  }, [jobId, jobData, pipeline, genStepsData, jobMeta, state.creativeType, firstDummyIndex, triggerBgmSuggestion, triggerVcon, triggerEkonte]);
 
   // ── Handle retry: reset failed step and re-trigger webhook ──
   const handleRetryStep = useCallback(async (idx: number) => {
