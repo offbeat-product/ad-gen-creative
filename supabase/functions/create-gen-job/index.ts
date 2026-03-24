@@ -111,6 +111,11 @@ serve(async (req) => {
         step_key: "styleframe",
         step_label: "スタイルフレーム作成",
       });
+      steps.push({
+        step_number: 9,
+        step_key: "ekonte",
+        step_label: "絵コンテ作成",
+      });
     }
 
     const { error: stepsError } = await adminClient.from("gen_steps").insert(
