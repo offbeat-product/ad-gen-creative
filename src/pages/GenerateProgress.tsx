@@ -239,8 +239,16 @@ const TEXT_STEP_KEYS = ['appeal_axis', 'copy', 'composition', 'narration_script'
 const DATA_DRIVEN_STEP_KEYS = [...TEXT_STEP_KEYS, 'bgm_suggestion', 'vcon', 'styleframe', 'ekonte'];
 
 /* Map pipeline stepKey to DB step_key (narration ↔ narration_audio) */
-const pipelineKeyToDbKey = (k: string) => k === 'narration' ? 'narration_audio' : k;
-const dbKeyToPipelineKey = (k: string) => k === 'narration_audio' ? 'narration' : k;
+const pipelineKeyToDbKey = (k: string) => {
+  if (k === 'narration') return 'narration_audio';
+  if (k === 'ekonte') return 'storyboard';
+  return k;
+};
+const dbKeyToPipelineKey = (k: string) => {
+  if (k === 'narration_audio') return 'narration';
+  if (k === 'storyboard') return 'ekonte';
+  return k;
+};
 
 /* ─── Trigger a specific next step webhook ─── */
 
@@ -498,8 +506,7 @@ const GenerateProgress = () => {
       let latestCompletedIdx = -1;
 
       steps.forEach((gs: any) => {
-        // Map DB step_key 'narration_audio' to pipeline stepKey 'narration'
-        const mappedKey = gs.step_key === 'narration_audio' ? 'narration' : gs.step_key;
+        const mappedKey = dbKeyToPipelineKey(gs.step_key);
         const pipelineIdx = stepKeyToIndex.get(mappedKey);
         if (pipelineIdx === undefined) return;
 
@@ -622,7 +629,7 @@ const GenerateProgress = () => {
         // Iterate forward to find the first completed step whose next step is pending
         for (let i = 0; i < TEXT_STEP_KEYS.length; i++) {
           const key = TEXT_STEP_KEYS[i];
-          const gs = steps.find((s: any) => s.step_key === key);
+          const gs = steps.find((s: any) => s.step_key === pipelineKeyToDbKey(key));
           const pIdx = stepKeyToIndex.get(key);
           if (gs?.status === 'completed' && pIdx !== undefined) {
             const nextKey = TEXT_STEP_KEYS[i + 1];
@@ -653,7 +660,7 @@ const GenerateProgress = () => {
         // Also check bgm_suggestion, vcon, styleframe, ekonte steps for approval
         if (!foundApproval && !styleSelectionPendingRef.current) {
           for (const extraKey of ['bgm_suggestion', 'vcon', 'styleframe', 'ekonte']) {
-            const gs = steps.find((s: any) => s.step_key === extraKey);
+            const gs = steps.find((s: any) => dbKeyToPipelineKey(s.step_key) === extraKey);
             const pIdx = stepKeyToIndex.get(extraKey);
             if (gs?.status === 'completed' && pIdx !== undefined && !dummyAnimationStartedRef.current) {
               // Skip showing approval if next step webhook was already triggered
@@ -665,7 +672,7 @@ const GenerateProgress = () => {
               const currentDataIdx = DATA_DRIVEN_STEP_KEYS.indexOf(extraKey);
               const immediateNextKey = DATA_DRIVEN_STEP_KEYS[currentDataIdx + 1];
               const immediateNextStep = immediateNextKey
-                ? steps.find((s: any) => s.step_key === immediateNextKey)
+                ? steps.find((s: any) => s.step_key === pipelineKeyToDbKey(immediateNextKey))
                 : null;
 
               if (!immediateNextKey || !immediateNextStep || immediateNextStep.status === 'pending') {
@@ -1643,7 +1650,7 @@ const GenerateProgress = () => {
   const handleStepClick = (idx: number) => {
     // Allow clicking on completed, skipped, errored, or in-progress steps
     const pipelineStep = pipeline[idx];
-    const genStep = pipelineStep ? genStepsData.find(gs => gs.step_key === pipelineStep.stepKey) : null;
+    const genStep = pipelineStep ? genStepsData.find(gs => gs.step_key === pipelineKeyToDbKey(pipelineStep.stepKey)) : null;
     const hasStatus = completedIndexes.has(idx) || skippedIndexes.has(idx) || !!errorMap[idx] ||
       (genStep && (genStep.status === 'processing' || genStep.status === 'in_progress'));
     if (hasStatus || completedIndexes.has(idx)) {
@@ -1658,7 +1665,7 @@ const GenerateProgress = () => {
     if (selectedStepIndex === null) return null;
     const pipelineStep = pipeline[selectedStepIndex];
     if (!pipelineStep) return null;
-    const genStep = genStepsData.find(gs => gs.step_key === pipelineStep.stepKey);
+    const genStep = genStepsData.find(gs => gs.step_key === pipelineKeyToDbKey(pipelineStep.stepKey));
     return genStep?.result ?? null;
   })();
 
@@ -1771,7 +1778,7 @@ const GenerateProgress = () => {
         </div>
         <div className="flex-1 overflow-y-auto">
           <PreviewPanel
-            pipeline={pipeline} selectedStepIndex={selectedStepIndex} completedIndexes={completedIndexes}
+            pipeline={pipeline} activeIndex={activeIndex} selectedStepIndex={selectedStepIndex} completedIndexes={completedIndexes}
             skippedIndexes={skippedIndexes}
             allDone={allDone} total={total} state={state} waitingForApproval={waitingForApproval}
             effectiveAutoMode={effectiveAutoMode} genStepResult={selectedGenStepResult} appealAxesResult={appealAxesStepResult}
@@ -1804,7 +1811,7 @@ const GenerateProgress = () => {
         </div>
         <div className="w-[60%] overflow-y-auto">
           <PreviewPanel
-            pipeline={pipeline} selectedStepIndex={selectedStepIndex} completedIndexes={completedIndexes}
+            pipeline={pipeline} activeIndex={activeIndex} selectedStepIndex={selectedStepIndex} completedIndexes={completedIndexes}
             skippedIndexes={skippedIndexes}
             allDone={allDone} total={total} state={state} waitingForApproval={waitingForApproval}
             effectiveAutoMode={effectiveAutoMode} genStepResult={selectedGenStepResult} appealAxesResult={appealAxesStepResult}

@@ -29,6 +29,7 @@ import BgmUploader from './BgmUploader';
 
 interface Props {
   pipeline: PipelineStep[];
+  activeIndex: number;
   selectedStepIndex: number | null;
   completedIndexes: Set<number>;
   skippedIndexes?: Set<number>;
@@ -231,6 +232,12 @@ const AccordionSection = ({ title, defaultOpen = false, children }: { title: str
       )}
     </div>
   );
+};
+
+const getDbStepKey = (stepKey: string) => {
+  if (stepKey === 'narration') return 'narration_audio';
+  if (stepKey === 'ekonte') return 'storyboard';
+  return stepKey;
 };
 
 /* ─── Step-specific preview renderers ─── */
@@ -1552,27 +1559,22 @@ const PreviewEkonte = ({ genStepResult, jobId }: { genStepResult: any; jobId?: s
     })();
   }, [jobId]);
 
-  // Parse ekonte result
   const parsed = (() => {
     if (!genStepResult) return [];
-    const raw = typeof genStepResult === 'string' ? JSON.parse(genStepResult) : genStepResult;
-    return raw?.ekonte_frames || raw?.styleframes || raw?.frames || [];
+    try {
+      let raw = typeof genStepResult === 'string' ? JSON.parse(genStepResult) : genStepResult;
+      if (typeof raw === 'string') {
+        raw = JSON.parse(raw);
+      }
+      return raw?.storyboard || raw?.ekonte_frames || raw?.styleframes || raw?.frames || [];
+    } catch {
+      return [];
+    }
   })();
 
-  // Group by tonmana
-  const framesByTonmana: Record<number, { name: string; frames: any[] }> = {};
-  for (const sf of parsed) {
-    const ti = sf.tonmana_id ?? sf.tonmana_index ?? 1;
-    if (!framesByTonmana[ti]) {
-      framesByTonmana[ti] = { name: sf.tonmana_name ?? `トンマナ ${ti}`, frames: [] };
-    }
-    framesByTonmana[ti].frames.push(sf);
-  }
-  const tonmanaIds = Object.keys(framesByTonmana).map(Number).sort();
-
-  // Get vcon cut data for telop overlay
   const getVconCut = (patternName: string, cutNumber: number) => {
-    const pattern = vconData.find((v: any) => v.pattern_name === patternName);
+    const base = patternName.replace(/[-_]\d+$/, '');
+    const pattern = vconData.find((v: any) => v.pattern_name === patternName || v.pattern_name === base);
     if (!pattern) return null;
     return pattern.cuts?.find((c: any) => c.cut_number === cutNumber) || null;
   };
@@ -1586,66 +1588,98 @@ const PreviewEkonte = ({ genStepResult, jobId }: { genStepResult: any; jobId?: s
     );
   }
 
-  return (
-    <Tabs defaultValue={String(tonmanaIds[0] ?? 1)} className="space-y-4">
-      {tonmanaIds.length > 1 && (
-        <TabsList>
-          {tonmanaIds.map(ti => (
-            <TabsTrigger key={ti} value={String(ti)}>トンマナ {ti}</TabsTrigger>
-          ))}
-        </TabsList>
-      )}
-      {tonmanaIds.map(ti => {
-        const group = framesByTonmana[ti];
-        const sorted = [...group.frames].sort((a, b) => (a.cut_number ?? 0) - (b.cut_number ?? 0));
-        return (
-          <TabsContent key={ti} value={String(ti)} className="space-y-3">
-            {tonmanaIds.length > 1 && (
-              <p className="text-sm text-muted-foreground font-medium">{group.name}</p>
-            )}
-            <div className="grid grid-cols-3 gap-3">
-              {sorted.map((frame: any, fi: number) => {
-                const vconCut = getVconCut(frame.pattern_name, frame.cut_number);
-                const telop = frame.telop || vconCut?.telop || '';
-                const annotations = frame.annotations || vconCut?.annotations || [];
-                return (
-                  <div key={fi} className="border border-border rounded-lg overflow-hidden">
-                    <div className="relative aspect-video">
-                      {frame.image_url ? (
-                        <img src={frame.image_url} alt={`Cut ${frame.cut_number}`} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-muted flex items-center justify-center">
-                          <Image className="w-10 h-10 text-muted-foreground/30" />
-                        </div>
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                      {telop && (
-                        <div className="absolute inset-0 flex items-center justify-center px-2">
-                          <p className="text-white text-xs font-bold text-center leading-tight drop-shadow-lg whitespace-pre-line"
-                             style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.8)' }}>
-                            {telop}
-                          </p>
-                        </div>
-                      )}
-                      {annotations.length > 0 && (
-                        <div className="absolute bottom-1 left-1 right-1">
-                          {annotations.map((a: string, ai: number) => (
-                            <p key={ai} className="text-white/70 text-[8px] leading-tight">{a}</p>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-2">
-                      <p className="text-xs font-medium truncate">Cut {frame.cut_number}</p>
-                    </div>
-                  </div>
-                );
-              })}
+  const groupedByPattern = parsed.reduce((acc: Record<string, any[]>, frame: any) => {
+    const patternName = frame.pattern_name || 'A';
+    if (!acc[patternName]) acc[patternName] = [];
+    acc[patternName].push(frame);
+    return acc;
+  }, {});
+  const patternNames = Object.keys(groupedByPattern).sort();
+
+  const renderCard = (frame: any) => {
+    const vconCut = getVconCut(frame.pattern_name || 'A', frame.cut_number || 1);
+    const telop = frame.telop || vconCut?.telop || '';
+    const annotations = frame.annotations || vconCut?.annotations || [];
+    const section = frame.section || vconCut?.section || '';
+    return (
+      <div key={`${frame.pattern_name}-${frame.cut_number}`} className="border border-border rounded-lg overflow-hidden">
+        <div className="relative aspect-video">
+          {frame.image_url ? (
+            <img src={frame.image_url} alt={`Cut ${frame.cut_number}`} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-muted flex items-center justify-center">
+              <Image className="w-10 h-10 text-muted-foreground/30" />
             </div>
-          </TabsContent>
-        );
-      })}
-    </Tabs>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+          {telop && (
+            <div className="absolute inset-0 flex items-center justify-center px-4">
+              <p
+                className="text-center whitespace-pre-line leading-tight drop-shadow-lg"
+                style={{
+                  color: '#fff',
+                  fontSize: 'clamp(0.875rem, 2vw, 1.25rem)',
+                  fontWeight: 'bold',
+                  textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
+                }}
+              >
+                {telop}
+              </p>
+            </div>
+          )}
+          {annotations.length > 0 && (
+            <div className="absolute bottom-2 left-2 right-2">
+              {annotations.map((annotation: string, i: number) => (
+                <p key={i} className="leading-tight" style={{ color: 'rgba(255,255,255,0.72)', fontSize: '10px' }}>
+                  {annotation}
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="p-2 space-y-1">
+          <p className="text-xs font-medium">C{frame.cut_number}{section ? ` - ${section}` : ''}</p>
+          {frame.prompt && (
+            <details className="text-xs text-muted-foreground">
+              <summary className="cursor-pointer hover:text-foreground">プロンプト</summary>
+              <p className="mt-1 text-[11px] leading-relaxed">{frame.prompt}</p>
+            </details>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      <Badge className="bg-success-wash text-success text-xs">AI生成データ</Badge>
+      {patternNames.length > 1 ? (
+        <Tabs defaultValue={patternNames[0]}>
+          <TabsList className="w-full flex-wrap h-auto gap-1">
+            {patternNames.map((patternName) => (
+              <TabsTrigger key={patternName} value={patternName} className="text-xs font-mono">
+                パターン{patternName}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {patternNames.map((patternName) => (
+            <TabsContent key={patternName} value={patternName} className="mt-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                {groupedByPattern[patternName]
+                  .sort((a: any, b: any) => (a.cut_number ?? 0) - (b.cut_number ?? 0))
+                  .map(renderCard)}
+              </div>
+            </TabsContent>
+          ))}
+        </Tabs>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          {parsed
+            .sort((a: any, b: any) => (a.cut_number ?? 0) - (b.cut_number ?? 0))
+            .map(renderCard)}
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -1843,7 +1877,7 @@ const generateDownloadText = (
 /* ─── Preview Panel ─── */
 
 const PreviewPanel = ({
-  pipeline, selectedStepIndex, completedIndexes, skippedIndexes, allDone, total, state,
+  pipeline, activeIndex, selectedStepIndex, completedIndexes, skippedIndexes, allDone, total, state,
   waitingForApproval, effectiveAutoMode, genStepResult, appealAxesResult, copyStepResult, compositionStepResult, narrationScriptResult, jobId,
   voiceSelectionPending, voiceGenerating, narrationAudioMap, narrationAudioMapB, selectedGender,
   errorMap, genStepsData, styleSelectionPending,
@@ -1878,15 +1912,16 @@ const PreviewPanel = ({
     if (selectedStepIndex === null) return null;
     const pipelineStep = pipeline[selectedStepIndex];
     if (!pipelineStep || !genStepsData) return null;
-    const gs = genStepsData.find((s: any) => s.step_key === pipelineStep.stepKey);
+    const gs = genStepsData.find((s: any) => s.step_key === getDbStepKey(pipelineStep.stepKey));
     return gs?.status ?? null;
   })();
 
   const selectedStepError = selectedStepIndex !== null ? errorMap?.[selectedStepIndex] : null;
   const isSelectedCompleted = selectedStepIndex !== null && completedIndexes.has(selectedStepIndex);
   const isSelectedSkipped = selectedStepIndex !== null && skippedIndexes?.has(selectedStepIndex);
-  const isSelectedInProgress = selectedStepStatus === 'processing' || selectedStepStatus === 'in_progress';
   const isSelectedFailed = selectedStepStatus === 'failed' || selectedStepStatus === 'error';
+  const isSelectedActivelyGenerating = selectedStepIndex !== null && activeIndex === selectedStepIndex && !isSelectedCompleted && !isSelectedSkipped && !isSelectedFailed;
+  const isSelectedInProgress = selectedStepStatus === 'processing' || selectedStepStatus === 'in_progress' || isSelectedActivelyGenerating;
 
   const STEP_RUNNING_MESSAGES: Record<string, string> = {
     appeal_axis: 'AIが訴求軸を生成しています...',
@@ -2024,6 +2059,26 @@ const PreviewPanel = ({
         <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
           <SkipForward className="h-12 w-12 text-muted-foreground mb-4" />
           <p className="text-lg font-medium text-muted-foreground">このステップはスキップされました</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (selectedStepIndex !== null && step?.stepKey === 'ekonte' && selectedStepStatus === 'pending' && !isSelectedInProgress && !isSelectedCompleted) {
+    return (
+      <div className="flex flex-col h-full">
+        <div className="px-6 pt-5 pb-3">
+          <div className="flex items-center gap-3">
+            <step.icon className="h-5 w-5 text-secondary" />
+            <h2 className="text-lg font-bold font-display">{step.label}</h2>
+            <Badge className="ml-auto bg-muted text-muted-foreground">待機中</Badge>
+          </div>
+        </div>
+        <Separator />
+        <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
+          <PenTool className="h-12 w-12 text-muted-foreground mb-4" />
+          <p className="text-lg font-medium mb-2">絵コンテはまだ開始されていません</p>
+          <p className="text-sm text-muted-foreground">スタイルフレームを承認すると絵コンテの生成が開始されます。</p>
         </div>
       </div>
     );
@@ -2219,6 +2274,8 @@ const PreviewPanel = ({
                 const currentStep = pipeline[waitingForApproval];
                 if (currentStep?.stepKey === 'narration') {
                   setVoiceApprovalOpen(true);
+                } else if (currentStep?.stepKey === 'ekonte') {
+                  toast({ title: '横動画作成は準備中です' });
                 } else {
                   onApprove(waitingForApproval);
                 }
