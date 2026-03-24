@@ -1792,6 +1792,7 @@ const PreviewPanel = ({
     bgm_suggestion: 'AIが最適なBGMを選定しています...',
     vcon: 'AIがVコン設計データを生成しています...',
     styleframe: 'AIがスタイルフレームを生成しています...',
+    ekonte: 'AIが絵コンテを生成しています...',
   };
 
   // Show voice selection or voice generating state
