@@ -1436,68 +1436,35 @@ const PreviewStyleFrames = ({ genStepResult, jobId }: { genStepResult?: any; job
   };
 
   if (parsed && Array.isArray(parsed) && parsed.length > 0) {
-    // Check if we have tonmana grouping from gen_patterns
-    const hasTonmana = Object.keys(tonmanaGroups).length > 1;
+    // Group frames by tonmana_id directly from styleframe result data
+    const framesByTonmana: Record<number, { name: string; frames: any[] }> = {};
+    for (const sf of parsed) {
+      const ti = sf.tonmana_id ?? 1;
+      if (!framesByTonmana[ti]) {
+        framesByTonmana[ti] = { name: sf.tonmana_name ?? `トンマナ ${ti}`, frames: [] };
+      }
+      framesByTonmana[ti].frames.push(sf);
+    }
+
+    const tonmanaKeys = Object.keys(framesByTonmana).map(Number).sort((a, b) => a - b);
+    const hasTonmana = tonmanaKeys.length > 1;
 
     if (hasTonmana) {
-      // Group frames by tonmana
-      const tonmanaKeys = Object.keys(tonmanaGroups).sort((a, b) => Number(a) - Number(b));
-      const framesByTonmana: Record<string, any[]> = {};
-
-      for (const key of tonmanaKeys) {
-        framesByTonmana[key] = [];
-      }
-
-      for (const sf of parsed) {
-        const pn = sf.pattern_name ?? 'A';
-        const base = pn.replace(/[-_]?\d+$/, '');
-        // Find which tonmana this pattern belongs to by suffix
-        // e.g., "A-1" → tonmana 1, "A-2" → tonmana 2
-        const suffixMatch = pn.match(/[-_](\d+)$/);
-        const suffix = suffixMatch ? suffixMatch[1] : null;
-
-        let assigned = false;
-        if (suffix && framesByTonmana[suffix]) {
-          framesByTonmana[suffix].push(sf);
-          assigned = true;
-        }
-
-        if (!assigned) {
-          // Try matching by gen_patterns patternIds
-          for (const [key, group] of Object.entries(tonmanaGroups)) {
-            if ((group as any).patternIds?.has(pn) || (group as any).patternIds?.has(base)) {
-              if (!framesByTonmana[key]) framesByTonmana[key] = [];
-              framesByTonmana[key].push(sf);
-              assigned = true;
-              break;
-            }
-          }
-        }
-
-        if (!assigned) {
-          // Default to first tonmana
-          const firstKey = tonmanaKeys[0];
-          if (firstKey) {
-            framesByTonmana[firstKey].push(sf);
-          }
-        }
-      }
-
       return (
         <div className="space-y-4">
           <Badge className="bg-success-wash text-success text-xs">AI生成データ</Badge>
-          <Tabs defaultValue={tonmanaKeys[0]}>
+          <Tabs defaultValue={String(tonmanaKeys[0])}>
             <TabsList className="w-full flex-wrap h-auto gap-1">
               {tonmanaKeys.map(key => (
-                <TabsTrigger key={key} value={key} className="text-xs">
-                  トンマナ {key}{(tonmanaGroups[key] as any)?.name ? ` — ${(tonmanaGroups[key] as any).name}` : ''}
+                <TabsTrigger key={key} value={String(key)} className="text-xs">
+                  トンマナ {key} — {framesByTonmana[key].name}
                 </TabsTrigger>
               ))}
             </TabsList>
             {tonmanaKeys.map(key => (
-              <TabsContent key={key} value={key}>
+              <TabsContent key={key} value={String(key)}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-3">
-                  {(framesByTonmana[key] || [])
+                  {framesByTonmana[key].frames
                     .sort((a: any, b: any) => (a.cut_number ?? 0) - (b.cut_number ?? 0))
                     .map((sf: any) => renderFrameCard(sf))}
                 </div>
