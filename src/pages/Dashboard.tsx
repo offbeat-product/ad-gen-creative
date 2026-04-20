@@ -82,6 +82,45 @@ const Dashboard = () => {
           </table>
         </div>
       </motion.div>
+
+      {/* Ad Brain Auto-Load */}
+      {currentProjectId && (
+        <motion.div variants={fadeUp}>
+          <div className="flex items-center gap-2 mb-4">
+            <Database className="h-5 w-5 text-secondary" />
+            <h2 className="text-lg font-semibold font-display">Ad Brain ナレッジ自動ロード</h2>
+          </div>
+          <div className="rounded-xl border bg-card p-6 space-y-4">
+            {ctxLoading && <p className="text-sm text-muted-foreground">読み込み中...</p>}
+            {!ctxLoading && !context && <p className="text-sm text-muted-foreground">データなし</p>}
+            {!ctxLoading && context && (
+              <>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="rounded-lg bg-accent p-4 text-center">
+                    <div className="text-xs text-muted-foreground mb-1">広告ルール</div>
+                    <div className="text-2xl font-bold tabular-nums text-secondary">{context.rules.length}件</div>
+                  </div>
+                  <div className="rounded-lg bg-accent p-4 text-center">
+                    <div className="text-xs text-muted-foreground mb-1">参考素材</div>
+                    <div className="text-2xl font-bold tabular-nums text-secondary">{context.materials.length}件</div>
+                  </div>
+                  <div className="rounded-lg bg-accent p-4 text-center">
+                    <div className="text-xs text-muted-foreground mb-1">修正パターン</div>
+                    <div className="text-2xl font-bold tabular-nums text-secondary">{context.corrections.length}件</div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm pt-2 border-t">
+                  <div><span className="text-muted-foreground">案件:</span> <span className="font-medium">{context.project.name}</span></div>
+                  <div><span className="text-muted-foreground">作品名:</span> <span className="font-medium">{context.project.work_title ?? '(未設定)'}</span></div>
+                  <div><span className="text-muted-foreground">クライアント:</span> <span className="font-medium">{context.project.product.client.name}</span></div>
+                  <div><span className="text-muted-foreground">商材:</span> <span className="font-medium">{context.project.product.name}</span></div>
+                  <div className="sm:col-span-2"><span className="text-muted-foreground">コピーライト:</span> <span className="font-medium">{context.project.copyright_text ?? '(未設定)'}</span></div>
+                </div>
+              </>
+            )}
+          </div>
+        </motion.div>
+      )}
     </motion.div>
   );
 };
