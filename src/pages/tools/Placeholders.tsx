@@ -1,36 +1,41 @@
-import { ReactNode } from 'react';
-import { Target, Layout, FileText, Mic, Image as ImageIcon, Film, Maximize2 } from 'lucide-react';
+interface ToolPlaceholderProps {
+  emoji: string;
+  title: string;
+  description: string;
+}
 
-const ToolPlaceholder = ({ icon, title }: { icon: ReactNode; title: string }) => (
-  <div className="max-w-4xl mx-auto space-y-6 p-6">
-    <div className="flex items-center gap-3">
-      <div className="h-10 w-10 rounded-lg bg-primary-wash text-primary flex items-center justify-center">
-        {icon}
-      </div>
-      <h1 className="text-2xl font-bold">{title}</h1>
+const ToolPlaceholder = ({ emoji, title, description }: ToolPlaceholderProps) => (
+  <div className="max-w-4xl mx-auto p-6 space-y-6">
+    <div className="space-y-1">
+      <h1 className="text-2xl font-bold">{emoji} {title}</h1>
+      <p className="text-sm text-muted-foreground">{description}</p>
     </div>
-    <p className="text-muted-foreground">実装予定</p>
+    <div className="rounded-xl border bg-muted/30 p-8 text-center">
+      <p className="text-sm text-muted-foreground">
+        クライアント→商材→案件を選択するウィザードをここに実装予定
+      </p>
+    </div>
   </div>
 );
 
 export const AppealAxisPage = () => (
-  <ToolPlaceholder icon={<Target className="h-5 w-5" />} title="訴求軸・コピー生成" />
+  <ToolPlaceholder emoji="🎯" title="訴求軸・コピー生成" description="LP URLや過去データから訴求軸・コピーを生成します" />
 );
 export const CompositionPage = () => (
-  <ToolPlaceholder icon={<Layout className="h-5 w-5" />} title="構成案・字コンテ生成" />
+  <ToolPlaceholder emoji="📋" title="構成案・字コンテ生成" description="訴求軸から構成案・字コンテを生成します" />
 );
 export const NarrationScriptPage = () => (
-  <ToolPlaceholder icon={<FileText className="h-5 w-5" />} title="NA原稿生成" />
+  <ToolPlaceholder emoji="📝" title="NA原稿生成" description="構成案・字コンテからNA原稿を生成します" />
 );
 export const NarrationAudioPage = () => (
-  <ToolPlaceholder icon={<Mic className="h-5 w-5" />} title="ナレーション音声生成" />
+  <ToolPlaceholder emoji="🎙" title="ナレーション音声生成" description="NA原稿から ElevenLabs を使って音声ファイルを生成します" />
 );
 export const ImageGenerationPage = () => (
-  <ToolPlaceholder icon={<ImageIcon className="h-5 w-5" />} title="イメージ画像生成" />
+  <ToolPlaceholder emoji="🎨" title="イメージ画像生成" description="プロンプトや字コンテからイメージ画像を生成します" />
 );
 export const CarouselVideoPage = () => (
-  <ToolPlaceholder icon={<Film className="h-5 w-5" />} title="カルーセル動画生成" />
+  <ToolPlaceholder emoji="🎴" title="カルーセル動画生成" description="原作イラストからカルーセル動画を生成します" />
 );
 export const VideoResizePage = () => (
-  <ToolPlaceholder icon={<Maximize2 className="h-5 w-5" />} title="動画リサイズ" />
+  <ToolPlaceholder emoji="♻️" title="動画リサイズ" description="横動画を縦動画・スクエア動画にリサイズします" />
 );

@@ -6,7 +6,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { CurrentProjectProvider } from "@/contexts/CurrentProjectContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import RequireProject from "@/components/RequireProject";
 import AppLayout from "@/components/AppLayout";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
@@ -51,13 +50,13 @@ const App = () => (
                 <Route path="/generate/progress" element={<GenerateProgress />} />
                 <Route path="/history" element={<HistoryPage />} />
                 <Route path="/result/:id" element={<GenerationResult />} />
-                <Route path="/tools/appeal-axis" element={<RequireProject><AppealAxisPage /></RequireProject>} />
-                <Route path="/tools/composition" element={<RequireProject><CompositionPage /></RequireProject>} />
-                <Route path="/tools/narration-script" element={<RequireProject><NarrationScriptPage /></RequireProject>} />
-                <Route path="/tools/narration-audio" element={<RequireProject><NarrationAudioPage /></RequireProject>} />
-                <Route path="/tools/image-generation" element={<RequireProject><ImageGenerationPage /></RequireProject>} />
-                <Route path="/tools/carousel-video" element={<RequireProject><CarouselVideoPage /></RequireProject>} />
-                <Route path="/tools/video-resize" element={<RequireProject><VideoResizePage /></RequireProject>} />
+                <Route path="/tools/appeal-axis" element={<AppealAxisPage />} />
+                <Route path="/tools/composition" element={<CompositionPage />} />
+                <Route path="/tools/narration-script" element={<NarrationScriptPage />} />
+                <Route path="/tools/narration-audio" element={<NarrationAudioPage />} />
+                <Route path="/tools/image-generation" element={<ImageGenerationPage />} />
+                <Route path="/tools/carousel-video" element={<CarouselVideoPage />} />
+                <Route path="/tools/video-resize" element={<VideoResizePage />} />
                 <Route path="/settings" element={<Settings />} />
               </Route>
               <Route path="*" element={<NotFound />} />
