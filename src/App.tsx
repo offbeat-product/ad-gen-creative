@@ -14,10 +14,8 @@ import GenerateProgress from "@/pages/GenerateProgress";
 import HistoryPage from "@/pages/History";
 import GenerationResult from "@/pages/GenerationResult";
 import Settings from "@/pages/Settings";
-import {
-  CarouselVideoPage,
-  VideoResizePage,
-} from "@/pages/tools/Placeholders";
+import { CarouselVideoPage } from "@/pages/tools/Placeholders";
+import VideoResizeTool from "@/pages/tools/VideoResizeTool";
 import BannerImageTool from "@/pages/tools/BannerImageTool";
 import NarrationAudioTool from "@/pages/tools/NarrationAudioTool";
 import NarrationScriptTool from "@/pages/tools/NarrationScriptTool";
