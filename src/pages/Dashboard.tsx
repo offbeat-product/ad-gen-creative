@@ -1,9 +1,11 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Building2, Clock } from 'lucide-react';
+import { Sparkles, Building2, Clock, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
 import { useClientCount } from '@/hooks/use-supabase-data';
+import { useCurrentProject } from '@/contexts/CurrentProjectContext';
+import { useProjectContext } from '@/hooks/useProjectContext';
 
 const recentGenerations = [
   { date: '03/16 15:30', client: 'レバレジーズ', product: 'LevTech Rookie', type: '動画30秒', count: '6本', status: '完了' },
