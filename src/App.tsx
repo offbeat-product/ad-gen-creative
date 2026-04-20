@@ -13,6 +13,15 @@ import GenerateProgress from "@/pages/GenerateProgress";
 import HistoryPage from "@/pages/History";
 import GenerationResult from "@/pages/GenerationResult";
 import Settings from "@/pages/Settings";
+import {
+  AppealAxisPage,
+  CompositionPage,
+  NarrationScriptPage,
+  NarrationAudioPage,
+  ImageGenerationPage,
+  CarouselVideoPage,
+  VideoResizePage,
+} from "@/pages/tools/Placeholders";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -39,6 +48,13 @@ const App = () => (
               <Route path="/generate/progress" element={<GenerateProgress />} />
               <Route path="/history" element={<HistoryPage />} />
               <Route path="/result/:id" element={<GenerationResult />} />
+              <Route path="/tools/appeal-axis" element={<AppealAxisPage />} />
+              <Route path="/tools/composition" element={<CompositionPage />} />
+              <Route path="/tools/narration-script" element={<NarrationScriptPage />} />
+              <Route path="/tools/narration-audio" element={<NarrationAudioPage />} />
+              <Route path="/tools/image-generation" element={<ImageGenerationPage />} />
+              <Route path="/tools/carousel-video" element={<CarouselVideoPage />} />
+              <Route path="/tools/video-resize" element={<VideoResizePage />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
             <Route path="*" element={<NotFound />} />

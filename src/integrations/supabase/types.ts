@@ -14,6 +14,143 @@ export type Database = {
   }
   public: {
     Tables: {
+      ambiguous_words: {
+        Row: {
+          category: string
+          created_at: string
+          id: number
+          notes: string | null
+          severity: string
+          updated_at: string
+          word: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          id?: number
+          notes?: string | null
+          severity?: string
+          updated_at?: string
+          word: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: number
+          notes?: string | null
+          severity?: string
+          updated_at?: string
+          word?: string
+        }
+        Relationships: []
+      }
+      app_config: {
+        Row: {
+          key: string
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
+      check_feedback: {
+        Row: {
+          ai_judgment: string
+          check_result_id: string | null
+          created_at: string
+          created_by: string | null
+          feedback_type: string
+          human_judgment: string
+          id: string
+          is_active: boolean
+          item_description: string
+          matched_rule_uuid: string | null
+          process_type: string
+          product_id: string
+          project_id: string | null
+          reason: string | null
+          rule_pattern_id: string | null
+          scope: string
+          updated_at: string
+        }
+        Insert: {
+          ai_judgment: string
+          check_result_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          feedback_type?: string
+          human_judgment: string
+          id?: string
+          is_active?: boolean
+          item_description: string
+          matched_rule_uuid?: string | null
+          process_type: string
+          product_id: string
+          project_id?: string | null
+          reason?: string | null
+          rule_pattern_id?: string | null
+          scope?: string
+          updated_at?: string
+        }
+        Update: {
+          ai_judgment?: string
+          check_result_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          feedback_type?: string
+          human_judgment?: string
+          id?: string
+          is_active?: boolean
+          item_description?: string
+          matched_rule_uuid?: string | null
+          process_type?: string
+          product_id?: string
+          project_id?: string | null
+          reason?: string | null
+          rule_pattern_id?: string | null
+          scope?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "check_feedback_check_result_id_fkey"
+            columns: ["check_result_id"]
+            isOneToOne: false
+            referencedRelation: "check_results"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "check_feedback_matched_rule_uuid_fkey"
+            columns: ["matched_rule_uuid"]
+            isOneToOne: false
+            referencedRelation: "check_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "check_feedback_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "check_feedback_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_with_check_settings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       check_results: {
         Row: {
           check_items: Json | null
@@ -105,63 +242,102 @@ export type Database = {
       }
       check_rules: {
         Row: {
+          auto_deactivated_at: string | null
           category: string
+          client_id: string | null
           created_at: string | null
           created_by: string | null
           description: string
+          false_positive_count: number | null
           id: string
+          improved_description: string | null
           is_active: boolean | null
           is_auto_generated: boolean | null
+          is_quality_ok: boolean
           process_type: string
           product_id: string
+          project_id: string | null
+          quality_checked_at: string | null
+          quality_issues: Json
+          quality_reason: string | null
+          quality_status: string | null
           rule_id: string
+          scope: string
           severity: string
           sort_order: number | null
           source_correction_count: number | null
           source_correction_id: string | null
           source_material_id: string | null
+          source_material_type: string | null
+          source_reference_id: string | null
           source_type: string | null
           title: string | null
           updated_at: string | null
           updated_by: string | null
         }
         Insert: {
+          auto_deactivated_at?: string | null
           category: string
+          client_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description: string
+          false_positive_count?: number | null
           id?: string
+          improved_description?: string | null
           is_active?: boolean | null
           is_auto_generated?: boolean | null
+          is_quality_ok?: boolean
           process_type: string
           product_id: string
+          project_id?: string | null
+          quality_checked_at?: string | null
+          quality_issues?: Json
+          quality_reason?: string | null
+          quality_status?: string | null
           rule_id: string
+          scope?: string
           severity?: string
           sort_order?: number | null
           source_correction_count?: number | null
           source_correction_id?: string | null
           source_material_id?: string | null
+          source_material_type?: string | null
+          source_reference_id?: string | null
           source_type?: string | null
           title?: string | null
           updated_at?: string | null
           updated_by?: string | null
         }
         Update: {
+          auto_deactivated_at?: string | null
           category?: string
+          client_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string
+          false_positive_count?: number | null
           id?: string
+          improved_description?: string | null
           is_active?: boolean | null
           is_auto_generated?: boolean | null
+          is_quality_ok?: boolean
           process_type?: string
           product_id?: string
+          project_id?: string | null
+          quality_checked_at?: string | null
+          quality_issues?: Json
+          quality_reason?: string | null
+          quality_status?: string | null
           rule_id?: string
+          scope?: string
           severity?: string
           sort_order?: number | null
           source_correction_count?: number | null
           source_correction_id?: string | null
           source_material_id?: string | null
+          source_material_type?: string | null
+          source_reference_id?: string | null
           source_type?: string | null
           title?: string | null
           updated_at?: string | null
@@ -169,32 +345,78 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "check_rules_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "check_rules_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "check_rules_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_with_check_settings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "check_rules_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "check_rules_source_reference_id_fkey"
+            columns: ["source_reference_id"]
+            isOneToOne: false
+            referencedRelation: "reference_materials"
+            referencedColumns: ["id"]
+          },
         ]
       }
       clients: {
         Row: {
+          contact_email: string | null
+          contact_person: string | null
           created_at: string | null
           id: string
+          industry: string | null
           name: string
+          notes: string | null
+          payment_terms: string | null
           sort_order: number | null
+          updated_at: string | null
         }
         Insert: {
+          contact_email?: string | null
+          contact_person?: string | null
           created_at?: string | null
           id?: string
+          industry?: string | null
           name: string
+          notes?: string | null
+          payment_terms?: string | null
           sort_order?: number | null
+          updated_at?: string | null
         }
         Update: {
+          contact_email?: string | null
+          contact_person?: string | null
           created_at?: string | null
           id?: string
+          industry?: string | null
           name?: string
+          notes?: string | null
+          payment_terms?: string | null
           sort_order?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -353,6 +575,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "correction_logs_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_with_check_settings"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "correction_logs_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
@@ -371,6 +600,7 @@ export type Database = {
           id: string
           original_content: string
           product_code: string
+          product_id: string | null
           rule_id: string
           rule_title: string | null
           updated_at: string | null
@@ -385,6 +615,7 @@ export type Database = {
           id?: string
           original_content: string
           product_code: string
+          product_id?: string | null
           rule_id: string
           rule_title?: string | null
           updated_at?: string | null
@@ -399,10 +630,203 @@ export type Database = {
           id?: string
           original_content?: string
           product_code?: string
+          product_id?: string | null
           rule_id?: string
           rule_title?: string | null
           updated_at?: string | null
           user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "correction_patterns_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "correction_patterns_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_with_check_settings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creators: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          email: string
+          id: string
+          is_active: boolean | null
+          last_active_at: string | null
+          name: string
+          notes: string | null
+          slack_user_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          email: string
+          id?: string
+          is_active?: boolean | null
+          last_active_at?: string | null
+          name: string
+          notes?: string | null
+          slack_user_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          email?: string
+          id?: string
+          is_active?: boolean | null
+          last_active_at?: string | null
+          name?: string
+          notes?: string | null
+          slack_user_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      email_notification_queue: {
+        Row: {
+          attempt_count: number | null
+          body_data: Json
+          created_at: string | null
+          error_message: string | null
+          id: string
+          notification_type: string
+          recipient_email: string
+          recipient_name: string | null
+          related_comment_ids: string[] | null
+          related_creator_id: string | null
+          related_project_id: string | null
+          scheduled_for: string
+          sent_at: string | null
+          share_token: string | null
+          status: string
+          subject: string
+          updated_at: string | null
+        }
+        Insert: {
+          attempt_count?: number | null
+          body_data?: Json
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          notification_type: string
+          recipient_email: string
+          recipient_name?: string | null
+          related_comment_ids?: string[] | null
+          related_creator_id?: string | null
+          related_project_id?: string | null
+          scheduled_for?: string
+          sent_at?: string | null
+          share_token?: string | null
+          status?: string
+          subject: string
+          updated_at?: string | null
+        }
+        Update: {
+          attempt_count?: number | null
+          body_data?: Json
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          notification_type?: string
+          recipient_email?: string
+          recipient_name?: string | null
+          related_comment_ids?: string[] | null
+          related_creator_id?: string | null
+          related_project_id?: string | null
+          scheduled_for?: string
+          sent_at?: string | null
+          share_token?: string | null
+          status?: string
+          subject?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_notification_queue_related_creator_id_fkey"
+            columns: ["related_creator_id"]
+            isOneToOne: false
+            referencedRelation: "creators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_notification_queue_related_project_id_fkey"
+            columns: ["related_project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      error_reports: {
+        Row: {
+          assigned_to: string | null
+          category: string
+          context_data: Json | null
+          created_at: string
+          description: string
+          id: string
+          page_url: string | null
+          product: string
+          reporter_email: string | null
+          reporter_id: string | null
+          resolution_note: string | null
+          resolved_at: string | null
+          screenshot_url: string | null
+          severity: string
+          status: string
+          title: string
+          updated_at: string
+          user_agent: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          category: string
+          context_data?: Json | null
+          created_at?: string
+          description: string
+          id?: string
+          page_url?: string | null
+          product: string
+          reporter_email?: string | null
+          reporter_id?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          screenshot_url?: string | null
+          severity?: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_agent?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: string
+          context_data?: Json | null
+          created_at?: string
+          description?: string
+          id?: string
+          page_url?: string | null
+          product?: string
+          reporter_email?: string | null
+          reporter_id?: string | null
+          resolution_note?: string | null
+          resolved_at?: string | null
+          screenshot_url?: string | null
+          severity?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_agent?: string | null
         }
         Relationships: []
       }
@@ -738,60 +1162,198 @@ export type Database = {
           },
         ]
       }
+      process_types: {
+        Row: {
+          code: string
+          created_at: string
+          creative_type: string
+          description: string | null
+          is_active: boolean
+          name: string
+          sort_order: number
+          used_by_brain: boolean
+          used_by_check: boolean
+          used_by_gen: boolean
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          creative_type: string
+          description?: string | null
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          used_by_brain?: boolean
+          used_by_check?: boolean
+          used_by_gen?: boolean
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          creative_type?: string
+          description?: string | null
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          used_by_brain?: boolean
+          used_by_check?: boolean
+          used_by_gen?: boolean
+        }
+        Relationships: []
+      }
+      product_check_settings: {
+        Row: {
+          created_at: string | null
+          default_size_specs: Json | null
+          id: string
+          info_lines: string[] | null
+          meta: string | null
+          product_id: string
+          rules_desc: string | null
+          sample_text: string | null
+          sf_enabled: boolean | null
+          updated_at: string | null
+          warning: string | null
+          webhook_paths: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          default_size_specs?: Json | null
+          id?: string
+          info_lines?: string[] | null
+          meta?: string | null
+          product_id: string
+          rules_desc?: string | null
+          sample_text?: string | null
+          sf_enabled?: boolean | null
+          updated_at?: string | null
+          warning?: string | null
+          webhook_paths?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          default_size_specs?: Json | null
+          id?: string
+          info_lines?: string[] | null
+          meta?: string | null
+          product_id?: string
+          rules_desc?: string | null
+          sample_text?: string | null
+          sf_enabled?: boolean | null
+          updated_at?: string | null
+          warning?: string | null
+          webhook_paths?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_check_settings_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_check_settings_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products_with_check_settings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_patterns: {
+        Row: {
+          created_at: string | null
+          default_business_days: number | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          pattern_code: string
+          pattern_name: string
+          product_id: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          default_business_days?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          pattern_code: string
+          pattern_name: string
+          product_id: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          default_business_days?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          pattern_code?: string
+          pattern_name?: string
+          product_id?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_patterns_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_patterns_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_with_check_settings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
+          abbreviation: string | null
           client_id: string | null
           code: string
           color: string | null
           created_at: string | null
           external_product_id: string | null
           id: string
-          info_lines: string[] | null
           label: string
-          meta: string | null
           name: string
-          rules_desc: string | null
-          sample_text: string | null
-          sf_enabled: boolean | null
           sort_order: number | null
-          warning: string | null
-          webhook_paths: Json | null
+          updated_at: string | null
         }
         Insert: {
+          abbreviation?: string | null
           client_id?: string | null
           code: string
           color?: string | null
           created_at?: string | null
           external_product_id?: string | null
           id?: string
-          info_lines?: string[] | null
           label: string
-          meta?: string | null
           name: string
-          rules_desc?: string | null
-          sample_text?: string | null
-          sf_enabled?: boolean | null
           sort_order?: number | null
-          warning?: string | null
-          webhook_paths?: Json | null
+          updated_at?: string | null
         }
         Update: {
+          abbreviation?: string | null
           client_id?: string | null
           code?: string
           color?: string | null
           created_at?: string | null
           external_product_id?: string | null
           id?: string
-          info_lines?: string[] | null
           label?: string
-          meta?: string | null
           name?: string
-          rules_desc?: string | null
-          sample_text?: string | null
-          sf_enabled?: boolean | null
           sort_order?: number | null
-          warning?: string | null
-          webhook_paths?: Json | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -854,6 +1416,104 @@ export type Database = {
         }
         Relationships: []
       }
+      project_audit_log: {
+        Row: {
+          action: string
+          created_at: string | null
+          field_name: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          project_id: string | null
+          user_email: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          field_name: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          project_id?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          field_name?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          project_id?: string | null
+          user_email?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_audit_log_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_collaborators: {
+        Row: {
+          creator_id: string
+          expires_at: string | null
+          id: string
+          invited_at: string | null
+          invited_by: string | null
+          is_active: boolean | null
+          last_accessed_at: string | null
+          notification_enabled: boolean | null
+          project_id: string
+          share_token: string
+        }
+        Insert: {
+          creator_id: string
+          expires_at?: string | null
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          is_active?: boolean | null
+          last_accessed_at?: string | null
+          notification_enabled?: boolean | null
+          project_id: string
+          share_token?: string
+        }
+        Update: {
+          creator_id?: string
+          expires_at?: string | null
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          is_active?: boolean | null
+          last_accessed_at?: string | null
+          notification_enabled?: boolean | null
+          project_id?: string
+          share_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_collaborators_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "creators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_collaborators_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_files: {
         Row: {
           check_result_id: string | null
@@ -867,6 +1527,8 @@ export type Database = {
           file_type: string
           fixed_at: string | null
           fixed_by: string | null
+          gdrive_synced_at: string | null
+          gdrive_url: string | null
           id: string
           parent_file_id: string | null
           pattern_id: string | null
@@ -875,6 +1537,7 @@ export type Database = {
           status: string | null
           submission_type: string
           updated_at: string | null
+          uploaded_by_creator_id: string | null
           version_number: number | null
         }
         Insert: {
@@ -889,6 +1552,8 @@ export type Database = {
           file_type: string
           fixed_at?: string | null
           fixed_by?: string | null
+          gdrive_synced_at?: string | null
+          gdrive_url?: string | null
           id?: string
           parent_file_id?: string | null
           pattern_id?: string | null
@@ -897,6 +1562,7 @@ export type Database = {
           status?: string | null
           submission_type?: string
           updated_at?: string | null
+          uploaded_by_creator_id?: string | null
           version_number?: number | null
         }
         Update: {
@@ -911,6 +1577,8 @@ export type Database = {
           file_type?: string
           fixed_at?: string | null
           fixed_by?: string | null
+          gdrive_synced_at?: string | null
+          gdrive_url?: string | null
           id?: string
           parent_file_id?: string | null
           pattern_id?: string | null
@@ -919,6 +1587,7 @@ export type Database = {
           status?: string | null
           submission_type?: string
           updated_at?: string | null
+          uploaded_by_creator_id?: string | null
           version_number?: number | null
         }
         Relationships: [
@@ -934,6 +1603,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_files_uploaded_by_creator_id_fkey"
+            columns: ["uploaded_by_creator_id"]
+            isOneToOne: false
+            referencedRelation: "creators"
             referencedColumns: ["id"]
           },
         ]
@@ -987,12 +1663,15 @@ export type Database = {
           client_deadline: string | null
           created_at: string
           deadline: string | null
+          expected_height: number | null
+          expected_width: number | null
           id: string
           is_active: boolean
           is_common: boolean
           process_key: string
           process_label: string
           project_id: string
+          skip_size_check: boolean
           sort_order: number
           status: string
           updated_at: string
@@ -1001,12 +1680,15 @@ export type Database = {
           client_deadline?: string | null
           created_at?: string
           deadline?: string | null
+          expected_height?: number | null
+          expected_width?: number | null
           id?: string
           is_active?: boolean
           is_common?: boolean
           process_key: string
           process_label: string
           project_id: string
+          skip_size_check?: boolean
           sort_order?: number
           status?: string
           updated_at?: string
@@ -1015,12 +1697,15 @@ export type Database = {
           client_deadline?: string | null
           created_at?: string
           deadline?: string | null
+          expected_height?: number | null
+          expected_width?: number | null
           id?: string
           is_active?: boolean
           is_common?: boolean
           process_key?: string
           process_label?: string
           project_id?: string
+          skip_size_check?: boolean
           sort_order?: number
           status?: string
           updated_at?: string
@@ -1037,46 +1722,73 @@ export type Database = {
       }
       projects: {
         Row: {
+          client_contact: string | null
           created_at: string | null
           created_by: string | null
+          creative_type: string | null
           deadline: string | null
           description: string | null
           id: string
           name: string
+          ob_am: string | null
+          ob_pm: string | null
+          ob_qm: string | null
           overall_deadline: string | null
           product_id: string | null
+          production_pattern: string | null
           project_code: string | null
+          schedule_business_days: number | null
           sort_order: number | null
           status: string | null
+          total_video_count: number | null
           updated_at: string | null
+          video_duration_seconds: number | null
         }
         Insert: {
+          client_contact?: string | null
           created_at?: string | null
           created_by?: string | null
+          creative_type?: string | null
           deadline?: string | null
           description?: string | null
           id?: string
           name: string
+          ob_am?: string | null
+          ob_pm?: string | null
+          ob_qm?: string | null
           overall_deadline?: string | null
           product_id?: string | null
+          production_pattern?: string | null
           project_code?: string | null
+          schedule_business_days?: number | null
           sort_order?: number | null
           status?: string | null
+          total_video_count?: number | null
           updated_at?: string | null
+          video_duration_seconds?: number | null
         }
         Update: {
+          client_contact?: string | null
           created_at?: string | null
           created_by?: string | null
+          creative_type?: string | null
           deadline?: string | null
           description?: string | null
           id?: string
           name?: string
+          ob_am?: string | null
+          ob_pm?: string | null
+          ob_qm?: string | null
           overall_deadline?: string | null
           product_id?: string | null
+          production_pattern?: string | null
           project_code?: string | null
+          schedule_business_days?: number | null
           sort_order?: number | null
           status?: string | null
+          total_video_count?: number | null
           updated_at?: string | null
+          video_duration_seconds?: number | null
         }
         Relationships: [
           {
@@ -1086,10 +1798,18 @@ export type Database = {
             referencedRelation: "products"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "projects_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_with_check_settings"
+            referencedColumns: ["id"]
+          },
         ]
       }
       reference_materials: {
         Row: {
+          ai_rule_enabled: boolean
           content_text: string | null
           created_at: string
           created_by: string | null
@@ -1107,6 +1827,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ai_rule_enabled?: boolean
           content_text?: string | null
           created_at?: string
           created_by?: string | null
@@ -1124,6 +1845,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ai_rule_enabled?: boolean
           content_text?: string | null
           created_at?: string
           created_by?: string | null
@@ -1142,11 +1864,168 @@ export type Database = {
         }
         Relationships: []
       }
+      revision_comment_files: {
+        Row: {
+          comment_id: string
+          created_at: string
+          file_id: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string
+          file_id: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string
+          file_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revision_comment_files_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "revision_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revision_comment_files_file_id_fkey"
+            columns: ["file_id"]
+            isOneToOne: false
+            referencedRelation: "project_files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      revision_comments: {
+        Row: {
+          comment_text: string
+          created_at: string
+          created_by: string | null
+          id: string
+          project_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          comment_text: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          project_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          comment_text?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          project_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revision_comments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rule_audit_log: {
+        Row: {
+          action_type: string
+          ai_confidence: number | null
+          ai_reasoning: string
+          check_rule_id: string | null
+          created_at: string
+          field_changed: string | null
+          id: string
+          level: string
+          new_value: string | null
+          old_value: string | null
+          product_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          rule_id: string
+          status: string
+        }
+        Insert: {
+          action_type: string
+          ai_confidence?: number | null
+          ai_reasoning: string
+          check_rule_id?: string | null
+          created_at?: string
+          field_changed?: string | null
+          id?: string
+          level: string
+          new_value?: string | null
+          old_value?: string | null
+          product_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rule_id: string
+          status?: string
+        }
+        Update: {
+          action_type?: string
+          ai_confidence?: number | null
+          ai_reasoning?: string
+          check_rule_id?: string | null
+          created_at?: string
+          field_changed?: string | null
+          id?: string
+          level?: string
+          new_value?: string | null
+          old_value?: string | null
+          product_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rule_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rule_audit_log_check_rule_id_fkey"
+            columns: ["check_rule_id"]
+            isOneToOne: false
+            referencedRelation: "check_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rule_audit_log_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rule_audit_log_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_with_check_settings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rule_candidates: {
         Row: {
           admin_notes: string | null
           approved_rule_id: string | null
           category: string | null
+          client_id: string | null
           created_at: string | null
           id: string
           process_type: string
@@ -1162,6 +2041,9 @@ export type Database = {
           similarity_score: number | null
           source_correction_ids: string[] | null
           source_count: number | null
+          source_material_type: string | null
+          source_reference_id: string | null
+          source_type: string | null
           status: string | null
           updated_at: string | null
         }
@@ -1169,6 +2051,7 @@ export type Database = {
           admin_notes?: string | null
           approved_rule_id?: string | null
           category?: string | null
+          client_id?: string | null
           created_at?: string | null
           id?: string
           process_type: string
@@ -1184,6 +2067,9 @@ export type Database = {
           similarity_score?: number | null
           source_correction_ids?: string[] | null
           source_count?: number | null
+          source_material_type?: string | null
+          source_reference_id?: string | null
+          source_type?: string | null
           status?: string | null
           updated_at?: string | null
         }
@@ -1191,6 +2077,7 @@ export type Database = {
           admin_notes?: string | null
           approved_rule_id?: string | null
           category?: string | null
+          client_id?: string | null
           created_at?: string | null
           id?: string
           process_type?: string
@@ -1206,15 +2093,32 @@ export type Database = {
           similarity_score?: number | null
           source_correction_ids?: string[] | null
           source_count?: number | null
+          source_material_type?: string | null
+          source_reference_id?: string | null
+          source_type?: string | null
           status?: string | null
           updated_at?: string | null
         }
         Relationships: [
           {
+            foreignKeyName: "rule_candidates_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "rule_candidates_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rule_candidates_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_with_check_settings"
             referencedColumns: ["id"]
           },
           {
@@ -1224,7 +2128,59 @@ export type Database = {
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "rule_candidates_source_reference_id_fkey"
+            columns: ["source_reference_id"]
+            isOneToOne: false
+            referencedRelation: "reference_materials"
+            referencedColumns: ["id"]
+          },
         ]
+      }
+      rule_quality_audit_log: {
+        Row: {
+          ambiguous_count: number
+          ambiguous_rate: number
+          audit_date: string
+          created_at: string | null
+          details: Json | null
+          duplicate_count: number
+          id: number
+          invalid_process_type_count: number
+          missing_title_count: number
+          quality_ng_count: number
+          quality_ok_count: number
+          total_rules: number
+        }
+        Insert: {
+          ambiguous_count: number
+          ambiguous_rate: number
+          audit_date?: string
+          created_at?: string | null
+          details?: Json | null
+          duplicate_count: number
+          id?: number
+          invalid_process_type_count: number
+          missing_title_count: number
+          quality_ng_count: number
+          quality_ok_count: number
+          total_rules: number
+        }
+        Update: {
+          ambiguous_count?: number
+          ambiguous_rate?: number
+          audit_date?: string
+          created_at?: string | null
+          details?: Json | null
+          duplicate_count?: number
+          id?: number
+          invalid_process_type_count?: number
+          missing_title_count?: number
+          quality_ng_count?: number
+          quality_ok_count?: number
+          total_rules?: number
+        }
+        Relationships: []
       }
       share_links: {
         Row: {
@@ -1344,6 +2300,90 @@ export type Database = {
       }
     }
     Views: {
+      products_with_check_settings: {
+        Row: {
+          abbreviation: string | null
+          client_id: string | null
+          code: string | null
+          color: string | null
+          created_at: string | null
+          external_product_id: string | null
+          id: string | null
+          info_lines: string[] | null
+          label: string | null
+          meta: string | null
+          name: string | null
+          rules_desc: string | null
+          sample_text: string | null
+          sf_enabled: boolean | null
+          sort_order: number | null
+          updated_at: string | null
+          warning: string | null
+          webhook_paths: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rule_quality_metrics: {
+        Row: {
+          ambiguous_count: number | null
+          ambiguous_rate_pct: number | null
+          client_name: string | null
+          duplicate_count: number | null
+          invalid_pt_count: number | null
+          missing_title_count: number | null
+          process_type: string | null
+          product_name: string | null
+          quality_ng: number | null
+          quality_ok: number | null
+          quality_ok_rate_pct: number | null
+          total_rules: number | null
+        }
+        Relationships: []
+      }
+      rule_quality_trend: {
+        Row: {
+          ambiguous_count: number | null
+          ambiguous_rate: number | null
+          audit_date: string | null
+          duplicate_count: number | null
+          invalid_process_type_count: number | null
+          missing_title_count: number | null
+          quality_ng_count: number | null
+          quality_ok_count: number | null
+          total_rules: number | null
+        }
+        Insert: {
+          ambiguous_count?: number | null
+          ambiguous_rate?: number | null
+          audit_date?: string | null
+          duplicate_count?: number | null
+          invalid_process_type_count?: number | null
+          missing_title_count?: number | null
+          quality_ng_count?: number | null
+          quality_ok_count?: number | null
+          total_rules?: number | null
+        }
+        Update: {
+          ambiguous_count?: number | null
+          ambiguous_rate?: number | null
+          audit_date?: string | null
+          duplicate_count?: number | null
+          invalid_process_type_count?: number | null
+          missing_title_count?: number | null
+          quality_ng_count?: number | null
+          quality_ok_count?: number | null
+          total_rules?: number | null
+        }
+        Relationships: []
+      }
       share_links_safe: {
         Row: {
           allow_comment_read: boolean | null
@@ -1394,6 +2434,29 @@ export type Database = {
         Args: { p_token: string; p_user_id: string }
         Returns: boolean
       }
+      approve_rule_candidate: {
+        Args: { p_candidate_id: string; p_reviewer_id?: string }
+        Returns: string
+      }
+      approve_rule_candidates_bulk: {
+        Args: { p_candidate_ids: string[]; p_reviewer_id?: string }
+        Returns: {
+          candidate_id: string
+          new_rule_id: string
+        }[]
+      }
+      audit_check_rules_quality: { Args: never; Returns: Json }
+      create_bulk_revision_comment: {
+        Args: {
+          p_comment_text: string
+          p_created_by?: string
+          p_file_ids: string[]
+          p_project_id: string
+          p_severity?: string
+        }
+        Returns: string
+      }
+      current_user_role: { Args: never; Returns: string }
       delete_project_cascade: {
         Args: { p_project_id: string }
         Returns: undefined
@@ -1401,6 +2464,42 @@ export type Database = {
       ensure_profile:
         | { Args: { p_email: string; p_user_id: string }; Returns: undefined }
         | { Args: { p_email: string; p_user_id: string }; Returns: undefined }
+      get_applicable_rules: {
+        Args: {
+          p_process_type?: string
+          p_product_id: string
+          p_project_id?: string
+        }
+        Returns: {
+          category: string
+          client_id: string
+          description: string
+          id: string
+          is_active: boolean
+          is_auto_generated: boolean
+          process_type: string
+          product_id: string
+          project_id: string
+          rule_id: string
+          scope: string
+          severity: string
+          sort_order: number
+          source_type: string
+          title: string
+        }[]
+      }
+      get_expected_size: {
+        Args: { p_process_type: string; p_project_id: string }
+        Returns: {
+          expected_height: number
+          expected_width: number
+          skip_check: boolean
+        }[]
+      }
+      get_file_comment_counts_for_creator: {
+        Args: { p_share_token: string }
+        Returns: Json
+      }
       get_invitation_by_token: {
         Args: { p_token: string }
         Returns: {
@@ -1422,6 +2521,57 @@ export type Database = {
           id: string
         }[]
       }
+      get_project_comments_for_creator: {
+        Args: { p_file_id?: string; p_share_token: string }
+        Returns: Json
+      }
+      get_project_files_for_creator: {
+        Args: { p_share_token: string }
+        Returns: {
+          check_result_id: string | null
+          checking_by: string | null
+          checking_started_at: string | null
+          created_at: string | null
+          created_by: string | null
+          file_data: string | null
+          file_name: string
+          file_size_bytes: number | null
+          file_type: string
+          fixed_at: string | null
+          fixed_by: string | null
+          gdrive_synced_at: string | null
+          gdrive_url: string | null
+          id: string
+          parent_file_id: string | null
+          pattern_id: string | null
+          process_type: string
+          project_id: string | null
+          status: string | null
+          submission_type: string
+          updated_at: string | null
+          uploaded_by_creator_id: string | null
+          version_number: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "project_files"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_project_for_creator: {
+        Args: { p_share_token: string }
+        Returns: Json
+      }
+      get_project_patterns_for_creator: {
+        Args: { p_share_token: string }
+        Returns: Json
+      }
+      get_project_processes_for_creator: {
+        Args: { p_share_token: string }
+        Returns: Json
+      }
+      get_project_status_summary: { Args: never; Returns: Json }
       get_share_link_by_token: {
         Args: { token_param: string }
         Returns: {
@@ -1499,11 +2649,14 @@ export type Database = {
       }
       get_user_role: { Args: { _user_id: string }; Returns: string }
       get_workspace_role: { Args: { _user_id: string }; Returns: string }
-      is_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_admin:
+        | { Args: never; Returns: boolean }
+        | { Args: { _user_id: string }; Returns: boolean }
       is_project_member: {
         Args: { p_project_id: string; p_user_id: string }
         Returns: boolean
       }
+      is_staff: { Args: never; Returns: boolean }
       is_workspace_member_accepted: {
         Args: { _user_id: string }
         Returns: boolean
@@ -1514,6 +2667,48 @@ export type Database = {
           display_name: string
           id: string
         }[]
+      }
+      process_email_notification_queue: { Args: never; Returns: Json }
+      recover_stuck_checking_files: {
+        Args: never
+        Returns: {
+          file_name: string
+          recovered_id: string
+          stuck_minutes: number
+        }[]
+      }
+      reject_rule_candidate: {
+        Args: {
+          p_candidate_id: string
+          p_notes?: string
+          p_reviewer_id?: string
+        }
+        Returns: undefined
+      }
+      send_slack_notification:
+        | { Args: { body: Json; channel_type: string }; Returns: undefined }
+        | { Args: { message: string }; Returns: undefined }
+      send_weekly_rule_improvement_report: { Args: never; Returns: undefined }
+      track_creator_access: {
+        Args: { p_share_token: string }
+        Returns: undefined
+      }
+      upload_file_as_creator: {
+        Args: {
+          p_file_data: string
+          p_file_name: string
+          p_file_size_bytes?: number
+          p_file_type: string
+          p_parent_file_id?: string
+          p_pattern_id?: string
+          p_process_type: string
+          p_share_token: string
+        }
+        Returns: string
+      }
+      validate_process_type: {
+        Args: { p_process_type: string }
+        Returns: boolean
       }
     }
     Enums: {

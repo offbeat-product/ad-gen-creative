@@ -1,5 +1,19 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Sparkles, History, Settings, X, ExternalLink, Infinity } from 'lucide-react';
+import {
+  LayoutDashboard,
+  History,
+  Settings,
+  X,
+  ExternalLink,
+  Infinity,
+  Target,
+  Layout,
+  FileText,
+  Mic,
+  Image as ImageIcon,
+  Film,
+  Maximize2,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -9,10 +23,20 @@ interface SidebarProps {
   onClose: () => void;
 }
 
-const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'ダッシュボード' },
-  { to: '/generate', icon: Sparkles, label: '新規生成' },
-  { to: '/history', icon: History, label: '生成履歴' },
+const dashboardItem = { to: '/', icon: LayoutDashboard, label: 'ダッシュボード' };
+
+const spotToolItems = [
+  { to: '/tools/appeal-axis', icon: Target, label: '訴求軸・コピー生成' },
+  { to: '/tools/composition', icon: Layout, label: '構成案・字コンテ生成' },
+  { to: '/tools/narration-script', icon: FileText, label: 'NA原稿生成' },
+  { to: '/tools/narration-audio', icon: Mic, label: 'ナレーション音声生成' },
+  { to: '/tools/image-generation', icon: ImageIcon, label: 'イメージ画像生成' },
+  { to: '/tools/carousel-video', icon: Film, label: 'カルーセル動画生成' },
+  { to: '/tools/video-resize', icon: Maximize2, label: '動画リサイズ' },
+];
+
+const otherItems = [
+  { to: '/history', icon: History, label: '履歴' },
   { to: '/settings', icon: Settings, label: '設定' },
 ];
 
@@ -23,18 +47,31 @@ const productLinks = [
   { label: 'Ad Ops', url: null, active: false, color: 'text-gray-400' },
 ];
 
+const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+  cn(
+    'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+    isActive
+      ? 'bg-primary-wash text-primary border-l-[3px] border-primary'
+      : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+  );
+
+const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+  <p className="px-3 mt-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+    {children}
+  </p>
+);
+
 const Sidebar = ({ open, onClose }: SidebarProps) => {
   return (
     <>
-      {/* Mobile overlay */}
       {open && (
         <div className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm lg:hidden" onClick={onClose} />
       )}
 
       <aside
         className={cn(
-          "fixed top-0 left-0 z-40 h-screen w-60 min-w-[240px] shrink-0 border-r bg-background transition-transform duration-300 lg:translate-x-0 lg:static flex flex-col",
-          open ? "translate-x-0" : "-translate-x-full"
+          'fixed top-0 left-0 z-40 h-screen w-60 min-w-[240px] shrink-0 border-r bg-background transition-transform duration-300 lg:translate-x-0 lg:static flex flex-col',
+          open ? 'translate-x-0' : '-translate-x-full',
         )}
       >
         {/* Logo */}
@@ -45,26 +82,31 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
           </Button>
         </div>
 
-        <nav className="space-y-1 px-3 py-3 whitespace-nowrap flex-1">
-          {navItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              onClick={onClose}
-              className={({ isActive }) =>
-                cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-primary-wash text-primary border-l-[3px] border-primary"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                )
-              }
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </NavLink>
-          ))}
+        <nav className="px-3 py-3 whitespace-nowrap flex-1 overflow-y-auto">
+          <NavLink to={dashboardItem.to} end onClick={onClose} className={navLinkClass}>
+            <dashboardItem.icon className="h-4 w-4" />
+            {dashboardItem.label}
+          </NavLink>
+
+          <SectionLabel>スポットツール</SectionLabel>
+          <div className="space-y-0.5">
+            {spotToolItems.map((item) => (
+              <NavLink key={item.to} to={item.to} onClick={onClose} className={navLinkClass}>
+                <item.icon className="h-4 w-4" />
+                {item.label}
+              </NavLink>
+            ))}
+          </div>
+
+          <SectionLabel>その他</SectionLabel>
+          <div className="space-y-0.5">
+            {otherItems.map((item) => (
+              <NavLink key={item.to} to={item.to} onClick={onClose} className={navLinkClass}>
+                <item.icon className="h-4 w-4" />
+                {item.label}
+              </NavLink>
+            ))}
+          </div>
         </nav>
 
         {/* Other products */}
@@ -75,7 +117,7 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
           </p>
           <div className="space-y-0.5">
             {productLinks.map((p) => {
-              const icon = <Infinity className={cn("h-4 w-4 shrink-0", p.color)} />;
+              const icon = <Infinity className={cn('h-4 w-4 shrink-0', p.color)} />;
 
               if (p.active && p.url) {
                 return (
@@ -100,7 +142,9 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
                 >
                   {icon}
                   {p.label}
-                  <span className="ml-auto text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">Coming Soon</span>
+                  <span className="ml-auto text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
+                    Coming Soon
+                  </span>
                 </span>
               );
             })}
