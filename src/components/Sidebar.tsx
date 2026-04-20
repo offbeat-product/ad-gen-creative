@@ -71,7 +71,7 @@ const toolGroups: { emoji: string; label: string; items: ToolItem[] }[] = [
 ];
 
 const otherItems = [
-  { to: '/history', icon: History, label: '履歴' },
+  { to: '/history', icon: History, label: '生成履歴' },
   { to: '/settings', icon: Settings, label: '設定' },
 ];
 
