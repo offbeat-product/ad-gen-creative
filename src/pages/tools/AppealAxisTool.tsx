@@ -541,44 +541,184 @@ const AppealAxisTool = () => {
                         typeof a === 'string' ? { text: a } : a
                       );
 
-                      // 訴求軸ごとにコピーをグループ化
-                      const grouped = appealAxes.map((_, axisIdx) =>
-                        copies.filter((c) => c.appeal_axis_index === axisIdx)
-                      );
+                      const handleCopyAll = () => {
+                        handleCopy(
+                          buildFormattedText(appealAxes, copies),
+                          '全訴求軸・コピーをコピーしました'
+                        );
+                      };
 
-                      // 通し番号 (A,B,C...) を発番
-                      let runningIdx = 0;
+                      const handleDownloadTxt = () => {
+                        const text = buildFormattedText(appealAxes, copies);
+                        const blob = new Blob([text], {
+                          type: 'text/plain;charset=utf-8',
+                        });
+                        const projectName = context?.project.name ?? 'project';
+                        saveAs(
+                          blob,
+                          `訴求軸コピー_${projectName}_${
+                            new Date().toISOString().split('T')[0]
+                          }.txt`
+                        );
+                        toast.success('TXTをダウンロードしました');
+                      };
+
+                      const handleDownloadDocx = async () => {
+                        const projectName = context?.project.name ?? 'project';
+                        const clientName =
+                          context?.project.product.client.name ?? '';
+                        const productName = context?.project.product.name ?? '';
+
+                        const children: Paragraph[] = [
+                          new Paragraph({
+                            text: '訴求軸・コピー生成結果',
+                            heading: HeadingLevel.HEADING_1,
+                          }),
+                          new Paragraph({
+                            children: [
+                              new TextRun({ text: `クライアント: ${clientName}` }),
+                            ],
+                          }),
+                          new Paragraph({
+                            children: [
+                              new TextRun({ text: `商材: ${productName}` }),
+                            ],
+                          }),
+                          new Paragraph({
+                            children: [
+                              new TextRun({ text: `案件: ${projectName}` }),
+                            ],
+                          }),
+                          new Paragraph({ text: '' }),
+                        ];
+
+                        appealAxes.forEach((axis, i) => {
+                          const axisNum = i + 1;
+                          children.push(
+                            new Paragraph({
+                              text: `訴求軸${axisNum}: ${axis.text}`,
+                              heading: HeadingLevel.HEADING_2,
+                            })
+                          );
+                          if (axis.reasoning) {
+                            children.push(
+                              new Paragraph({
+                                children: [
+                                  new TextRun({
+                                    text: `根拠: ${axis.reasoning}`,
+                                    italics: true,
+                                    color: '666666',
+                                  }),
+                                ],
+                              })
+                            );
+                          }
+                          children.push(new Paragraph({ text: '' }));
+
+                          const axisCopies = copies.filter(
+                            (c) => c.appeal_axis_index === axisNum
+                          );
+                          axisCopies.forEach((c) => {
+                            children.push(
+                              new Paragraph({
+                                children: [
+                                  new TextRun({
+                                    text: `${c.pattern_id}. `,
+                                    bold: true,
+                                  }),
+                                  new TextRun({
+                                    text: c.copy_text,
+                                    bold: true,
+                                    size: 24,
+                                  }),
+                                ],
+                              })
+                            );
+                            if (c.hook) {
+                              children.push(
+                                new Paragraph({
+                                  children: [
+                                    new TextRun({
+                                      text: `   狙い: ${c.hook}`,
+                                      italics: true,
+                                      size: 20,
+                                      color: '666666',
+                                    }),
+                                  ],
+                                })
+                              );
+                            }
+                          });
+                          children.push(new Paragraph({ text: '' }));
+                        });
+
+                        const doc = new Document({
+                          sections: [{ children }],
+                        });
+                        const blob = await Packer.toBlob(doc);
+                        saveAs(
+                          blob,
+                          `訴求軸コピー_${projectName}_${
+                            new Date().toISOString().split('T')[0]
+                          }.docx`
+                        );
+                        toast.success('Wordドキュメントをダウンロードしました');
+                      };
+
+                      const handleGoToComposition = (c: CopyItem) => {
+                        const axis = appealAxes[c.appeal_axis_index - 1];
+                        sessionStorage.setItem(
+                          'composition_seed',
+                          JSON.stringify({
+                            from_tool: 'appeal_axis_copy',
+                            from_job_id: jobId,
+                            appeal_axis_text: axis?.text ?? '',
+                            appeal_axis_reasoning: axis?.reasoning ?? '',
+                            copy_text: c.copy_text,
+                            copy_hook: c.hook ?? '',
+                            pattern_id: c.pattern_id,
+                            brief: briefData,
+                            project_id: state.projectId,
+                            client_id: state.clientId,
+                            product_id: state.productId,
+                          })
+                        );
+                        toast.success('選択したコピーで構成案を生成します');
+                        navigate('/tools/composition');
+                      };
+
+                      // 訴求軸ごとにコピーをグループ化 (DB は 1-indexed)
+                      const grouped = appealAxes.map((_, axisIdx) =>
+                        copies.filter((c) => c.appeal_axis_index === axisIdx + 1)
+                      );
 
                       return (
                         <div key={asset.id} className="space-y-6">
                           {/* アクションボタン */}
                           <div className="flex flex-wrap gap-2 justify-end">
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
-                              onClick={() =>
-                                handleCopy(
-                                  appealAxes
-                                    .map((a, i) => `${i + 1}. ${a.text}`)
-                                    .join('\n'),
-                                  '訴求軸をコピーしました'
-                                )
-                              }
+                              onClick={handleCopyAll}
                               disabled={appealAxes.length === 0}
                             >
-                              <Copy className="h-3 w-3 mr-1" /> 訴求軸のみコピー
+                              <Copy className="h-3 w-3 mr-1" /> 全体をコピー
                             </Button>
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
-                              onClick={() =>
-                                handleCopy(
-                                  JSON.stringify(asset.metadata, null, 2),
-                                  'JSONをコピーしました'
-                                )
-                              }
+                              onClick={handleDownloadTxt}
+                              disabled={appealAxes.length === 0}
                             >
-                              <Code className="h-3 w-3 mr-1" /> JSONコピー
+                              <FileText className="h-3 w-3 mr-1" /> .txt ダウンロード
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleDownloadDocx}
+                              disabled={appealAxes.length === 0}
+                            >
+                              <FileDown className="h-3 w-3 mr-1" /> .docx ダウンロード
                             </Button>
                           </div>
 
