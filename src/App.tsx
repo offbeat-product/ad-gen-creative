@@ -50,7 +50,7 @@ const App = () => (
                 <Route path="/generate/progress" element={<GenerateProgress />} />
                 <Route path="/history" element={<HistoryPage />} />
                 <Route path="/result/:id" element={<GenerationResult />} />
-                <Route path="/tools/appeal-axis" element={<AppealAxisPage />} />
+                <Route path="/tools/appeal-axis" element={<AppealAxisTool />} />
                 <Route path="/tools/composition" element={<CompositionTool />} />
                 <Route path="/tools/narration-script" element={<NarrationScriptTool />} />
                 <Route path="/tools/narration-audio" element={<NarrationAudioTool />} />
