@@ -7,14 +7,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 
-const tools = [
+const tools: { path: string; label: string; Icon: typeof Target; description: string; comingSoon?: boolean }[] = [
   { path: '/tools/appeal-axis', label: '訴求軸・コピー生成', Icon: Target, description: 'LP URLや過去データから訴求軸・コピーを生成' },
   { path: '/tools/composition', label: '構成案・字コンテ生成', Icon: Layout, description: '訴求軸から構成案・字コンテを生成' },
   { path: '/tools/narration-script', label: 'NA原稿生成', Icon: FileText, description: '構成案からNA原稿を生成' },
   { path: '/tools/narration-audio', label: 'ナレーション音声生成', Icon: Mic, description: 'NA原稿から音声ファイルを生成' },
-  { path: '/tools/image-generation', label: 'イメージ画像生成', Icon: ImageIcon, description: 'プロンプトから画像を生成' },
-  { path: '/tools/carousel-video', label: 'カルーセル動画生成', Icon: Film, description: '原作イラストからカルーセル動画を生成' },
-  { path: '/tools/video-resize', label: '動画リサイズ', Icon: Maximize2, description: '横動画を縦動画・スクエアにリサイズ' },
+  { path: '/tools/image-generation', label: '絵コンテ用画像生成', Icon: ImageIcon, description: '字コンテから絵コンテ用の画像を生成' },
+  { path: '/tools/banner-image', label: 'バナー画像生成', Icon: ImageIcon, description: '訴求軸からバナー画像を生成', comingSoon: true },
+  { path: '/tools/carousel-video', label: 'カルーセル動画生成', Icon: Film, description: '原作イラストからカルーセル動画を生成', comingSoon: true },
+  { path: '/tools/video-resize', label: '動画リサイズ', Icon: Maximize2, description: '横動画を縦動画・スクエアにリサイズ', comingSoon: true },
 ];
 
 const toolLabelMap: Record<string, string> = {
@@ -22,7 +23,8 @@ const toolLabelMap: Record<string, string> = {
   composition: '構成案・字コンテ生成',
   narration_script: 'NA原稿生成',
   narration_audio: 'ナレーション音声生成',
-  image_generation: 'イメージ画像生成',
+  image_generation: '絵コンテ用画像生成',
+  banner_image: 'バナー画像生成',
   carousel_video: 'カルーセル動画生成',
   video_resize: '動画リサイズ',
 };
@@ -144,17 +146,31 @@ const Dashboard = () => {
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-muted-foreground">何を生成しますか?</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {tools.map((tool) => (
-            <Link
-              key={tool.path}
-              to={tool.path}
-              className="group rounded-xl border bg-card p-4 hover:shadow-elevated hover:-translate-y-0.5 transition-all"
-            >
-              <tool.Icon className="h-6 w-6 text-secondary mb-2" />
-              <div className="font-semibold text-sm">{tool.label}</div>
-              <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{tool.description}</div>
-            </Link>
-          ))}
+          {tools.map((tool) =>
+            tool.comingSoon ? (
+              <div
+                key={tool.path}
+                className="relative rounded-xl border bg-card p-4 opacity-60 cursor-not-allowed"
+              >
+                <span className="absolute top-2 right-2 text-[9px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
+                  Soon
+                </span>
+                <tool.Icon className="h-6 w-6 text-muted-foreground mb-2" />
+                <div className="font-semibold text-sm">{tool.label}</div>
+                <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{tool.description}</div>
+              </div>
+            ) : (
+              <Link
+                key={tool.path}
+                to={tool.path}
+                className="group rounded-xl border bg-card p-4 hover:shadow-elevated hover:-translate-y-0.5 transition-all"
+              >
+                <tool.Icon className="h-6 w-6 text-secondary mb-2" />
+                <div className="font-semibold text-sm">{tool.label}</div>
+                <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{tool.description}</div>
+              </Link>
+            )
+          )}
         </div>
       </section>
 
