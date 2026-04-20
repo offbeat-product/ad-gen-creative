@@ -122,7 +122,7 @@ const buildFormattedText = (
   return lines.join('\n');
 };
 
-const letterFor = (n: number) => String.fromCharCode(65 + n); // 0->A
+
 
 const AppealAxisTool = () => {
   const { user } = useAuth();
