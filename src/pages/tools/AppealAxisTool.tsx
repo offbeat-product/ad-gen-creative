@@ -19,6 +19,7 @@ import SpotStepClient from '@/components/spot/SpotStepClient';
 import SpotStepProduct from '@/components/spot/SpotStepProduct';
 import SpotStepProject from '@/components/spot/SpotStepProject';
 import SpotStepDataCollection from '@/components/spot/SpotStepDataCollection';
+import BriefSection, { type BriefData, EMPTY_BRIEF } from '@/components/spot/BriefSection';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -30,6 +31,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Table,
   TableBody,
@@ -63,6 +66,12 @@ interface CopyItem {
   appeal_axis_index: number;
   copy_index: number;
   text: string;
+  hook?: string;
+}
+
+interface AppealAxisObj {
+  text: string;
+  reasoning?: string;
 }
 
 interface SpotAsset {
@@ -71,7 +80,7 @@ interface SpotAsset {
   file_name: string | null;
   sort_order: number | null;
   metadata: {
-    appeal_axes?: string[];
+    appeal_axes?: (string | AppealAxisObj)[];
     copies?: CopyItem[];
     hint?: string;
   } | null;
@@ -91,6 +100,8 @@ const AppealAxisTool = () => {
   const [numAppealAxes, setNumAppealAxes] = useState<number>(3);
   const [numCopies, setNumCopies] = useState<number>(3);
   const [hint, setHint] = useState('');
+  const [briefData, setBriefData] = useState<BriefData>(EMPTY_BRIEF);
+  const [lpScrapedContent, setLpScrapedContent] = useState<string | null>(null);
 
   // 実行・進捗
   const [jobId, setJobId] = useState<string | null>(null);
@@ -175,6 +186,10 @@ const AppealAxisTool = () => {
         num_appeal_axes: numAppealAxes,
         num_copies: numCopies,
         hint,
+        brief: {
+          ...briefData,
+          lp_scraped_content: lpScrapedContent,
+        },
         copyright_text: context?.project.copyright_text ?? null,
         client_name: context?.project.product.client.name ?? null,
         product_name: context?.project.product.name ?? null,
@@ -341,6 +356,18 @@ const AppealAxisTool = () => {
                 </div>
               )}
 
+              {/* 広告ブリーフ */}
+              {state.projectId && (
+                <BriefSection
+                  projectId={state.projectId}
+                  value={briefData}
+                  onChange={setBriefData}
+                  onLpScrapedContentLoaded={setLpScrapedContent}
+                />
+              )}
+
+              <Separator className="my-2" />
+
               {/* 訴求軸 / コピー数 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -383,12 +410,14 @@ const AppealAxisTool = () => {
               </div>
 
               {/* プレビュー */}
-              <div className="rounded-xl border bg-accent/20 p-4 text-sm">
-                <span className="font-semibold text-foreground">
-                  {numAppealAxes} × {numCopies} = 合計{totalPatterns}パターン
-                </span>
-                <span className="text-muted-foreground"> 生成されます</span>
-              </div>
+              <Alert>
+                <AlertDescription>
+                  <span className="font-semibold text-foreground">
+                    {numAppealAxes} × {numCopies} = 合計{totalPatterns}パターン
+                  </span>
+                  <span className="text-muted-foreground"> 生成されます</span>
+                </AlertDescription>
+              </Alert>
 
               {/* ヒント */}
               <div className="space-y-2">
@@ -400,12 +429,26 @@ const AppealAxisTool = () => {
                   rows={3}
                   placeholder="特に意識してほしいターゲット・トーン・要素など"
                 />
+                <p className="text-xs text-muted-foreground">
+                  ブリーフに書き切れない細かい指示を追加で書けます
+                </p>
               </div>
+
+              {/* 必須項目チェック */}
+              {(!briefData.ad_objective || !briefData.target_audience) && (
+                <Alert variant="destructive">
+                  <AlertDescription className="text-xs">
+                    広告ブリーフの「広告の目的」と「ターゲット」は必須です
+                  </AlertDescription>
+                </Alert>
+              )}
 
               {/* 実行ボタン */}
               <Button
                 onClick={handleGenerate}
-                disabled={isRunning}
+                disabled={
+                  isRunning || !briefData.ad_objective || !briefData.target_audience
+                }
                 className="w-full h-12"
                 size="lg"
               >
@@ -453,8 +496,13 @@ const AppealAxisTool = () => {
 
                   {assets.length > 0 &&
                     assets.map((asset) => {
-                      const appealAxes = asset.metadata?.appeal_axes ?? [];
+                      const appealAxesRaw = asset.metadata?.appeal_axes ?? [];
                       const copies = asset.metadata?.copies ?? [];
+
+                      // 文字列/オブジェクト両対応に正規化
+                      const appealAxes = appealAxesRaw.map((a) =>
+                        typeof a === 'string' ? { text: a } : a
+                      );
 
                       // 訴求軸ごとにコピーをグループ化
                       const grouped = appealAxes.map((_, axisIdx) =>
@@ -473,7 +521,9 @@ const AppealAxisTool = () => {
                               size="sm"
                               onClick={() =>
                                 handleCopy(
-                                  appealAxes.map((a, i) => `${i + 1}. ${a}`).join('\n'),
+                                  appealAxes
+                                    .map((a, i) => `${i + 1}. ${a.text}`)
+                                    .join('\n'),
                                   '訴求軸をコピーしました'
                                 )
                               }
@@ -510,7 +560,16 @@ const AppealAxisTool = () => {
                                     <span className="flex-shrink-0 w-7 h-7 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center text-xs font-bold">
                                       {i + 1}
                                     </span>
-                                    <span className="text-sm leading-relaxed pt-1">{axis}</span>
+                                    <div className="flex-1 space-y-1 pt-0.5">
+                                      <div className="text-sm leading-relaxed font-medium">
+                                        {axis.text}
+                                      </div>
+                                      {axis.reasoning && (
+                                        <div className="text-xs text-muted-foreground leading-relaxed">
+                                          根拠: {axis.reasoning}
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
                                 ))}
                               </div>
@@ -529,7 +588,8 @@ const AppealAxisTool = () => {
                                   className="rounded-lg border overflow-hidden"
                                 >
                                   <div className="bg-muted px-4 py-2 text-sm font-semibold">
-                                    訴求軸{axisIdx + 1}: {appealAxes[axisIdx] ?? '(未定義)'}
+                                    訴求軸{axisIdx + 1}:{' '}
+                                    {appealAxes[axisIdx]?.text ?? '(未定義)'}
                                   </div>
                                   <Table>
                                     <TableHeader>
@@ -551,7 +611,12 @@ const AppealAxisTool = () => {
                                               {letter}
                                             </TableCell>
                                             <TableCell className="text-sm align-top whitespace-pre-wrap">
-                                              {c.text}
+                                              <div className="font-medium">{c.text}</div>
+                                              {c.hook && (
+                                                <div className="text-xs text-muted-foreground mt-1">
+                                                  狙い: {c.hook}
+                                                </div>
+                                              )}
                                             </TableCell>
                                             <TableCell className="text-right align-top">
                                               <Button
@@ -561,7 +626,7 @@ const AppealAxisTool = () => {
                                                   console.log(
                                                     '[future] generate composition for',
                                                     {
-                                                      appeal_axis: appealAxes[axisIdx],
+                                                      appeal_axis: appealAxes[axisIdx]?.text,
                                                       copy_text: c.text,
                                                     }
                                                   );

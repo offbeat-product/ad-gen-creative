@@ -1934,6 +1934,7 @@ export type Database = {
       }
       projects: {
         Row: {
+          ad_objective: string | null
           client_contact: string | null
           copyright_text: string | null
           created_at: string | null
@@ -1941,8 +1942,14 @@ export type Database = {
           creative_type: string | null
           deadline: string | null
           description: string | null
+          differentiation: string | null
           id: string
+          lp_scraped_at: string | null
+          lp_scraped_content: string | null
+          lp_summary: string | null
+          lp_url: string | null
           name: string
+          ng_words: string[] | null
           ob_am: string | null
           ob_pm: string | null
           ob_qm: string | null
@@ -1950,15 +1957,20 @@ export type Database = {
           product_id: string | null
           production_pattern: string | null
           project_code: string | null
+          reference_creatives: string | null
           schedule_business_days: number | null
           sort_order: number | null
           status: string | null
+          target_audience: string | null
+          target_insight: string | null
+          tone_preset: string | null
           total_video_count: number | null
           updated_at: string | null
           video_duration_seconds: number | null
           work_title: string | null
         }
         Insert: {
+          ad_objective?: string | null
           client_contact?: string | null
           copyright_text?: string | null
           created_at?: string | null
@@ -1966,8 +1978,14 @@ export type Database = {
           creative_type?: string | null
           deadline?: string | null
           description?: string | null
+          differentiation?: string | null
           id?: string
+          lp_scraped_at?: string | null
+          lp_scraped_content?: string | null
+          lp_summary?: string | null
+          lp_url?: string | null
           name: string
+          ng_words?: string[] | null
           ob_am?: string | null
           ob_pm?: string | null
           ob_qm?: string | null
@@ -1975,15 +1993,20 @@ export type Database = {
           product_id?: string | null
           production_pattern?: string | null
           project_code?: string | null
+          reference_creatives?: string | null
           schedule_business_days?: number | null
           sort_order?: number | null
           status?: string | null
+          target_audience?: string | null
+          target_insight?: string | null
+          tone_preset?: string | null
           total_video_count?: number | null
           updated_at?: string | null
           video_duration_seconds?: number | null
           work_title?: string | null
         }
         Update: {
+          ad_objective?: string | null
           client_contact?: string | null
           copyright_text?: string | null
           created_at?: string | null
@@ -1991,8 +2014,14 @@ export type Database = {
           creative_type?: string | null
           deadline?: string | null
           description?: string | null
+          differentiation?: string | null
           id?: string
+          lp_scraped_at?: string | null
+          lp_scraped_content?: string | null
+          lp_summary?: string | null
+          lp_url?: string | null
           name?: string
+          ng_words?: string[] | null
           ob_am?: string | null
           ob_pm?: string | null
           ob_qm?: string | null
@@ -2000,9 +2029,13 @@ export type Database = {
           product_id?: string | null
           production_pattern?: string | null
           project_code?: string | null
+          reference_creatives?: string | null
           schedule_business_days?: number | null
           sort_order?: number | null
           status?: string | null
+          target_audience?: string | null
+          target_insight?: string | null
+          tone_preset?: string | null
           total_video_count?: number | null
           updated_at?: string | null
           video_duration_seconds?: number | null
