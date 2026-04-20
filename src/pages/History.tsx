@@ -45,7 +45,7 @@ import { supabase } from '@/integrations/supabase/client';
 const PAGE_SIZE = 20;
 
 const TOOL_LABELS: Record<string, { label: string; icon: typeof Target; path: string }> = {
-  appeal_axis: { label: '訴求軸・コピー生成', icon: Target, path: '/tools/appeal-axis' },
+  appeal_axis_copy: { label: '訴求軸・コピー生成', icon: Target, path: '/tools/appeal-axis' },
   composition: { label: '構成案・字コンテ生成', icon: Layout, path: '/tools/composition' },
   narration_script: { label: 'NA原稿生成', icon: FileText, path: '/tools/narration-script' },
   narration_audio: { label: 'ナレーション音声生成', icon: Mic, path: '/tools/narration-audio' },
