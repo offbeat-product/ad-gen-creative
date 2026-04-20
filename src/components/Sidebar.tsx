@@ -10,9 +10,11 @@ import {
   Layout,
   FileText,
   Mic,
+  Music,
   Image as ImageIcon,
   Film,
   Maximize2,
+  Clapperboard,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -39,6 +41,7 @@ const toolGroups: { emoji: string; label: string; items: ToolItem[] }[] = [
     items: [
       { to: '/tools/appeal-axis', icon: Target, label: '訴求軸・コピー生成' },
       { to: '/tools/composition', icon: Layout, label: '構成案・字コンテ生成' },
+      { to: '/tools/vcon', icon: Clapperboard, label: 'Vコン作成' },
       { to: '/tools/narration-script', icon: FileText, label: 'NA原稿生成' },
     ],
   },
@@ -47,6 +50,7 @@ const toolGroups: { emoji: string; label: string; items: ToolItem[] }[] = [
     label: '音声生成',
     items: [
       { to: '/tools/narration-audio', icon: Mic, label: 'ナレーション音声生成' },
+      { to: '/tools/bgm-suggestion', icon: Music, label: 'BGM提案' },
     ],
   },
   {
@@ -61,8 +65,8 @@ const toolGroups: { emoji: string; label: string; items: ToolItem[] }[] = [
     emoji: '🎬',
     label: '動画生成',
     items: [
-      { to: '/tools/carousel-video', icon: Film, label: 'カルーセル動画生成', comingSoon: true },
-      { to: '/tools/video-resize', icon: Maximize2, label: '動画リサイズ', comingSoon: true },
+      { to: '/tools/carousel-video', icon: Film, label: 'カルーセル動画生成' },
+      { to: '/tools/video-resize', icon: Maximize2, label: '動画リサイズ' },
     ],
   },
 ];
