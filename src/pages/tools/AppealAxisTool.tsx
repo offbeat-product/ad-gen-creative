@@ -94,6 +94,8 @@ const AppealAxisTool = () => {
   const [numAppealAxes, setNumAppealAxes] = useState<number>(3);
   const [numCopies, setNumCopies] = useState<number>(3);
   const [hint, setHint] = useState('');
+  const [briefData, setBriefData] = useState<BriefData>(EMPTY_BRIEF);
+  const [lpScrapedContent, setLpScrapedContent] = useState<string | null>(null);
 
   // 実行・進捗
   const [jobId, setJobId] = useState<string | null>(null);
