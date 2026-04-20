@@ -15,7 +15,6 @@ import HistoryPage from "@/pages/History";
 import GenerationResult from "@/pages/GenerationResult";
 import Settings from "@/pages/Settings";
 import {
-  ImageGenerationPage,
   CarouselVideoPage,
   VideoResizePage,
 } from "@/pages/tools/Placeholders";
@@ -23,6 +22,7 @@ import NarrationAudioTool from "@/pages/tools/NarrationAudioTool";
 import NarrationScriptTool from "@/pages/tools/NarrationScriptTool";
 import CompositionTool from "@/pages/tools/CompositionTool";
 import AppealAxisTool from "@/pages/tools/AppealAxisTool";
+import ImageGenerationTool from "@/pages/tools/ImageGenerationTool";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -54,7 +54,7 @@ const App = () => (
                 <Route path="/tools/composition" element={<CompositionTool />} />
                 <Route path="/tools/narration-script" element={<NarrationScriptTool />} />
                 <Route path="/tools/narration-audio" element={<NarrationAudioTool />} />
-                <Route path="/tools/image-generation" element={<ImageGenerationPage />} />
+                <Route path="/tools/image-generation" element={<ImageGenerationTool />} />
                 <Route path="/tools/carousel-video" element={<CarouselVideoPage />} />
                 <Route path="/tools/video-resize" element={<VideoResizePage />} />
                 <Route path="/settings" element={<Settings />} />
