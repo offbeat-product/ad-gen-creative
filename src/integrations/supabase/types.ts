@@ -830,6 +830,38 @@ export type Database = {
         }
         Relationships: []
       }
+      gen_favorites: {
+        Row: {
+          created_at: string | null
+          id: string
+          project_id: string
+          sort_order: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          project_id: string
+          sort_order?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          project_id?: string
+          sort_order?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gen_favorites_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       gen_jobs: {
         Row: {
           completed_at: string | null
@@ -968,6 +1000,168 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "gen_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gen_share_links: {
+        Row: {
+          allow_comment: boolean | null
+          allow_download: boolean | null
+          created_at: string | null
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          job_id: string | null
+          last_viewed_at: string | null
+          note: string | null
+          password_hash: string | null
+          title: string | null
+          token: string
+          view_count: number | null
+        }
+        Insert: {
+          allow_comment?: boolean | null
+          allow_download?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          job_id?: string | null
+          last_viewed_at?: string | null
+          note?: string | null
+          password_hash?: string | null
+          title?: string | null
+          token: string
+          view_count?: number | null
+        }
+        Update: {
+          allow_comment?: boolean | null
+          allow_download?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          job_id?: string | null
+          last_viewed_at?: string | null
+          note?: string | null
+          password_hash?: string | null
+          title?: string | null
+          token?: string
+          view_count?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gen_share_links_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "gen_spot_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gen_spot_assets: {
+        Row: {
+          asset_type: string
+          created_at: string | null
+          file_name: string | null
+          file_size_bytes: number | null
+          file_url: string
+          id: string
+          is_selected: boolean | null
+          job_id: string
+          metadata: Json | null
+          sort_order: number | null
+        }
+        Insert: {
+          asset_type: string
+          created_at?: string | null
+          file_name?: string | null
+          file_size_bytes?: number | null
+          file_url: string
+          id?: string
+          is_selected?: boolean | null
+          job_id: string
+          metadata?: Json | null
+          sort_order?: number | null
+        }
+        Update: {
+          asset_type?: string
+          created_at?: string | null
+          file_name?: string | null
+          file_size_bytes?: number | null
+          file_url?: string
+          id?: string
+          is_selected?: boolean | null
+          job_id?: string
+          metadata?: Json | null
+          sort_order?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gen_spot_assets_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "gen_spot_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gen_spot_jobs: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          duration_ms: number | null
+          error_message: string | null
+          id: string
+          input_data: Json | null
+          n8n_execution_id: string | null
+          output_data: Json | null
+          output_file_url: string | null
+          project_id: string
+          started_at: string | null
+          status: string | null
+          tool_type: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          input_data?: Json | null
+          n8n_execution_id?: string | null
+          output_data?: Json | null
+          output_file_url?: string | null
+          project_id: string
+          started_at?: string | null
+          status?: string | null
+          tool_type: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          input_data?: Json | null
+          n8n_execution_id?: string | null
+          output_data?: Json | null
+          output_file_url?: string | null
+          project_id?: string
+          started_at?: string | null
+          status?: string | null
+          tool_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gen_spot_jobs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -1322,9 +1516,15 @@ export type Database = {
           code: string
           color: string | null
           created_at: string | null
+          default_bg_color: string | null
+          default_display_sec: number | null
+          default_switch_sec: number | null
+          default_transition: string | null
           external_product_id: string | null
+          frame_image_url: string | null
           id: string
           label: string
+          logo_image_url: string | null
           name: string
           sort_order: number | null
           updated_at: string | null
@@ -1335,9 +1535,15 @@ export type Database = {
           code: string
           color?: string | null
           created_at?: string | null
+          default_bg_color?: string | null
+          default_display_sec?: number | null
+          default_switch_sec?: number | null
+          default_transition?: string | null
           external_product_id?: string | null
+          frame_image_url?: string | null
           id?: string
           label: string
+          logo_image_url?: string | null
           name: string
           sort_order?: number | null
           updated_at?: string | null
@@ -1348,9 +1554,15 @@ export type Database = {
           code?: string
           color?: string | null
           created_at?: string | null
+          default_bg_color?: string | null
+          default_display_sec?: number | null
+          default_switch_sec?: number | null
+          default_transition?: string | null
           external_product_id?: string | null
+          frame_image_url?: string | null
           id?: string
           label?: string
+          logo_image_url?: string | null
           name?: string
           sort_order?: number | null
           updated_at?: string | null
@@ -1723,6 +1935,7 @@ export type Database = {
       projects: {
         Row: {
           client_contact: string | null
+          copyright_text: string | null
           created_at: string | null
           created_by: string | null
           creative_type: string | null
@@ -1743,9 +1956,11 @@ export type Database = {
           total_video_count: number | null
           updated_at: string | null
           video_duration_seconds: number | null
+          work_title: string | null
         }
         Insert: {
           client_contact?: string | null
+          copyright_text?: string | null
           created_at?: string | null
           created_by?: string | null
           creative_type?: string | null
@@ -1766,9 +1981,11 @@ export type Database = {
           total_video_count?: number | null
           updated_at?: string | null
           video_duration_seconds?: number | null
+          work_title?: string | null
         }
         Update: {
           client_contact?: string | null
+          copyright_text?: string | null
           created_at?: string | null
           created_by?: string | null
           creative_type?: string | null
@@ -1789,6 +2006,7 @@ export type Database = {
           total_video_count?: number | null
           updated_at?: string | null
           video_duration_seconds?: number | null
+          work_title?: string | null
         }
         Relationships: [
           {
@@ -2464,6 +2682,7 @@ export type Database = {
       ensure_profile:
         | { Args: { p_email: string; p_user_id: string }; Returns: undefined }
         | { Args: { p_email: string; p_user_id: string }; Returns: undefined }
+      generate_share_token: { Args: never; Returns: string }
       get_applicable_rules: {
         Args: {
           p_process_type?: string
