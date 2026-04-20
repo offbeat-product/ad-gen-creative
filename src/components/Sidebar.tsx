@@ -41,7 +41,6 @@ const toolGroups: { emoji: string; label: string; items: ToolItem[] }[] = [
     items: [
       { to: '/tools/appeal-axis', icon: Target, label: '訴求軸・コピー生成' },
       { to: '/tools/composition', icon: Layout, label: '構成案・字コンテ生成' },
-      { to: '/tools/vcon', icon: Clapperboard, label: 'Vコン作成' },
       { to: '/tools/narration-script', icon: FileText, label: 'NA原稿生成' },
     ],
   },
@@ -65,6 +64,7 @@ const toolGroups: { emoji: string; label: string; items: ToolItem[] }[] = [
     emoji: '🎬',
     label: '動画生成',
     items: [
+      { to: '/tools/vcon', icon: Clapperboard, label: 'Vコン作成' },
       { to: '/tools/carousel-video', icon: Film, label: 'カルーセル動画生成' },
       { to: '/tools/video-resize', icon: Maximize2, label: '動画リサイズ' },
     ],
