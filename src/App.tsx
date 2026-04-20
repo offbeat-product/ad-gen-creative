@@ -14,10 +14,8 @@ import GenerateProgress from "@/pages/GenerateProgress";
 import HistoryPage from "@/pages/History";
 import GenerationResult from "@/pages/GenerationResult";
 import Settings from "@/pages/Settings";
-import {
-  CarouselVideoPage,
-  VideoResizePage,
-} from "@/pages/tools/Placeholders";
+import { CarouselVideoPage } from "@/pages/tools/Placeholders";
+import VideoResizeTool from "@/pages/tools/VideoResizeTool";
 import BannerImageTool from "@/pages/tools/BannerImageTool";
 import NarrationAudioTool from "@/pages/tools/NarrationAudioTool";
 import NarrationScriptTool from "@/pages/tools/NarrationScriptTool";
@@ -58,7 +56,7 @@ const App = () => (
                 <Route path="/tools/image-generation" element={<ImageGenerationTool />} />
                 <Route path="/tools/banner-image" element={<BannerImageTool />} />
                 <Route path="/tools/carousel-video" element={<CarouselVideoPage />} />
-                <Route path="/tools/video-resize" element={<VideoResizePage />} />
+                <Route path="/tools/video-resize" element={<VideoResizeTool />} />
                 <Route path="/settings" element={<Settings />} />
               </Route>
               <Route path="*" element={<NotFound />} />
