@@ -1,145 +1,205 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
+const STORAGE_KEY = 'adgen.user_preferences';
+
+interface UserPreferences {
+  default_voice_id: string;
+  default_voice_speed: number;
+  default_banner_style: string;
+  default_image_style: string;
+  default_duration_seconds: number;
+  default_aspect_ratio: string;
+}
+
+const DEFAULTS: UserPreferences = {
+  default_voice_id: 'female_a',
+  default_voice_speed: 1.0,
+  default_banner_style: 'photographic',
+  default_image_style: 'photographic',
+  default_duration_seconds: 30,
+  default_aspect_ratio: '9:16',
+};
+
+function loadPrefs(): UserPreferences {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return DEFAULTS;
+    return { ...DEFAULTS, ...JSON.parse(raw) };
+  } catch {
+    return DEFAULTS;
+  }
+}
+
 const SettingsAI = () => {
   const { toast } = useToast();
-  const [creativeType, setCreativeType] = useState('動画');
-  const [duration, setDuration] = useState('30秒');
-  const [genMode, setGenMode] = useState('全自動モード');
-  const [appealCount, setAppealCount] = useState([3]);
-  const [copyCount, setCopyCount] = useState([3]);
-  const [toneCount, setToneCount] = useState([2]);
-  const [voiceType, setVoiceType] = useState('女性ナチュラル');
-  const [copyTone, setCopyTone] = useState('親しみやすい');
-  const [template, setTemplate] = useState('冒頭→前半→後半→締め');
-  const [resolution, setResolution] = useState('1920×1080');
-  const [autoResize, setAutoResize] = useState(true);
-  const [imageFormat, setImageFormat] = useState('PNG');
+  const [prefs, setPrefs] = useState<UserPreferences>(DEFAULTS);
 
-  const total = appealCount[0] * copyCount[0] * toneCount[0];
+  useEffect(() => {
+    setPrefs(loadPrefs());
+  }, []);
 
-  const resetDefaults = () => {
-    setCreativeType('動画'); setDuration('30秒'); setGenMode('全自動モード');
-    setAppealCount([3]); setCopyCount([3]); setToneCount([2]);
-    setVoiceType('女性ナチュラル'); setCopyTone('親しみやすい'); setTemplate('冒頭→前半→後半→締め');
-    setResolution('1920×1080'); setAutoResize(true); setImageFormat('PNG');
+  const update = <K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) => {
+    setPrefs((p) => ({ ...p, [key]: value }));
+  };
+
+  const handleSave = () => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(prefs));
+    toast({ title: 'デフォルト値を保存しました' });
+  };
+
+  const handleReset = () => {
+    setPrefs(DEFAULTS);
+    localStorage.removeItem(STORAGE_KEY);
+    toast({ title: 'デフォルト値をリセットしました' });
   };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }} className="space-y-6">
-      {/* Section 1: Default Creative Settings */}
+      <p className="text-sm text-muted-foreground">
+        各ツールの初期値として使われる、よく使う設定を保存できます。
+      </p>
+
+      {/* Narration */}
       <Card>
-        <CardHeader><CardTitle className="text-base">デフォルトクリエイティブ設定</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">ナレーション音声</CardTitle></CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
-            <Label className="text-sm font-medium">クリエイティブタイプ</Label>
-            <RadioGroup value={creativeType} onValueChange={setCreativeType} className="flex gap-4">
-              <div className="flex items-center gap-2"><RadioGroupItem value="静止画バナー" id="ct-static" /><Label htmlFor="ct-static">静止画バナー</Label></div>
-              <div className="flex items-center gap-2"><RadioGroupItem value="動画" id="ct-video" /><Label htmlFor="ct-video">動画</Label></div>
-            </RadioGroup>
-          </div>
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">動画デフォルト尺</Label>
-            <RadioGroup value={duration} onValueChange={setDuration} className="flex gap-4">
-              {['15秒', '30秒', '60秒'].map(d => (
-                <div key={d} className="flex items-center gap-2"><RadioGroupItem value={d} id={`dur-${d}`} /><Label htmlFor={`dur-${d}`}>{d}</Label></div>
+            <Label className="text-sm font-medium">デフォルト声優</Label>
+            <RadioGroup
+              value={prefs.default_voice_id}
+              onValueChange={(v) => update('default_voice_id', v)}
+              className="grid grid-cols-2 sm:grid-cols-4 gap-2"
+            >
+              {[
+                { value: 'male_a', label: '男性A' },
+                { value: 'male_b', label: '男性B' },
+                { value: 'female_a', label: '女性A' },
+                { value: 'female_b', label: '女性B' },
+              ].map((v) => (
+                <div key={v.value} className="flex items-center gap-2 border rounded-lg px-3 py-2">
+                  <RadioGroupItem value={v.value} id={`voice-${v.value}`} />
+                  <Label htmlFor={`voice-${v.value}`} className="cursor-pointer">{v.label}</Label>
+                </div>
               ))}
             </RadioGroup>
           </div>
+
           <div className="space-y-2">
-            <Label className="text-sm font-medium">デフォルト生成モード</Label>
-            <RadioGroup value={genMode} onValueChange={setGenMode} className="flex gap-4">
-              {['全自動モード', 'ステップ確認モード'].map(m => (
-                <div key={m} className="flex items-center gap-2"><RadioGroupItem value={m} id={`gm-${m}`} /><Label htmlFor={`gm-${m}`}>{m}</Label></div>
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-medium">デフォルト速度</Label>
+              <span className="text-sm font-bold text-secondary tabular-nums">{prefs.default_voice_speed.toFixed(1)}x</span>
+            </div>
+            <Slider
+              value={[prefs.default_voice_speed]}
+              onValueChange={(v) => update('default_voice_speed', v[0])}
+              min={0.5}
+              max={2.0}
+              step={0.1}
+            />
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>0.5x (遅い)</span>
+              <span>1.0x (標準)</span>
+              <span>2.0x (速い)</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Image styles */}
+      <Card>
+        <CardHeader><CardTitle className="text-base">画像生成スタイル</CardTitle></CardHeader>
+        <CardContent className="space-y-6">
+          <StyleSelect
+            label="バナー画像のデフォルトスタイル"
+            value={prefs.default_banner_style}
+            onChange={(v) => update('default_banner_style', v)}
+          />
+          <StyleSelect
+            label="絵コンテ画像のデフォルトスタイル"
+            value={prefs.default_image_style}
+            onChange={(v) => update('default_image_style', v)}
+          />
+        </CardContent>
+      </Card>
+
+      {/* Video defaults */}
+      <Card>
+        <CardHeader><CardTitle className="text-base">動画デフォルト</CardTitle></CardHeader>
+        <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">デフォルト動画尺</Label>
+            <RadioGroup
+              value={String(prefs.default_duration_seconds)}
+              onValueChange={(v) => update('default_duration_seconds', Number(v))}
+              className="flex gap-4"
+            >
+              {[15, 30, 60].map((d) => (
+                <div key={d} className="flex items-center gap-2 border rounded-lg px-3 py-2">
+                  <RadioGroupItem value={String(d)} id={`dur-${d}`} />
+                  <Label htmlFor={`dur-${d}`} className="cursor-pointer">{d}秒</Label>
+                </div>
+              ))}
+            </RadioGroup>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">デフォルトアスペクト比</Label>
+            <RadioGroup
+              value={prefs.default_aspect_ratio}
+              onValueChange={(v) => update('default_aspect_ratio', v)}
+              className="flex gap-4"
+            >
+              {[
+                { value: '9:16', label: '9:16 (縦)' },
+                { value: '16:9', label: '16:9 (横)' },
+                { value: '1:1', label: '1:1 (正方形)' },
+              ].map((a) => (
+                <div key={a.value} className="flex items-center gap-2 border rounded-lg px-3 py-2">
+                  <RadioGroupItem value={a.value} id={`ar-${a.value}`} />
+                  <Label htmlFor={`ar-${a.value}`} className="cursor-pointer">{a.label}</Label>
+                </div>
               ))}
             </RadioGroup>
           </div>
         </CardContent>
       </Card>
 
-      {/* Section 2: Default Pattern Count */}
-      <Card>
-        <CardHeader><CardTitle className="text-base">デフォルトパターン数</CardTitle></CardHeader>
-        <CardContent className="space-y-6">
-          {[
-            { label: '訴求軸パターン数', value: appealCount, set: setAppealCount },
-            { label: 'コピーパターン数', value: copyCount, set: setCopyCount },
-            { label: 'トンマナパターン数', value: toneCount, set: setToneCount },
-          ].map(({ label, value, set }) => (
-            <div key={label} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">{label}</Label>
-                <span className="text-lg font-bold text-secondary tabular-nums">{value[0]}</span>
-              </div>
-              <Slider value={value} onValueChange={set} min={1} max={10} step={1} />
-            </div>
-          ))}
-          <div className="bg-muted rounded-lg p-3 text-sm text-muted-foreground">
-            デフォルト: <span className="font-semibold text-foreground">{total}本</span>（{appealCount[0]}×{copyCount[0]}×{toneCount[0]}）
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Section 3: AI Quality Settings */}
-      <Card>
-        <CardHeader><CardTitle className="text-base">AI生成品質設定</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <SettingSelect label="ナレーション音声タイプ" value={voiceType} onValueChange={setVoiceType}
-            options={['女性ナチュラル', '男性ナチュラル', '女性プロフェッショナル', '男性プロフェッショナル']} />
-          <SettingSelect label="コピートーン" value={copyTone} onValueChange={setCopyTone}
-            options={['親しみやすい', 'プロフェッショナル', '緊急感', 'ナチュラル', 'カジュアル']} />
-          <SettingSelect label="構成案テンプレート" value={template} onValueChange={setTemplate}
-            options={['冒頭→前半→後半→締め', '問題提起→共感→解決→CTA', 'ストーリー型', '比較型']} />
-        </CardContent>
-      </Card>
-
-      {/* Section 4: Output Settings */}
-      <Card>
-        <CardHeader><CardTitle className="text-base">出力設定</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <SettingSelect label="動画解像度" value={resolution} onValueChange={setResolution}
-            options={['1920×1080（フルHD）', '1280×720（HD）', '3840×2160（4K）']} />
-          <div className="flex items-center justify-between">
-            <div>
-              <Label className="text-sm font-medium">自動縦動画リサイズ</Label>
-              <p className="text-xs text-muted-foreground mt-0.5">横動画生成後に自動で縦動画（9:16）にリサイズします</p>
-            </div>
-            <Switch checked={autoResize} onCheckedChange={setAutoResize} />
-          </div>
-          <SettingSelect label="静止画出力形式" value={imageFormat} onValueChange={setImageFormat}
-            options={['PNG', 'JPG', 'WebP']} />
-        </CardContent>
-      </Card>
-
-      {/* Save */}
       <div className="flex items-center gap-4">
-        <Button className="bg-secondary text-secondary-foreground hover:bg-secondary/90" onClick={() => toast({ title: 'AI生成設定を保存しました' })}>
-          設定を保存
+        <Button className="bg-secondary text-secondary-foreground hover:bg-secondary/90" onClick={handleSave}>
+          デフォルト値を保存
         </Button>
-        <button onClick={resetDefaults} className="text-sm text-secondary hover:underline">デフォルトに戻す</button>
+        <button onClick={handleReset} className="text-sm text-secondary hover:underline">
+          初期設定に戻す
+        </button>
       </div>
     </motion.div>
   );
 };
 
-function SettingSelect({ label, value, onValueChange, options }: { label: string; value: string; onValueChange: (v: string) => void; options: string[] }) {
+function StyleSelect({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const options = [
+    { value: 'photographic', label: 'リアル' },
+    { value: 'illustration', label: 'イラスト' },
+    { value: 'motion_graphics', label: 'モーショングラフィックス' },
+  ];
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       <Label className="text-sm font-medium">{label}</Label>
-      <Select value={value} onValueChange={onValueChange}>
-        <SelectTrigger className="w-full max-w-sm"><SelectValue /></SelectTrigger>
-        <SelectContent>
-          {options.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-        </SelectContent>
-      </Select>
+      <RadioGroup value={value} onValueChange={onChange} className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        {options.map((o) => (
+          <div key={o.value} className="flex items-center gap-2 border rounded-lg px-3 py-2">
+            <RadioGroupItem value={o.value} id={`${label}-${o.value}`} />
+            <Label htmlFor={`${label}-${o.value}`} className="cursor-pointer">{o.label}</Label>
+          </div>
+        ))}
+      </RadioGroup>
     </div>
   );
 }

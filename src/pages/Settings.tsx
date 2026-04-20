@@ -1,11 +1,10 @@
 import { Settings as SettingsIcon } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import SettingsAI from './settings/SettingsAI';
-import SettingsClients from './settings/SettingsClients';
-import SettingsTeam from './settings/SettingsTeam';
-import SettingsNotifications from './settings/SettingsNotifications';
 import SettingsAccount from './settings/SettingsAccount';
+import SettingsClients from './settings/SettingsClients';
+import SettingsAI from './settings/SettingsAI';
+import SettingsNotifications from './settings/SettingsNotifications';
 
 const Settings = () => (
   <motion.div
@@ -19,22 +18,20 @@ const Settings = () => (
       <h1 className="text-2xl font-bold tracking-tight font-display">設定</h1>
     </div>
 
-    <Tabs defaultValue="ai">
+    <Tabs defaultValue="account">
       <div className="overflow-x-auto -mx-4 px-4 lg:mx-0 lg:px-0">
         <TabsList className="w-max justify-start">
-          <TabsTrigger value="ai">AI生成設定</TabsTrigger>
-          <TabsTrigger value="clients">クライアント管理</TabsTrigger>
-          <TabsTrigger value="team">チーム管理</TabsTrigger>
-          <TabsTrigger value="notifications">通知設定</TabsTrigger>
           <TabsTrigger value="account">アカウント</TabsTrigger>
+          <TabsTrigger value="clients">クライアント管理</TabsTrigger>
+          <TabsTrigger value="defaults">デフォルト値</TabsTrigger>
+          <TabsTrigger value="notifications">通知設定</TabsTrigger>
         </TabsList>
       </div>
 
-      <TabsContent value="ai"><SettingsAI /></TabsContent>
-      <TabsContent value="clients"><SettingsClients /></TabsContent>
-      <TabsContent value="team"><SettingsTeam /></TabsContent>
-      <TabsContent value="notifications"><SettingsNotifications /></TabsContent>
       <TabsContent value="account"><SettingsAccount /></TabsContent>
+      <TabsContent value="clients"><SettingsClients /></TabsContent>
+      <TabsContent value="defaults"><SettingsAI /></TabsContent>
+      <TabsContent value="notifications"><SettingsNotifications /></TabsContent>
     </Tabs>
   </motion.div>
 );
