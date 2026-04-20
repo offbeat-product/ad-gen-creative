@@ -67,9 +67,11 @@ interface SpotJob {
 }
 
 interface CopyItem {
-  appeal_axis_index: number;
+  pattern_id: string;
+  appeal_axis_index: number; // 1-indexed
+  appeal_axis_text?: string;
   copy_index: number;
-  text: string;
+  copy_text: string;
   hook?: string;
 }
 
@@ -89,6 +91,36 @@ interface SpotAsset {
     hint?: string;
   } | null;
 }
+
+const buildFormattedText = (
+  appealAxes: AppealAxisObj[],
+  copies: CopyItem[]
+): string => {
+  const lines: string[] = [];
+  lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  lines.push('  訴求軸・コピー生成結果');
+  lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  lines.push('');
+
+  appealAxes.forEach((axis, i) => {
+    const axisNum = i + 1;
+    lines.push(`■ 訴求軸${axisNum}: ${axis.text}`);
+    if (axis.reasoning) {
+      lines.push(`  根拠: ${axis.reasoning}`);
+    }
+    lines.push('');
+    const axisCopies = copies.filter((c) => c.appeal_axis_index === axisNum);
+    axisCopies.forEach((c) => {
+      lines.push(`  ${c.pattern_id}. ${c.copy_text}`);
+      if (c.hook) {
+        lines.push(`     狙い: ${c.hook}`);
+      }
+    });
+    lines.push('');
+  });
+
+  return lines.join('\n');
+};
 
 const letterFor = (n: number) => String.fromCharCode(65 + n); // 0->A
 
