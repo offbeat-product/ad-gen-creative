@@ -126,6 +126,7 @@ const letterFor = (n: number) => String.fromCharCode(65 + n); // 0->A
 
 const AppealAxisTool = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { state, updateState } = useSpotWizard();
   const { context } = useProjectContext(state.projectId);
 
