@@ -19,6 +19,7 @@ import SpotStepClient from '@/components/spot/SpotStepClient';
 import SpotStepProduct from '@/components/spot/SpotStepProduct';
 import SpotStepProject from '@/components/spot/SpotStepProject';
 import SpotStepDataCollection from '@/components/spot/SpotStepDataCollection';
+import BriefSection, { type BriefData, EMPTY_BRIEF } from '@/components/spot/BriefSection';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -30,6 +31,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Table,
   TableBody,
