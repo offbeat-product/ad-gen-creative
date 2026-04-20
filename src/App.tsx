@@ -16,13 +16,13 @@ import GenerationResult from "@/pages/GenerationResult";
 import Settings from "@/pages/Settings";
 import {
   AppealAxisPage,
-  CompositionPage,
   ImageGenerationPage,
   CarouselVideoPage,
   VideoResizePage,
 } from "@/pages/tools/Placeholders";
 import NarrationAudioTool from "@/pages/tools/NarrationAudioTool";
 import NarrationScriptTool from "@/pages/tools/NarrationScriptTool";
+import CompositionTool from "@/pages/tools/CompositionTool";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
