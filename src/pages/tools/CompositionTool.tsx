@@ -389,6 +389,25 @@ const CompositionTool = () => {
                 </div>
               )}
 
+              {/* 引き継ぎ情報 */}
+              {seedInfo && (
+                <div className="rounded-xl border border-secondary/30 bg-secondary-wash/40 p-4 space-y-1">
+                  <div className="text-xs font-semibold text-secondary uppercase tracking-wide">
+                    🔗 訴求軸・コピー生成ツールから引き継ぎ
+                  </div>
+                  {seedInfo.pattern_id && (
+                    <div className="text-xs text-muted-foreground">
+                      パターン: {seedInfo.pattern_id}
+                    </div>
+                  )}
+                  {seedInfo.hook && (
+                    <div className="text-xs text-muted-foreground">
+                      💡 狙い: {seedInfo.hook}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* 訴求軸 */}
               <div className="space-y-2">
                 <Label htmlFor="appeal-axis">訴求軸</Label>
