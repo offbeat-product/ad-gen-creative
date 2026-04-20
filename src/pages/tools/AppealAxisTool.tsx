@@ -779,43 +779,32 @@ const AppealAxisTool = () => {
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                      {group.map((c) => {
-                                        const letter = letterFor(runningIdx);
-                                        runningIdx += 1;
-                                        return (
-                                          <TableRow key={`${axisIdx}-${c.copy_index}`}>
-                                            <TableCell className="font-bold align-top">
-                                              {letter}
-                                            </TableCell>
-                                            <TableCell className="text-sm align-top whitespace-pre-wrap">
-                                              <div className="font-medium">{c.text}</div>
-                                              {c.hook && (
-                                                <div className="text-xs text-muted-foreground mt-1">
-                                                  狙い: {c.hook}
-                                                </div>
-                                              )}
-                                            </TableCell>
-                                            <TableCell className="text-right align-top">
-                                              <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => {
-                                                  console.log(
-                                                    '[future] generate composition for',
-                                                    {
-                                                      appeal_axis: appealAxes[axisIdx]?.text,
-                                                      copy_text: c.text,
-                                                    }
-                                                  );
-                                                  toast.info('構成案生成への連携は今後実装予定です');
-                                                }}
-                                              >
-                                                <ArrowRight className="h-3 w-3 mr-1" /> 構成案生成
-                                              </Button>
-                                            </TableCell>
-                                          </TableRow>
-                                        );
-                                      })}
+                                      {group.map((c) => (
+                                        <TableRow key={`${axisIdx}-${c.copy_index}`}>
+                                          <TableCell className="font-bold align-top">
+                                            {c.pattern_id}
+                                          </TableCell>
+                                          <TableCell className="text-sm align-top whitespace-pre-wrap">
+                                            <div className="font-semibold leading-relaxed">
+                                              {c.copy_text}
+                                            </div>
+                                            {c.hook && (
+                                              <div className="text-xs text-muted-foreground mt-1.5">
+                                                💡 狙い: {c.hook}
+                                              </div>
+                                            )}
+                                          </TableCell>
+                                          <TableCell className="text-right align-top">
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() => handleGoToComposition(c)}
+                                            >
+                                              <ArrowRight className="h-3 w-3 mr-1" /> 構成案生成
+                                            </Button>
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
                                     </TableBody>
                                   </Table>
                                 </div>
