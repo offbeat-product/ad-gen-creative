@@ -25,8 +25,16 @@ interface SidebarProps {
 
 const dashboardItem = { to: '/', icon: LayoutDashboard, label: 'ダッシュボード' };
 
-const toolGroups: { label: string; items: { to: string; icon: typeof Target; label: string }[] }[] = [
+interface ToolItem {
+  to: string;
+  icon: typeof Target;
+  label: string;
+  comingSoon?: boolean;
+}
+
+const toolGroups: { emoji: string; label: string; items: ToolItem[] }[] = [
   {
+    emoji: '📝',
     label: '文字生成',
     items: [
       { to: '/tools/appeal-axis', icon: Target, label: '訴求軸・コピー生成' },
@@ -35,23 +43,26 @@ const toolGroups: { label: string; items: { to: string; icon: typeof Target; lab
     ],
   },
   {
+    emoji: '🔊',
     label: '音声生成',
     items: [
       { to: '/tools/narration-audio', icon: Mic, label: 'ナレーション音声生成' },
     ],
   },
   {
+    emoji: '🖼️',
     label: '画像生成',
     items: [
       { to: '/tools/image-generation', icon: ImageIcon, label: '絵コンテ用画像生成' },
-      { to: '/tools/banner-image', icon: ImageIcon, label: 'バナー画像生成' },
+      { to: '/tools/banner-image', icon: ImageIcon, label: 'バナー画像生成', comingSoon: true },
     ],
   },
   {
+    emoji: '🎬',
     label: '動画生成',
     items: [
-      { to: '/tools/carousel-video', icon: Film, label: 'カルーセル動画生成' },
-      { to: '/tools/video-resize', icon: Maximize2, label: '動画リサイズ' },
+      { to: '/tools/carousel-video', icon: Film, label: 'カルーセル動画生成', comingSoon: true },
+      { to: '/tools/video-resize', icon: Maximize2, label: '動画リサイズ', comingSoon: true },
     ],
   },
 ];
