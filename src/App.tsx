@@ -56,7 +56,7 @@ const App = () => (
                 <Route path="/tools/image-generation" element={<ImageGenerationTool />} />
                 <Route path="/tools/banner-image" element={<BannerImageTool />} />
                 <Route path="/tools/carousel-video" element={<CarouselVideoPage />} />
-                <Route path="/tools/video-resize" element={<VideoResizePage />} />
+                <Route path="/tools/video-resize" element={<VideoResizeTool />} />
                 <Route path="/settings" element={<Settings />} />
               </Route>
               <Route path="*" element={<NotFound />} />
