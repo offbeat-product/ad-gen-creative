@@ -25,14 +25,35 @@ interface SidebarProps {
 
 const dashboardItem = { to: '/', icon: LayoutDashboard, label: 'ダッシュボード' };
 
-const spotToolItems = [
-  { to: '/tools/appeal-axis', icon: Target, label: '訴求軸・コピー生成' },
-  { to: '/tools/composition', icon: Layout, label: '構成案・字コンテ生成' },
-  { to: '/tools/narration-script', icon: FileText, label: 'NA原稿生成' },
-  { to: '/tools/narration-audio', icon: Mic, label: 'ナレーション音声生成' },
-  { to: '/tools/image-generation', icon: ImageIcon, label: 'イメージ画像生成' },
-  { to: '/tools/carousel-video', icon: Film, label: 'カルーセル動画生成' },
-  { to: '/tools/video-resize', icon: Maximize2, label: '動画リサイズ' },
+const toolGroups: { label: string; items: { to: string; icon: typeof Target; label: string }[] }[] = [
+  {
+    label: '文字生成',
+    items: [
+      { to: '/tools/appeal-axis', icon: Target, label: '訴求軸・コピー生成' },
+      { to: '/tools/composition', icon: Layout, label: '構成案・字コンテ生成' },
+      { to: '/tools/narration-script', icon: FileText, label: 'NA原稿生成' },
+    ],
+  },
+  {
+    label: '音声生成',
+    items: [
+      { to: '/tools/narration-audio', icon: Mic, label: 'ナレーション音声生成' },
+    ],
+  },
+  {
+    label: '画像生成',
+    items: [
+      { to: '/tools/image-generation', icon: ImageIcon, label: '絵コンテ用画像生成' },
+      { to: '/tools/banner-image', icon: ImageIcon, label: 'バナー画像生成' },
+    ],
+  },
+  {
+    label: '動画生成',
+    items: [
+      { to: '/tools/carousel-video', icon: Film, label: 'カルーセル動画生成' },
+      { to: '/tools/video-resize', icon: Maximize2, label: '動画リサイズ' },
+    ],
+  },
 ];
 
 const otherItems = [
