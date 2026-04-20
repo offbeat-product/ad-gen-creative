@@ -146,17 +146,31 @@ const Dashboard = () => {
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-muted-foreground">何を生成しますか?</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {tools.map((tool) => (
-            <Link
-              key={tool.path}
-              to={tool.path}
-              className="group rounded-xl border bg-card p-4 hover:shadow-elevated hover:-translate-y-0.5 transition-all"
-            >
-              <tool.Icon className="h-6 w-6 text-secondary mb-2" />
-              <div className="font-semibold text-sm">{tool.label}</div>
-              <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{tool.description}</div>
-            </Link>
-          ))}
+          {tools.map((tool) =>
+            tool.comingSoon ? (
+              <div
+                key={tool.path}
+                className="relative rounded-xl border bg-card p-4 opacity-60 cursor-not-allowed"
+              >
+                <span className="absolute top-2 right-2 text-[9px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
+                  Soon
+                </span>
+                <tool.Icon className="h-6 w-6 text-muted-foreground mb-2" />
+                <div className="font-semibold text-sm">{tool.label}</div>
+                <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{tool.description}</div>
+              </div>
+            ) : (
+              <Link
+                key={tool.path}
+                to={tool.path}
+                className="group rounded-xl border bg-card p-4 hover:shadow-elevated hover:-translate-y-0.5 transition-all"
+              >
+                <tool.Icon className="h-6 w-6 text-secondary mb-2" />
+                <div className="font-semibold text-sm">{tool.label}</div>
+                <div className="text-xs text-muted-foreground mt-1 line-clamp-2">{tool.description}</div>
+              </Link>
+            )
+          )}
         </div>
       </section>
 
