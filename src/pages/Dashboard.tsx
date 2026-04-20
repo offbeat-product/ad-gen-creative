@@ -109,11 +109,45 @@ const Dashboard = () => {
                     <div className="text-2xl font-bold tabular-nums text-secondary">{context.corrections.length}件</div>
                   </div>
                 </div>
+
+                {Object.keys(context.stats.rulesByProcessType).length > 0 && (
+                  <div className="pt-2 border-t">
+                    <div className="text-xs font-medium text-muted-foreground mb-2">ルール内訳(工程別)</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.entries(context.stats.rulesByProcessType)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([type, count]) => (
+                          <span key={type} className="inline-flex items-center rounded-full bg-secondary-wash px-2 py-0.5 text-xs font-medium text-secondary">
+                            {type}: {count}
+                          </span>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {Object.keys(context.stats.materialsByType).length > 0 && (
+                  <div className="pt-2 border-t">
+                    <div className="text-xs font-medium text-muted-foreground mb-2">素材内訳(種類別)</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {Object.entries(context.stats.materialsByType)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([type, count]) => (
+                          <span key={type} className="inline-flex items-center rounded-full bg-primary-wash px-2 py-0.5 text-xs font-medium text-primary">
+                            {type}: {count}
+                          </span>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-sm pt-2 border-t">
                   <div><span className="text-muted-foreground">案件:</span> <span className="font-medium">{context.project.name}</span></div>
                   <div><span className="text-muted-foreground">作品名:</span> <span className="font-medium">{context.project.work_title ?? '(未設定)'}</span></div>
                   <div><span className="text-muted-foreground">クライアント:</span> <span className="font-medium">{context.project.product.client.name}</span></div>
                   <div><span className="text-muted-foreground">商材:</span> <span className="font-medium">{context.project.product.name}</span></div>
+                  {context.project.creative_type && (
+                    <div><span className="text-muted-foreground">クリエイティブタイプ:</span> <span className="font-medium">{context.project.creative_type}</span></div>
+                  )}
                   <div className="sm:col-span-2"><span className="text-muted-foreground">コピーライト:</span> <span className="font-medium">{context.project.copyright_text ?? '(未設定)'}</span></div>
                 </div>
               </>
