@@ -297,27 +297,29 @@ const BannerImageTool = () => {
   const handleGenerate = async () => {
     if (!state.projectId || !user || !mainCopy.trim() || selectedSizes.length === 0) return;
 
+    const insertPayload = {
+      project_id: state.projectId,
+      tool_type: 'banner_image',
+      input_data: {
+        main_copy: mainCopy,
+        sub_copy: subCopy,
+        cta_text: ctaText,
+        appeal_point: appealPoint,
+        target_audience: targetAudience,
+        creative_style: creativeStyle,
+        sizes: selectedSizes,
+        variations_per_size: variationsPerSize,
+        burn_text: burnText,
+        output_png: outputPng,
+        output_psd: outputPsd,
+      },
+      status: 'pending',
+      created_by: user.id,
+    } as any;
+
     const { data: newJob, error: jobError } = await supabase
       .from('gen_spot_jobs')
-      .insert({
-        project_id: state.projectId,
-        tool_type: 'banner_image',
-        input_data: {
-          main_copy: mainCopy,
-          sub_copy: subCopy,
-          cta_text: ctaText,
-          appeal_point: appealPoint,
-          target_audience: targetAudience,
-          creative_style: creativeStyle,
-          sizes: selectedSizes,
-          variations_per_size: variationsPerSize,
-          burn_text: burnText,
-          output_png: outputPng,
-          output_psd: outputPsd,
-        },
-        status: 'pending',
-        created_by: user.id,
-      })
+      .insert(insertPayload)
       .select()
       .single();
 
