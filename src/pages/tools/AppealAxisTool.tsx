@@ -66,6 +66,12 @@ interface CopyItem {
   appeal_axis_index: number;
   copy_index: number;
   text: string;
+  hook?: string;
+}
+
+interface AppealAxisObj {
+  text: string;
+  reasoning?: string;
 }
 
 interface SpotAsset {
@@ -74,7 +80,7 @@ interface SpotAsset {
   file_name: string | null;
   sort_order: number | null;
   metadata: {
-    appeal_axes?: string[];
+    appeal_axes?: (string | AppealAxisObj)[];
     copies?: CopyItem[];
     hint?: string;
   } | null;
