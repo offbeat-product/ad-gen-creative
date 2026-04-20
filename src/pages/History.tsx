@@ -109,6 +109,26 @@ function StatusBadge({ status }: { status: string | null }) {
   }
 }
 
+interface SummaryCardProps {
+  label: string;
+  value: number;
+  Icon: typeof Sparkles;
+  color: string;
+  spin?: boolean;
+}
+
+const SummaryCard = ({ label, value, Icon, color, spin }: SummaryCardProps) => (
+  <div className="rounded-xl border bg-card p-4 flex items-center gap-3">
+    <div className={cn('h-10 w-10 rounded-lg bg-muted flex items-center justify-center', color)}>
+      <Icon className={cn('h-5 w-5', spin && 'animate-spin')} />
+    </div>
+    <div>
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="text-2xl font-bold tabular-nums">{value}</div>
+    </div>
+  </div>
+);
+
 const History = () => {
   const navigate = useNavigate();
 
