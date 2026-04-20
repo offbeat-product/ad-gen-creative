@@ -52,7 +52,19 @@ const SpotToolWizard = ({
   const { context } = useProjectContext(state.projectId);
   const [currentStep, setCurrentStep] = useState(0);
   const [direction, setDirection] = useState(1);
+  const [didInitialJump, setDidInitialJump] = useState(false);
   const restoredRef = useRef(false);
+
+  // 初回マウント時、state が全て埋まっていれば STEP3 (index 2) にジャンプ
+  // (sessionStorage seed 復元などで外部から state が事前設定されるケース)
+  useEffect(() => {
+    if (didInitialJump) return;
+    if (jobId) return; // jobId がある場合は STEP4 復元側に任せる
+    if (state.clientId && state.productId && state.projectId) {
+      setCurrentStep(2);
+      setDidInitialJump(true);
+    }
+  }, [state.clientId, state.productId, state.projectId, didInitialJump, jobId]);
 
   const goNext = useCallback(() => {
     setDirection(1);
