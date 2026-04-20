@@ -109,15 +109,19 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
             {dashboardItem.label}
           </NavLink>
 
-          <SectionLabel>生成ツール</SectionLabel>
-          <div className="space-y-0.5">
-            {spotToolItems.map((item) => (
-              <NavLink key={item.to} to={item.to} onClick={onClose} className={navLinkClass}>
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </NavLink>
-            ))}
-          </div>
+          {toolGroups.map((group) => (
+            <div key={group.label}>
+              <SectionLabel>{group.label}</SectionLabel>
+              <div className="space-y-0.5">
+                {group.items.map((item) => (
+                  <NavLink key={item.to} to={item.to} onClick={onClose} className={navLinkClass}>
+                    <item.icon className="h-4 w-4" />
+                    {item.label}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
+          ))}
 
           <SectionLabel>その他</SectionLabel>
           <div className="space-y-0.5">
