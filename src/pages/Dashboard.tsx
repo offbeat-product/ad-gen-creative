@@ -29,6 +29,8 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const userName = user?.email?.split('@')[0] ?? '';
   const clientCount = useClientCount();
+  const { currentProjectId } = useCurrentProject();
+  const { context, loading: ctxLoading } = useProjectContext(currentProjectId);
 
   return (
     <motion.div className="max-w-7xl mx-auto space-y-8" variants={stagger} initial="initial" animate="animate">
