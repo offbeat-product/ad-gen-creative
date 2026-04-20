@@ -371,20 +371,10 @@ const NarrationAudioTool = () => {
               {/* ボイス選択 */}
               <div className="space-y-2">
                 <Label>ボイス選択</Label>
-                <RadioGroup value={selectedVoice} onValueChange={setSelectedVoice}>
-                  {VOICE_OPTIONS.map((v) => (
-                    <div
-                      key={v.id}
-                      className="flex items-center space-x-2 p-3 rounded border hover:bg-accent/30 cursor-pointer"
-                    >
-                      <RadioGroupItem value={v.id} id={`voice-${v.id}`} />
-                      <Label htmlFor={`voice-${v.id}`} className="flex-1 cursor-pointer">
-                        <span className="font-medium">{v.label}</span>
-                        <span className="text-xs text-muted-foreground ml-2">{v.description}</span>
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
+                <SpotVoiceSelector
+                  selectedVoiceId={selectedVoice}
+                  onSelectVoice={setSelectedVoice}
+                />
               </div>
 
               {/* 読み上げ速度 */}
