@@ -88,7 +88,7 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
             {dashboardItem.label}
           </NavLink>
 
-          <SectionLabel>スポットツール</SectionLabel>
+          <SectionLabel>生成ツール</SectionLabel>
           <div className="space-y-0.5">
             {spotToolItems.map((item) => (
               <NavLink key={item.to} to={item.to} onClick={onClose} className={navLinkClass}>
