@@ -15,7 +15,6 @@ import HistoryPage from "@/pages/History";
 import GenerationResult from "@/pages/GenerationResult";
 import Settings from "@/pages/Settings";
 import {
-  ImageGenerationPage,
   CarouselVideoPage,
   VideoResizePage,
 } from "@/pages/tools/Placeholders";
@@ -23,6 +22,7 @@ import NarrationAudioTool from "@/pages/tools/NarrationAudioTool";
 import NarrationScriptTool from "@/pages/tools/NarrationScriptTool";
 import CompositionTool from "@/pages/tools/CompositionTool";
 import AppealAxisTool from "@/pages/tools/AppealAxisTool";
+import ImageGenerationTool from "@/pages/tools/ImageGenerationTool";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
