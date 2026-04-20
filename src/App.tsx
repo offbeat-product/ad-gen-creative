@@ -14,7 +14,7 @@ import GenerateProgress from "@/pages/GenerateProgress";
 import HistoryPage from "@/pages/History";
 import GenerationResult from "@/pages/GenerationResult";
 import Settings from "@/pages/Settings";
-import { CarouselVideoPage } from "@/pages/tools/Placeholders";
+import CarouselVideoTool from "@/pages/tools/CarouselVideoTool";
 import VideoResizeTool from "@/pages/tools/VideoResizeTool";
 import BannerImageTool from "@/pages/tools/BannerImageTool";
 import NarrationAudioTool from "@/pages/tools/NarrationAudioTool";
@@ -55,7 +55,7 @@ const App = () => (
                 <Route path="/tools/narration-audio" element={<NarrationAudioTool />} />
                 <Route path="/tools/image-generation" element={<ImageGenerationTool />} />
                 <Route path="/tools/banner-image" element={<BannerImageTool />} />
-                <Route path="/tools/carousel-video" element={<CarouselVideoPage />} />
+                <Route path="/tools/carousel-video" element={<CarouselVideoTool />} />
                 <Route path="/tools/video-resize" element={<VideoResizeTool />} />
                 <Route path="/settings" element={<Settings />} />
               </Route>
