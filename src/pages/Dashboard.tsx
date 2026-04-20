@@ -13,7 +13,7 @@ const tools: { path: string; label: string; Icon: typeof Target; description: st
   { path: '/tools/narration-script', label: 'NA原稿生成', Icon: FileText, description: '構成案からNA原稿を生成' },
   { path: '/tools/narration-audio', label: 'ナレーション音声生成', Icon: Mic, description: 'NA原稿から音声ファイルを生成' },
   { path: '/tools/image-generation', label: '絵コンテ用画像生成', Icon: ImageIcon, description: '字コンテから絵コンテ用の画像を生成' },
-  { path: '/tools/banner-image', label: 'バナー画像生成', Icon: ImageIcon, description: '訴求軸からバナー画像を生成', comingSoon: true },
+  { path: '/tools/banner-image', label: 'バナー画像生成', Icon: ImageIcon, description: '訴求軸からバナー画像を生成' },
   { path: '/tools/carousel-video', label: 'カルーセル動画生成', Icon: Film, description: '原作イラストからカルーセル動画を生成', comingSoon: true },
   { path: '/tools/video-resize', label: '動画リサイズ', Icon: Maximize2, description: '横動画を縦動画・スクエアにリサイズ', comingSoon: true },
 ];

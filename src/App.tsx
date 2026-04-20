@@ -15,10 +15,10 @@ import HistoryPage from "@/pages/History";
 import GenerationResult from "@/pages/GenerationResult";
 import Settings from "@/pages/Settings";
 import {
-  BannerImagePage,
   CarouselVideoPage,
   VideoResizePage,
 } from "@/pages/tools/Placeholders";
+import BannerImageTool from "@/pages/tools/BannerImageTool";
 import NarrationAudioTool from "@/pages/tools/NarrationAudioTool";
 import NarrationScriptTool from "@/pages/tools/NarrationScriptTool";
 import CompositionTool from "@/pages/tools/CompositionTool";
@@ -56,7 +56,7 @@ const App = () => (
                 <Route path="/tools/narration-script" element={<NarrationScriptTool />} />
                 <Route path="/tools/narration-audio" element={<NarrationAudioTool />} />
                 <Route path="/tools/image-generation" element={<ImageGenerationTool />} />
-                <Route path="/tools/banner-image" element={<BannerImagePage />} />
+                <Route path="/tools/banner-image" element={<BannerImageTool />} />
                 <Route path="/tools/carousel-video" element={<CarouselVideoPage />} />
                 <Route path="/tools/video-resize" element={<VideoResizePage />} />
                 <Route path="/settings" element={<Settings />} />

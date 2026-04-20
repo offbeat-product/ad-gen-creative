@@ -54,7 +54,7 @@ const toolGroups: { emoji: string; label: string; items: ToolItem[] }[] = [
     label: '画像生成',
     items: [
       { to: '/tools/image-generation', icon: ImageIcon, label: '絵コンテ用画像生成' },
-      { to: '/tools/banner-image', icon: ImageIcon, label: 'バナー画像生成', comingSoon: true },
+      { to: '/tools/banner-image', icon: ImageIcon, label: 'バナー画像生成' },
     ],
   },
   {
