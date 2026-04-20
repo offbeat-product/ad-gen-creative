@@ -27,9 +27,6 @@ export const CompositionPage = () => (
 export const NarrationScriptPage = () => (
   <ToolPlaceholder emoji="📝" title="NA原稿生成" description="構成案・字コンテからNA原稿を生成します" />
 );
-export const NarrationAudioPage = () => (
-  <ToolPlaceholder emoji="🎙" title="ナレーション音声生成" description="NA原稿から ElevenLabs を使って音声ファイルを生成します" />
-);
 export const ImageGenerationPage = () => (
   <ToolPlaceholder emoji="🎨" title="イメージ画像生成" description="プロンプトや字コンテからイメージ画像を生成します" />
 );
