@@ -170,10 +170,8 @@ const ProjectSwitcherModal = ({ open, onOpenChange }: ProjectSwitcherModalProps)
         aria-label={favoriteIds.has(p.id) ? 'ピン留めを外す' : 'ピン留め'}
       >
         <Star
-          className={cn(
-            'h-4 w-4 transition-colors',
-            favoriteIds.has(p.id) ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground',
-          )}
+          className={cn('h-4 w-4 transition-colors', !favoriteIds.has(p.id) && 'text-muted-foreground')}
+          style={favoriteIds.has(p.id) ? { fill: 'hsl(45 93% 58%)', color: 'hsl(45 93% 58%)' } : undefined}
         />
       </button>
     </button>
@@ -204,7 +202,7 @@ const ProjectSwitcherModal = ({ open, onOpenChange }: ProjectSwitcherModalProps)
               {pinnedProjects.length > 0 && (
                 <section>
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground mb-2">
-                    <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                    <Star className="h-3.5 w-3.5" style={{ fill: 'hsl(45 93% 58%)', color: 'hsl(45 93% 58%)' }} />
                     ピン留め
                   </div>
                   <div className="space-y-2">
