@@ -54,7 +54,7 @@ const App = () => (
                 <Route path="/tools/composition" element={<CompositionTool />} />
                 <Route path="/tools/narration-script" element={<NarrationScriptTool />} />
                 <Route path="/tools/narration-audio" element={<NarrationAudioTool />} />
-                <Route path="/tools/image-generation" element={<ImageGenerationPage />} />
+                <Route path="/tools/image-generation" element={<ImageGenerationTool />} />
                 <Route path="/tools/carousel-video" element={<CarouselVideoPage />} />
                 <Route path="/tools/video-resize" element={<VideoResizePage />} />
                 <Route path="/settings" element={<Settings />} />
