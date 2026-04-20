@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Check,
@@ -8,8 +9,11 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowRight,
-  Code,
+  FileText,
+  FileDown,
 } from 'lucide-react';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
+import { saveAs } from 'file-saver';
 import { cn } from '@/lib/utils';
 import { useSpotWizard } from '@/hooks/useSpotWizard';
 import { useProjectContext } from '@/hooks/useProjectContext';
