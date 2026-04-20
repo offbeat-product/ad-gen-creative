@@ -25,8 +25,16 @@ interface SidebarProps {
 
 const dashboardItem = { to: '/', icon: LayoutDashboard, label: 'ダッシュボード' };
 
-const toolGroups: { label: string; items: { to: string; icon: typeof Target; label: string }[] }[] = [
+interface ToolItem {
+  to: string;
+  icon: typeof Target;
+  label: string;
+  comingSoon?: boolean;
+}
+
+const toolGroups: { emoji: string; label: string; items: ToolItem[] }[] = [
   {
+    emoji: '📝',
     label: '文字生成',
     items: [
       { to: '/tools/appeal-axis', icon: Target, label: '訴求軸・コピー生成' },
@@ -35,23 +43,26 @@ const toolGroups: { label: string; items: { to: string; icon: typeof Target; lab
     ],
   },
   {
+    emoji: '🔊',
     label: '音声生成',
     items: [
       { to: '/tools/narration-audio', icon: Mic, label: 'ナレーション音声生成' },
     ],
   },
   {
+    emoji: '🖼️',
     label: '画像生成',
     items: [
       { to: '/tools/image-generation', icon: ImageIcon, label: '絵コンテ用画像生成' },
-      { to: '/tools/banner-image', icon: ImageIcon, label: 'バナー画像生成' },
+      { to: '/tools/banner-image', icon: ImageIcon, label: 'バナー画像生成', comingSoon: true },
     ],
   },
   {
+    emoji: '🎬',
     label: '動画生成',
     items: [
-      { to: '/tools/carousel-video', icon: Film, label: 'カルーセル動画生成' },
-      { to: '/tools/video-resize', icon: Maximize2, label: '動画リサイズ' },
+      { to: '/tools/carousel-video', icon: Film, label: 'カルーセル動画生成', comingSoon: true },
+      { to: '/tools/video-resize', icon: Maximize2, label: '動画リサイズ', comingSoon: true },
     ],
   },
 ];
@@ -109,16 +120,53 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
             {dashboardItem.label}
           </NavLink>
 
-          {toolGroups.map((group) => (
-            <div key={group.label}>
-              <SectionLabel>{group.label}</SectionLabel>
+          {toolGroups.map((group, idx) => (
+            <div key={group.label} className={cn(idx > 0 && 'mt-1 pt-1 border-t border-border/50')}>
+              <p className="px-3 mt-3 mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 flex items-center gap-1.5">
+                <span>{group.emoji}</span>
+                <span>{group.label}</span>
+              </p>
               <div className="space-y-0.5">
-                {group.items.map((item) => (
-                  <NavLink key={item.to} to={item.to} onClick={onClose} className={navLinkClass}>
-                    <item.icon className="h-4 w-4" />
-                    {item.label}
-                  </NavLink>
-                ))}
+                {group.items.map((item) =>
+                  item.comingSoon ? (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      onClick={onClose}
+                      className={({ isActive }) =>
+                        cn(
+                          'flex items-center gap-3 rounded-lg pl-5 pr-3 py-2 text-sm font-medium transition-colors opacity-60',
+                          isActive
+                            ? 'bg-primary-wash text-primary'
+                            : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                        )
+                      }
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span className="flex-1">{item.label}</span>
+                      <span className="text-[9px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
+                        Soon
+                      </span>
+                    </NavLink>
+                  ) : (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      onClick={onClose}
+                      className={({ isActive }) =>
+                        cn(
+                          'flex items-center gap-3 rounded-lg pl-5 pr-3 py-2 text-sm font-medium transition-colors',
+                          isActive
+                            ? 'bg-primary-wash text-primary border-l-[3px] border-primary pl-[17px]'
+                            : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                        )
+                      }
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {item.label}
+                    </NavLink>
+                  )
+                )}
               </div>
             </div>
           ))}

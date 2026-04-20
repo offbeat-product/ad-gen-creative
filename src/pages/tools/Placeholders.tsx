@@ -1,3 +1,5 @@
+import { Sparkles } from 'lucide-react';
+
 interface ToolPlaceholderProps {
   emoji: string;
   title: string;
@@ -5,15 +7,23 @@ interface ToolPlaceholderProps {
 }
 
 const ToolPlaceholder = ({ emoji, title, description }: ToolPlaceholderProps) => (
-  <div className="max-w-4xl mx-auto p-6 space-y-6">
+  <div className="max-w-3xl mx-auto p-6 space-y-6">
     <div className="space-y-1">
-      <h1 className="text-2xl font-bold">{emoji} {title}</h1>
+      <h1 className="text-2xl font-bold font-display">
+        {emoji} {title}
+      </h1>
       <p className="text-sm text-muted-foreground">{description}</p>
     </div>
-    <div className="rounded-xl border bg-muted/30 p-8 text-center">
-      <p className="text-sm text-muted-foreground">
-        クライアント→商材→案件を選択するウィザードをここに実装予定
-      </p>
+    <div className="rounded-2xl border border-dashed bg-gradient-to-br from-secondary-wash/40 to-primary-wash/30 p-12 text-center space-y-3">
+      <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-secondary/10 text-secondary">
+        <Sparkles className="h-6 w-6" />
+      </div>
+      <div className="space-y-1">
+        <p className="text-base font-semibold">近日公開</p>
+        <p className="text-sm text-muted-foreground">
+          このツールは現在開発中です。もうしばらくお待ちください。
+        </p>
+      </div>
     </div>
   </div>
 );
@@ -29,6 +39,9 @@ export const NarrationScriptPage = () => (
 );
 export const ImageGenerationPage = () => (
   <ToolPlaceholder emoji="🎨" title="イメージ画像生成" description="プロンプトや字コンテからイメージ画像を生成します" />
+);
+export const BannerImagePage = () => (
+  <ToolPlaceholder emoji="🖼️" title="バナー画像生成" description="商材情報からバナー画像を一括生成します" />
 );
 export const CarouselVideoPage = () => (
   <ToolPlaceholder emoji="🎴" title="カルーセル動画生成" description="原作イラストからカルーセル動画を生成します" />
