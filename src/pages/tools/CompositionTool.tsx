@@ -91,11 +91,45 @@ const CompositionTool = () => {
   const [copyText, setCopyText] = useState('');
   const [duration, setDuration] = useState<number>(30);
   const [creativeType, setCreativeType] = useState<string>('video');
+  const [seedInfo, setSeedInfo] = useState<{
+    pattern_id?: string;
+    hook?: string;
+  } | null>(null);
 
   // 実行・進捗
   const [jobId, setJobId] = useState<string | null>(null);
   const [job, setJob] = useState<SpotJob | null>(null);
   const [assets, setAssets] = useState<SpotAsset[]>([]);
+
+  // 訴求軸・コピー生成ツールから渡された seed を消費
+  useEffect(() => {
+    const seedJson = sessionStorage.getItem('composition_seed');
+    if (!seedJson) return;
+    try {
+      const seed = JSON.parse(seedJson);
+      if (seed.client_id || seed.product_id || seed.project_id) {
+        updateState({
+          clientId: seed.client_id ?? null,
+          productId: seed.product_id ?? null,
+          projectId: seed.project_id ?? null,
+        });
+      }
+      if (seed.appeal_axis_text) setAppealAxis(seed.appeal_axis_text);
+      if (seed.copy_text) setCopyText(seed.copy_text);
+      setSeedInfo({
+        pattern_id: seed.pattern_id,
+        hook: seed.copy_hook,
+      });
+      sessionStorage.removeItem('composition_seed');
+      setCurrentStep(STEPS.length - 1);
+      toast.info(
+        `訴求軸「${seed.appeal_axis_text}」とコピー「${seed.copy_text}」を引き継ぎました`
+      );
+    } catch (e) {
+      console.error('failed to parse composition_seed', e);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const canProceed = (): boolean => {
     switch (currentStep) {
@@ -352,6 +386,25 @@ const CompositionTool = () => {
                       </span>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* 引き継ぎ情報 */}
+              {seedInfo && (
+                <div className="rounded-xl border border-secondary/30 bg-secondary-wash/40 p-4 space-y-1">
+                  <div className="text-xs font-semibold text-secondary uppercase tracking-wide">
+                    🔗 訴求軸・コピー生成ツールから引き継ぎ
+                  </div>
+                  {seedInfo.pattern_id && (
+                    <div className="text-xs text-muted-foreground">
+                      パターン: {seedInfo.pattern_id}
+                    </div>
+                  )}
+                  {seedInfo.hook && (
+                    <div className="text-xs text-muted-foreground">
+                      💡 狙い: {seedInfo.hook}
+                    </div>
+                  )}
                 </div>
               )}
 

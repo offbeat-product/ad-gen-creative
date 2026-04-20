@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Check,
@@ -8,8 +9,11 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowRight,
-  Code,
+  FileText,
+  FileDown,
 } from 'lucide-react';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
+import { saveAs } from 'file-saver';
 import { cn } from '@/lib/utils';
 import { useSpotWizard } from '@/hooks/useSpotWizard';
 import { useProjectContext } from '@/hooks/useProjectContext';
@@ -63,9 +67,11 @@ interface SpotJob {
 }
 
 interface CopyItem {
-  appeal_axis_index: number;
+  pattern_id: string;
+  appeal_axis_index: number; // 1-indexed
+  appeal_axis_text?: string;
   copy_index: number;
-  text: string;
+  copy_text: string;
   hook?: string;
 }
 
@@ -86,10 +92,41 @@ interface SpotAsset {
   } | null;
 }
 
-const letterFor = (n: number) => String.fromCharCode(65 + n); // 0->A
+const buildFormattedText = (
+  appealAxes: AppealAxisObj[],
+  copies: CopyItem[]
+): string => {
+  const lines: string[] = [];
+  lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  lines.push('  訴求軸・コピー生成結果');
+  lines.push('━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  lines.push('');
+
+  appealAxes.forEach((axis, i) => {
+    const axisNum = i + 1;
+    lines.push(`■ 訴求軸${axisNum}: ${axis.text}`);
+    if (axis.reasoning) {
+      lines.push(`  根拠: ${axis.reasoning}`);
+    }
+    lines.push('');
+    const axisCopies = copies.filter((c) => c.appeal_axis_index === axisNum);
+    axisCopies.forEach((c) => {
+      lines.push(`  ${c.pattern_id}. ${c.copy_text}`);
+      if (c.hook) {
+        lines.push(`     狙い: ${c.hook}`);
+      }
+    });
+    lines.push('');
+  });
+
+  return lines.join('\n');
+};
+
+
 
 const AppealAxisTool = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { state, updateState } = useSpotWizard();
   const { context } = useProjectContext(state.projectId);
 
@@ -504,44 +541,184 @@ const AppealAxisTool = () => {
                         typeof a === 'string' ? { text: a } : a
                       );
 
-                      // 訴求軸ごとにコピーをグループ化
-                      const grouped = appealAxes.map((_, axisIdx) =>
-                        copies.filter((c) => c.appeal_axis_index === axisIdx)
-                      );
+                      const handleCopyAll = () => {
+                        handleCopy(
+                          buildFormattedText(appealAxes, copies),
+                          '全訴求軸・コピーをコピーしました'
+                        );
+                      };
 
-                      // 通し番号 (A,B,C...) を発番
-                      let runningIdx = 0;
+                      const handleDownloadTxt = () => {
+                        const text = buildFormattedText(appealAxes, copies);
+                        const blob = new Blob([text], {
+                          type: 'text/plain;charset=utf-8',
+                        });
+                        const projectName = context?.project.name ?? 'project';
+                        saveAs(
+                          blob,
+                          `訴求軸コピー_${projectName}_${
+                            new Date().toISOString().split('T')[0]
+                          }.txt`
+                        );
+                        toast.success('TXTをダウンロードしました');
+                      };
+
+                      const handleDownloadDocx = async () => {
+                        const projectName = context?.project.name ?? 'project';
+                        const clientName =
+                          context?.project.product.client.name ?? '';
+                        const productName = context?.project.product.name ?? '';
+
+                        const children: Paragraph[] = [
+                          new Paragraph({
+                            text: '訴求軸・コピー生成結果',
+                            heading: HeadingLevel.HEADING_1,
+                          }),
+                          new Paragraph({
+                            children: [
+                              new TextRun({ text: `クライアント: ${clientName}` }),
+                            ],
+                          }),
+                          new Paragraph({
+                            children: [
+                              new TextRun({ text: `商材: ${productName}` }),
+                            ],
+                          }),
+                          new Paragraph({
+                            children: [
+                              new TextRun({ text: `案件: ${projectName}` }),
+                            ],
+                          }),
+                          new Paragraph({ text: '' }),
+                        ];
+
+                        appealAxes.forEach((axis, i) => {
+                          const axisNum = i + 1;
+                          children.push(
+                            new Paragraph({
+                              text: `訴求軸${axisNum}: ${axis.text}`,
+                              heading: HeadingLevel.HEADING_2,
+                            })
+                          );
+                          if (axis.reasoning) {
+                            children.push(
+                              new Paragraph({
+                                children: [
+                                  new TextRun({
+                                    text: `根拠: ${axis.reasoning}`,
+                                    italics: true,
+                                    color: '666666',
+                                  }),
+                                ],
+                              })
+                            );
+                          }
+                          children.push(new Paragraph({ text: '' }));
+
+                          const axisCopies = copies.filter(
+                            (c) => c.appeal_axis_index === axisNum
+                          );
+                          axisCopies.forEach((c) => {
+                            children.push(
+                              new Paragraph({
+                                children: [
+                                  new TextRun({
+                                    text: `${c.pattern_id}. `,
+                                    bold: true,
+                                  }),
+                                  new TextRun({
+                                    text: c.copy_text,
+                                    bold: true,
+                                    size: 24,
+                                  }),
+                                ],
+                              })
+                            );
+                            if (c.hook) {
+                              children.push(
+                                new Paragraph({
+                                  children: [
+                                    new TextRun({
+                                      text: `   狙い: ${c.hook}`,
+                                      italics: true,
+                                      size: 20,
+                                      color: '666666',
+                                    }),
+                                  ],
+                                })
+                              );
+                            }
+                          });
+                          children.push(new Paragraph({ text: '' }));
+                        });
+
+                        const doc = new Document({
+                          sections: [{ children }],
+                        });
+                        const blob = await Packer.toBlob(doc);
+                        saveAs(
+                          blob,
+                          `訴求軸コピー_${projectName}_${
+                            new Date().toISOString().split('T')[0]
+                          }.docx`
+                        );
+                        toast.success('Wordドキュメントをダウンロードしました');
+                      };
+
+                      const handleGoToComposition = (c: CopyItem) => {
+                        const axis = appealAxes[c.appeal_axis_index - 1];
+                        sessionStorage.setItem(
+                          'composition_seed',
+                          JSON.stringify({
+                            from_tool: 'appeal_axis_copy',
+                            from_job_id: jobId,
+                            appeal_axis_text: axis?.text ?? '',
+                            appeal_axis_reasoning: axis?.reasoning ?? '',
+                            copy_text: c.copy_text,
+                            copy_hook: c.hook ?? '',
+                            pattern_id: c.pattern_id,
+                            brief: briefData,
+                            project_id: state.projectId,
+                            client_id: state.clientId,
+                            product_id: state.productId,
+                          })
+                        );
+                        toast.success('選択したコピーで構成案を生成します');
+                        navigate('/tools/composition');
+                      };
+
+                      // 訴求軸ごとにコピーをグループ化 (DB は 1-indexed)
+                      const grouped = appealAxes.map((_, axisIdx) =>
+                        copies.filter((c) => c.appeal_axis_index === axisIdx + 1)
+                      );
 
                       return (
                         <div key={asset.id} className="space-y-6">
                           {/* アクションボタン */}
                           <div className="flex flex-wrap gap-2 justify-end">
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
-                              onClick={() =>
-                                handleCopy(
-                                  appealAxes
-                                    .map((a, i) => `${i + 1}. ${a.text}`)
-                                    .join('\n'),
-                                  '訴求軸をコピーしました'
-                                )
-                              }
+                              onClick={handleCopyAll}
                               disabled={appealAxes.length === 0}
                             >
-                              <Copy className="h-3 w-3 mr-1" /> 訴求軸のみコピー
+                              <Copy className="h-3 w-3 mr-1" /> 全体をコピー
                             </Button>
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
-                              onClick={() =>
-                                handleCopy(
-                                  JSON.stringify(asset.metadata, null, 2),
-                                  'JSONをコピーしました'
-                                )
-                              }
+                              onClick={handleDownloadTxt}
+                              disabled={appealAxes.length === 0}
                             >
-                              <Code className="h-3 w-3 mr-1" /> JSONコピー
+                              <FileText className="h-3 w-3 mr-1" /> .txt ダウンロード
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleDownloadDocx}
+                              disabled={appealAxes.length === 0}
+                            >
+                              <FileDown className="h-3 w-3 mr-1" /> .docx ダウンロード
                             </Button>
                           </div>
 
@@ -602,43 +779,32 @@ const AppealAxisTool = () => {
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                      {group.map((c) => {
-                                        const letter = letterFor(runningIdx);
-                                        runningIdx += 1;
-                                        return (
-                                          <TableRow key={`${axisIdx}-${c.copy_index}`}>
-                                            <TableCell className="font-bold align-top">
-                                              {letter}
-                                            </TableCell>
-                                            <TableCell className="text-sm align-top whitespace-pre-wrap">
-                                              <div className="font-medium">{c.text}</div>
-                                              {c.hook && (
-                                                <div className="text-xs text-muted-foreground mt-1">
-                                                  狙い: {c.hook}
-                                                </div>
-                                              )}
-                                            </TableCell>
-                                            <TableCell className="text-right align-top">
-                                              <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => {
-                                                  console.log(
-                                                    '[future] generate composition for',
-                                                    {
-                                                      appeal_axis: appealAxes[axisIdx]?.text,
-                                                      copy_text: c.text,
-                                                    }
-                                                  );
-                                                  toast.info('構成案生成への連携は今後実装予定です');
-                                                }}
-                                              >
-                                                <ArrowRight className="h-3 w-3 mr-1" /> 構成案生成
-                                              </Button>
-                                            </TableCell>
-                                          </TableRow>
-                                        );
-                                      })}
+                                      {group.map((c) => (
+                                        <TableRow key={`${axisIdx}-${c.copy_index}`}>
+                                          <TableCell className="font-bold align-top">
+                                            {c.pattern_id}
+                                          </TableCell>
+                                          <TableCell className="text-sm align-top whitespace-pre-wrap">
+                                            <div className="font-semibold leading-relaxed">
+                                              {c.copy_text}
+                                            </div>
+                                            {c.hook && (
+                                              <div className="text-xs text-muted-foreground mt-1.5">
+                                                💡 狙い: {c.hook}
+                                              </div>
+                                            )}
+                                          </TableCell>
+                                          <TableCell className="text-right align-top">
+                                            <Button
+                                              variant="outline"
+                                              size="sm"
+                                              onClick={() => handleGoToComposition(c)}
+                                            >
+                                              <ArrowRight className="h-3 w-3 mr-1" /> 構成案生成
+                                            </Button>
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
                                     </TableBody>
                                   </Table>
                                 </div>
