@@ -180,6 +180,10 @@ const AppealAxisTool = () => {
         num_appeal_axes: numAppealAxes,
         num_copies: numCopies,
         hint,
+        brief: {
+          ...briefData,
+          lp_scraped_content: lpScrapedContent,
+        },
         copyright_text: context?.project.copyright_text ?? null,
         client_name: context?.project.product.client.name ?? null,
         product_name: context?.project.product.name ?? null,
