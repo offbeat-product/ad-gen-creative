@@ -356,6 +356,18 @@ const AppealAxisTool = () => {
                 </div>
               )}
 
+              {/* 広告ブリーフ */}
+              {state.projectId && (
+                <BriefSection
+                  projectId={state.projectId}
+                  value={briefData}
+                  onChange={setBriefData}
+                  onLpScrapedContentLoaded={setLpScrapedContent}
+                />
+              )}
+
+              <Separator className="my-2" />
+
               {/* 訴求軸 / コピー数 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -398,12 +410,14 @@ const AppealAxisTool = () => {
               </div>
 
               {/* プレビュー */}
-              <div className="rounded-xl border bg-accent/20 p-4 text-sm">
-                <span className="font-semibold text-foreground">
-                  {numAppealAxes} × {numCopies} = 合計{totalPatterns}パターン
-                </span>
-                <span className="text-muted-foreground"> 生成されます</span>
-              </div>
+              <Alert>
+                <AlertDescription>
+                  <span className="font-semibold text-foreground">
+                    {numAppealAxes} × {numCopies} = 合計{totalPatterns}パターン
+                  </span>
+                  <span className="text-muted-foreground"> 生成されます</span>
+                </AlertDescription>
+              </Alert>
 
               {/* ヒント */}
               <div className="space-y-2">
@@ -415,12 +429,26 @@ const AppealAxisTool = () => {
                   rows={3}
                   placeholder="特に意識してほしいターゲット・トーン・要素など"
                 />
+                <p className="text-xs text-muted-foreground">
+                  ブリーフに書き切れない細かい指示を追加で書けます
+                </p>
               </div>
+
+              {/* 必須項目チェック */}
+              {(!briefData.ad_objective || !briefData.target_audience) && (
+                <Alert variant="destructive">
+                  <AlertDescription className="text-xs">
+                    広告ブリーフの「広告の目的」と「ターゲット」は必須です
+                  </AlertDescription>
+                </Alert>
+              )}
 
               {/* 実行ボタン */}
               <Button
                 onClick={handleGenerate}
-                disabled={isRunning}
+                disabled={
+                  isRunning || !briefData.ad_objective || !briefData.target_audience
+                }
                 className="w-full h-12"
                 size="lg"
               >
