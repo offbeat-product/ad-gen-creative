@@ -16,10 +16,10 @@ const VOICE_OPTIONS = {
 };
 
 const VOICE_SAMPLES: Record<string, string> = {
-  '3JDquces8E8bkmvbh6Bc': 'https://storage.googleapis.com/eleven-public-cdn/premade/voices/3JDquces8E8bkmvbh6Bc/preview.mp3',
-  'j210dv0vWm7fCknyQpbA': 'https://storage.googleapis.com/eleven-public-cdn/premade/voices/j210dv0vWm7fCknyQpbA/preview.mp3',
-  'T7yYq3WpB94yAuOXraRi': 'https://storage.googleapis.com/eleven-public-cdn/premade/voices/T7yYq3WpB94yAuOXraRi/preview.mp3',
-  'WQz3clzUdMqvBf0jswZQ': 'https://storage.googleapis.com/eleven-public-cdn/premade/voices/WQz3clzUdMqvBf0jswZQ/preview.mp3',
+  '3JDquces8E8bkmvbh6Bc': 'https://storage.googleapis.com/eleven-public-prod/custom/voices/3JDquces8E8bkmvbh6Bc/PZchZFPBnPlog5kS1miM.mp3',
+  'j210dv0vWm7fCknyQpbA': 'https://storage.googleapis.com/eleven-public-prod/custom/voices/j210dv0vWm7fCknyQpbA/Bek5CWu0oLhcBJoGa1tS.mp3',
+  'T7yYq3WpB94yAuOXraRi': 'https://storage.googleapis.com/eleven-public-prod/database/workspace/03a8c99c86974bca88a204cdbc83a221/voices/T7yYq3WpB94yAuOXraRi/PYjBstOZEP2op7fQugbV.mp3',
+  'WQz3clzUdMqvBf0jswZQ': 'https://storage.googleapis.com/eleven-public-prod/database/workspace/8d4b2297d90b4dafb1b6c97b0791083f/voices/WQz3clzUdMqvBf0jswZQ/i6AmEdWw199PgEgmzXn0.mp3',
 };
 
 interface Props {
