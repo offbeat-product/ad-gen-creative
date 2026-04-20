@@ -110,11 +110,11 @@ const Dashboard = () => {
                   </div>
                 </div>
 
-                {Object.keys(context.stats.rulesByProcessType).length > 0 && (
+                {Object.keys(context.stats?.rulesByProcessType ?? {}).length > 0 && (
                   <div className="pt-2 border-t">
                     <div className="text-xs font-medium text-muted-foreground mb-2">ルール内訳(工程別)</div>
                     <div className="flex flex-wrap gap-1.5">
-                      {Object.entries(context.stats.rulesByProcessType)
+                      {Object.entries(context.stats?.rulesByProcessType ?? {})
                         .sort((a, b) => b[1] - a[1])
                         .map(([type, count]) => (
                           <span key={type} className="inline-flex items-center rounded-full bg-secondary-wash px-2 py-0.5 text-xs font-medium text-secondary">
@@ -125,11 +125,11 @@ const Dashboard = () => {
                   </div>
                 )}
 
-                {Object.keys(context.stats.materialsByType).length > 0 && (
+                {Object.keys(context.stats?.materialsByType ?? {}).length > 0 && (
                   <div className="pt-2 border-t">
                     <div className="text-xs font-medium text-muted-foreground mb-2">素材内訳(種類別)</div>
                     <div className="flex flex-wrap gap-1.5">
-                      {Object.entries(context.stats.materialsByType)
+                      {Object.entries(context.stats?.materialsByType ?? {})
                         .sort((a, b) => b[1] - a[1])
                         .map(([type, count]) => (
                           <span key={type} className="inline-flex items-center rounded-full bg-primary-wash px-2 py-0.5 text-xs font-medium text-primary">
