@@ -17,12 +17,12 @@ import Settings from "@/pages/Settings";
 import {
   AppealAxisPage,
   CompositionPage,
-  NarrationScriptPage,
   ImageGenerationPage,
   CarouselVideoPage,
   VideoResizePage,
 } from "@/pages/tools/Placeholders";
 import NarrationAudioTool from "@/pages/tools/NarrationAudioTool";
+import NarrationScriptTool from "@/pages/tools/NarrationScriptTool";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -52,7 +52,7 @@ const App = () => (
                 <Route path="/result/:id" element={<GenerationResult />} />
                 <Route path="/tools/appeal-axis" element={<AppealAxisPage />} />
                 <Route path="/tools/composition" element={<CompositionPage />} />
-                <Route path="/tools/narration-script" element={<NarrationScriptPage />} />
+                <Route path="/tools/narration-script" element={<NarrationScriptTool />} />
                 <Route path="/tools/narration-audio" element={<NarrationAudioTool />} />
                 <Route path="/tools/image-generation" element={<ImageGenerationPage />} />
                 <Route path="/tools/carousel-video" element={<CarouselVideoPage />} />
