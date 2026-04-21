@@ -35,6 +35,12 @@ export interface SpotAsset {
   file_url: string;
   file_name: string | null;
   sort_order: number | null;
+  metadata?: {
+    voice_id?: string;
+    speed?: number;
+    original_script?: string;
+    converted_script?: string;
+  } | null;
 }
 
 interface Props {
