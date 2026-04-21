@@ -119,12 +119,10 @@ const BannerImageTool = () => {
               ['banner_draft', 'banner_design'].includes(r.process_type)
             ) ?? [];
 
-          const { data: newJob, error: jobError } = await supabase
-            .from('gen_spot_jobs')
-            .insert({
-              project_id: state.projectId,
-              tool_type: TOOL_TYPE,
-              input_data: {
+          const insertPayload = {
+            project_id: state.projectId,
+            tool_type: TOOL_TYPE,
+            input_data: {
                 main_copy: mainCopy,
                 sub_copy: subCopy,
                 cta_text: ctaText,
