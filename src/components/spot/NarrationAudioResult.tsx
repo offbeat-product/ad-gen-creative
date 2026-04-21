@@ -319,6 +319,79 @@ const NarrationAudioResult = ({
           </div>
         </div>
       )}
+
+      {/* NA原稿(スクリプト)表示カード */}
+      {job.status === 'completed' && assets.length > 0 && assets[0]?.metadata && (
+        <div className="rounded-xl border bg-card p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-secondary" />
+            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              読み上げ原稿(音声との整合性チェック用)
+            </div>
+          </div>
+
+          <div className="flex border-b">
+            <button
+              onClick={() => setActiveScriptTab('original')}
+              className={cn(
+                'px-3 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+                activeScriptTab === 'original'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              )}
+            >
+              元の原稿
+            </button>
+            <button
+              onClick={() => setActiveScriptTab('converted')}
+              className={cn(
+                'px-3 py-2 text-sm font-medium transition-colors border-b-2 -mb-px',
+                activeScriptTab === 'converted'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              )}
+            >
+              TTS変換後
+            </button>
+          </div>
+
+          <div className="rounded-lg border bg-muted/30 p-4 max-h-96 overflow-y-auto">
+            <pre className="whitespace-pre-wrap break-words text-sm font-sans text-foreground">
+              {activeScriptTab === 'original'
+                ? assets[0].metadata.original_script ?? '(元の原稿が保存されていません)'
+                : assets[0].metadata.converted_script ?? '(TTS変換後の原稿が保存されていません)'}
+            </pre>
+          </div>
+
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-xs text-muted-foreground flex-1">
+              {activeScriptTab === 'original'
+                ? '元の原稿: NA原稿ツールで生成されたそのまま(タイムコード付き)'
+                : 'TTS変換後: ElevenLabs に渡す前に、TTS向けに読みやすく変換した版'}
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const text =
+                  activeScriptTab === 'original'
+                    ? assets[0].metadata?.original_script
+                    : assets[0].metadata?.converted_script;
+                if (text) {
+                  navigator.clipboard.writeText(text);
+                  toast.success('原稿をコピーしました');
+                } else {
+                  toast.error('コピーする原稿がありません');
+                }
+              }}
+              className="text-xs flex-shrink-0"
+            >
+              <Copy className="h-3 w-3 mr-1" />
+              コピー
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
