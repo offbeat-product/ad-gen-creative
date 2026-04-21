@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowRight,
+  Image as ImageIcon,
   FileText,
   FileDown,
   RotateCcw,
@@ -196,6 +197,24 @@ const CompositionResult = ({
     toast.success('Wordドキュメントをダウンロードしました');
   };
 
+  const handleGoToImageGeneration = (scenes: Scene[]) => {
+    sessionStorage.setItem(
+      'image_generation_seed',
+      JSON.stringify({
+        from_tool: 'composition',
+        from_job_id: jobId,
+        scenes,
+        duration_seconds: duration,
+        creative_type: creativeType,
+        project_id: state.projectId,
+        client_id: state.clientId,
+        product_id: state.productId,
+      })
+    );
+    toast.success('構成案を絵コンテ画像生成に引き継ぎます');
+    navigate('/tools/image-generation');
+  };
+
   const handleGoToNarrationScript = (scenes: Scene[]) => {
     // NOTE: NarrationScriptTool 側での seed 受信は Phase C2 で対応予定
     sessionStorage.setItem(
@@ -276,6 +295,13 @@ const CompositionResult = ({
                 onClick={() => handleDownloadDocx(scenes, assetDuration)}
               >
                 <FileDown className="h-3 w-3 mr-1" /> .docx
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleGoToImageGeneration(scenes)}
+              >
+                <ImageIcon className="h-3 w-3 mr-1" /> 絵コンテ画像生成へ
               </Button>
               <Button
                 variant="brand"
