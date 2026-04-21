@@ -26,6 +26,7 @@ const tools: { path: string; label: string; Icon: typeof Target; description: st
 
 const toolLabelMap: Record<string, string> = {
   appeal_axis: '訴求軸・コピー生成',
+  appeal_axis_copy: '訴求軸・コピー生成',
   composition: '構成案・字コンテ生成',
   narration_script: 'NA原稿生成',
   narration_audio: 'ナレーション音声生成',
