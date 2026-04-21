@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+
 import { useSpotWizard } from '@/hooks/useSpotWizard';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,7 +29,6 @@ interface BgmAsset {
 
 const BgmSuggestionTool = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const { state, updateState } = useSpotWizard();
 
   const [appealAxis, setAppealAxis] = useState('');
