@@ -290,14 +290,20 @@ const NarrationAudioResult = ({
                     <Mic className="h-3 w-3 text-secondary flex-shrink-0" />
                     {asset.file_name ?? `narration_${asset.sort_order ?? 1}.mp3`}
                   </div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {durations[asset.id] !== undefined
+                      ? `長さ: ${formatDuration(durations[asset.id])}`
+                      : '長さ: 読み込み中...'}
+                  </div>
                 </div>
-                <a
-                  href={asset.file_url}
-                  download
-                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-3 py-2 rounded-md border hover:bg-muted/50 transition-colors"
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDownload(asset)}
+                  className="text-xs"
                 >
-                  <Download className="h-3 w-3" /> DL
-                </a>
+                  <Download className="h-3 w-3 mr-1" /> DL
+                </Button>
               </div>
             ))}
           </div>
