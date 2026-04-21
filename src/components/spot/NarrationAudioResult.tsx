@@ -11,12 +11,15 @@ import {
   Pause,
   Download,
   Mic,
+  Copy,
+  FileText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import type { SpotWizardState } from '@/hooks/useSpotWizard';
 import type { useProjectContext } from '@/hooks/useProjectContext';
 
