@@ -51,10 +51,39 @@ const formatDateTime = (iso?: string | null): string => {
   return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
+const formatDuration = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${String(secs).padStart(2, '0')}`;
+};
+
+const buildDownloadFilename = (
+  context: ReturnType<typeof useProjectContext>['context']
+): string => {
+  const client = context?.project.product.client.name ?? 'client';
+  const product = context?.project.product.name ?? 'product';
+  const project = context?.project.name ?? 'project';
+  const date = new Date();
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  const dateStr = `${yyyy}${mm}${dd}`;
+  const raw = `${client}_${product}_${project}_${dateStr}.mp3`;
+  const sanitized = raw
+    .replace(/[\/\\:*?"<>|]/g, '_')
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_');
+  if (sanitized.length > 200) {
+    return sanitized.substring(0, 196) + '.mp3';
+  }
+  return sanitized;
+};
+
 const NarrationAudioResult = ({
   job,
   assets,
   jobId,
+  context,
   state,
   script,
   onStartNew,
@@ -62,6 +91,7 @@ const NarrationAudioResult = ({
   const navigate = useNavigate();
   const isRunning = job?.status === 'pending' || job?.status === 'running';
   const [playingAssetId, setPlayingAssetId] = useState<string | null>(null);
+  const [durations, setDurations] = useState<Record<string, number>>({});
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -70,6 +100,41 @@ const NarrationAudioResult = ({
       audioRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    assets.forEach((asset) => {
+      if (durations[asset.id] !== undefined) return;
+      const audio = new Audio(asset.file_url);
+      const onLoaded = () => {
+        setDurations((prev) => ({ ...prev, [asset.id]: audio.duration }));
+      };
+      audio.addEventListener('loadedmetadata', onLoaded);
+      audio.addEventListener('error', () => {
+        // silent
+      });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assets]);
+
+  const handleDownload = async (asset: SpotAsset) => {
+    try {
+      const filename = buildDownloadFilename(context);
+      const response = await fetch(asset.file_url);
+      if (!response.ok) throw new Error('fetch failed');
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch (e) {
+      toast.error('ダウンロードに失敗しました');
+      console.error('[download error]', e);
+    }
+  };
 
   if (!jobId || !job) {
     return (
