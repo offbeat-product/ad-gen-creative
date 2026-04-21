@@ -123,21 +123,25 @@ const BannerImageTool = () => {
             project_id: state.projectId,
             tool_type: TOOL_TYPE,
             input_data: {
-                main_copy: mainCopy,
-                sub_copy: subCopy,
-                cta_text: ctaText,
-                appeal_point: appealPoint,
-                target_audience: targetAudience,
-                creative_style: creativeStyle,
-                sizes: selectedSizes,
-                variations_per_size: variationsPerSize,
-                burn_text: burnText,
-                output_png: outputPng,
-                output_psd: outputPsd,
-              },
-              status: 'pending',
-              created_by: user.id,
-            })
+              main_copy: mainCopy,
+              sub_copy: subCopy,
+              cta_text: ctaText,
+              appeal_point: appealPoint,
+              target_audience: targetAudience,
+              creative_style: creativeStyle,
+              sizes: selectedSizes,
+              variations_per_size: variationsPerSize,
+              burn_text: burnText,
+              output_png: outputPng,
+              output_psd: outputPsd,
+            },
+            status: 'pending',
+            created_by: user.id,
+          } as any;
+
+          const { data: newJob, error: jobError } = await supabase
+            .from('gen_spot_jobs')
+            .insert(insertPayload)
             .select()
             .single();
 
