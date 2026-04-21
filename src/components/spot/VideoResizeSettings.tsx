@@ -1,23 +1,25 @@
-import { useRef, useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   Loader2,
-  Video as VideoIcon,
   ListChecks,
   X,
   Plus,
   Upload,
+  Video as VideoIcon,
   Maximize2,
   Square,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import CarouselVideoPickerDialog from '@/components/spot/CarouselVideoPickerDialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from 'sonner';
+import CarouselVideoPickerDialog, {
+  type CarouselVideoJobRow,
+} from './CarouselVideoPickerDialog';
 
 export interface VideoFormat {
   width: number;
@@ -111,10 +113,18 @@ const VideoResizeSettings = ({
     );
   };
 
+  const handlePickCarouselVideo = (j: CarouselVideoJobRow) => {
+    if (!j.output_file_url) return;
+    setSourceVideoUrl(j.output_file_url);
+    const created = j.created_at ? new Date(j.created_at).toLocaleDateString('ja-JP') : '';
+    setSourceVideoName(`カルーセル動画 (${created})`);
+    setPickerOpen(false);
+    toast.success('動画を読み込みました');
+  };
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
       toast.error(`ファイルサイズが${MAX_UPLOAD_MB}MBを超えています`);
       return;
@@ -430,7 +440,8 @@ const VideoResizeSettings = ({
           </>
         ) : (
           <>
-            <VideoIcon className="h-4 w-4 mr-2" /> 動画をリサイズ ({selectedFormats.length}サイズ)
+            <VideoIcon className="h-4 w-4 mr-2" /> 動画をリサイズ ({selectedFormats.length}
+            サイズ)
           </>
         )}
       </Button>
@@ -439,16 +450,7 @@ const VideoResizeSettings = ({
         projectId={projectId}
         open={pickerOpen}
         onOpenChange={setPickerOpen}
-        onPick={(j) => {
-          if (!j.output_file_url) return;
-          setSourceVideoUrl(j.output_file_url);
-          const created = j.created_at
-            ? new Date(j.created_at).toLocaleDateString('ja-JP')
-            : '';
-          setSourceVideoName(`カルーセル動画 (${created})`);
-          setPickerOpen(false);
-          toast.success('動画を読み込みました');
-        }}
+        onPick={handlePickCarouselVideo}
       />
     </div>
   );

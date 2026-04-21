@@ -43,26 +43,30 @@ const CarouselVideoPickerDialog = ({ projectId, open, onOpenChange, onPick }: Pr
           .order('created_at', { ascending: false })
           .limit(20);
         if (cancelled) return;
-        const list = ((jobRows ?? []) as CarouselVideoJobRow[]).slice();
-        const missing = list.filter((j) => !j.output_file_url).map((j) => j.id);
-        if (missing.length > 0) {
+        if (!jobRows || jobRows.length === 0) {
+          setJobs([]);
+          return;
+        }
+        const jobsList = jobRows as CarouselVideoJobRow[];
+        const missingIds = jobsList.filter((j) => !j.output_file_url).map((j) => j.id);
+        if (missingIds.length > 0) {
           const { data: assetRows } = await supabase
             .from('gen_spot_assets')
             .select('job_id, file_url')
-            .in('job_id', missing)
+            .in('job_id', missingIds)
             .eq('asset_type', 'carousel_video');
           const urlByJob = new Map<string, string>();
           (assetRows ?? []).forEach((r: any) => {
             if (r.file_url && !urlByJob.has(r.job_id)) urlByJob.set(r.job_id, r.file_url);
           });
-          list.forEach((j) => {
+          jobsList.forEach((j) => {
             if (!j.output_file_url && urlByJob.has(j.id)) {
               j.output_file_url = urlByJob.get(j.id)!;
             }
           });
         }
         if (cancelled) return;
-        setJobs(list.filter((j) => !!j.output_file_url));
+        setJobs(jobsList.filter((j) => !!j.output_file_url));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -117,7 +121,7 @@ const CarouselVideoPickerDialog = ({ projectId, open, onOpenChange, onPick }: Pr
                         </span>
                       )}
                     </div>
-                    <div className="text-[11px] text-muted-foreground truncate font-mono">
+                    <div className="text-xs text-muted-foreground truncate">
                       {j.output_file_url}
                     </div>
                   </button>
