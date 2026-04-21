@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check } from 'lucide-react';
+import { Check, Sparkles, FolderOpen, ChevronRight, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { SpotWizardState } from '@/hooks/useSpotWizard';
 import { useProjectContext } from '@/hooks/useProjectContext';
@@ -8,6 +8,8 @@ import { supabase } from '@/integrations/supabase/client';
 import SpotStepTarget from '@/components/spot/SpotStepTarget';
 import SpotStepDataCollection from '@/components/spot/SpotStepDataCollection';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { clearJobIdFromUrl } from '@/lib/spot-url';
 
 export interface WizardRenderContext {
   state: SpotWizardState;
@@ -37,6 +39,13 @@ const STEPS = [
   { label: '生成結果' },
 ];
 
+interface RestorationNotice {
+  jobId: string;
+  clientName: string;
+  productName: string;
+  projectName: string;
+}
+
 const SpotToolWizard = ({
   toolTitle,
   toolDescription,
@@ -53,13 +62,13 @@ const SpotToolWizard = ({
   const [currentStep, setCurrentStep] = useState(0);
   const [direction, setDirection] = useState(1);
   const [didInitialJump, setDidInitialJump] = useState(false);
+  const [restorationNotice, setRestorationNotice] = useState<RestorationNotice | null>(null);
   const restoredRef = useRef(false);
 
   // 初回マウント時、state が全て埋まっていれば STEP3 (index 2) にジャンプ
-  // (sessionStorage seed 復元などで外部から state が事前設定されるケース)
   useEffect(() => {
     if (didInitialJump) return;
-    if (jobId) return; // jobId がある場合は STEP4 復元側に任せる
+    if (jobId) return;
     if (state.clientId && state.productId && state.projectId) {
       setCurrentStep(2);
       setDidInitialJump(true);
@@ -99,16 +108,28 @@ const SpotToolWizard = ({
         .select('id, project_id, input_data, tool_type')
         .eq('id', urlJobId)
         .maybeSingle();
-      if (!job || job.tool_type !== toolType) return;
+      if (!job || job.tool_type !== toolType) {
+        // 不一致でも URL は綺麗にする
+        clearJobIdFromUrl();
+        return;
+      }
 
       const { data: project } = await supabase
         .from('projects')
-        .select('id, product:products(id, client_id)')
+        .select('id, name, product:products(id, name, client_id, client:clients(id, name))')
         .eq('id', job.project_id)
         .maybeSingle();
-      if (!project || !project.product) return;
+      if (!project || !project.product) {
+        clearJobIdFromUrl();
+        return;
+      }
 
-      const product = project.product as unknown as { id: string; client_id: string | null };
+      const product = project.product as unknown as {
+        id: string;
+        name: string;
+        client_id: string | null;
+        client: { id: string; name: string } | null;
+      };
       updateState({
         clientId: product.client_id,
         productId: product.id,
@@ -120,6 +141,17 @@ const SpotToolWizard = ({
         (job.input_data as Record<string, unknown>) ?? {}
       );
       setCurrentStep(3);
+
+      // 復元通知を表示
+      setRestorationNotice({
+        jobId: urlJobId,
+        clientName: product.client?.name ?? '(不明)',
+        productName: product.name,
+        projectName: (project as { name: string }).name,
+      });
+
+      // URL から job_id を削除(履歴・リロード再復元防止)
+      clearJobIdFromUrl();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toolType]);
@@ -139,6 +171,29 @@ const SpotToolWizard = ({
     return true;
   };
 
+  // ユーザー手動変更検知用ラッパ
+  const updateStateWithUrlClear = useCallback(
+    (u: Partial<SpotWizardState>) => {
+      // ターゲット系の変更時は URL の job_id を消す
+      if ('clientId' in u || 'productId' in u || 'projectId' in u) {
+        clearJobIdFromUrl();
+      }
+      updateState(u);
+    },
+    [updateState]
+  );
+
+  const handleStartFresh = useCallback(() => {
+    updateState({ clientId: null, productId: null, projectId: null });
+    clearJobIdFromUrl();
+    setDirection(-1);
+    setCurrentStep(0);
+    setRestorationNotice(null);
+  }, [updateState]);
+
+  const showProjectBadge =
+    currentStep > 0 && state.clientId && state.productId && state.projectId && context;
+
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       {/* ヘッダー */}
@@ -149,6 +204,45 @@ const SpotToolWizard = ({
         </h1>
         <p className="text-sm text-muted-foreground">{toolDescription}</p>
       </div>
+
+      {/* 復元通知 Alert */}
+      {restorationNotice && (
+        <Alert className="border-primary/40 bg-primary/5 relative">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <button
+            onClick={() => setRestorationNotice(null)}
+            className="absolute top-3 right-3 text-muted-foreground hover:text-foreground"
+            aria-label="閉じる"
+          >
+            <X className="h-4 w-4" />
+          </button>
+          <AlertTitle>ジョブを履歴から復元しました</AlertTitle>
+          <AlertDescription className="space-y-3">
+            <div className="text-sm leading-relaxed">
+              <div>
+                <span className="text-muted-foreground">クライアント:</span>{' '}
+                <strong>{restorationNotice.clientName}</strong>
+              </div>
+              <div>
+                <span className="text-muted-foreground">商材:</span>{' '}
+                <strong>{restorationNotice.productName}</strong>
+              </div>
+              <div>
+                <span className="text-muted-foreground">案件:</span>{' '}
+                <strong>{restorationNotice.projectName}</strong>
+              </div>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button size="sm" onClick={() => setRestorationNotice(null)}>
+                この案件で続行
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleStartFresh}>
+                新しく最初から始める
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* ステップインジケータ (デスクトップ) */}
       <div className="hidden md:flex items-center justify-between">
@@ -196,6 +290,26 @@ const SpotToolWizard = ({
         <span className="text-sm font-medium">{STEPS[currentStep].label}</span>
       </div>
 
+      {/* 選択中の案件バッジ(STEP2 以降) */}
+      {showProjectBadge && (
+        <div className="text-xs text-muted-foreground flex items-center gap-1.5 flex-wrap rounded-md bg-muted/40 px-3 py-1.5">
+          <FolderOpen className="h-3 w-3 shrink-0" />
+          <span>{context!.project.product.client.name}</span>
+          <ChevronRight className="h-3 w-3 shrink-0" />
+          <span>{context!.project.product.name}</span>
+          <ChevronRight className="h-3 w-3 shrink-0" />
+          <span className="font-medium text-foreground">{context!.project.name}</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-5 px-1.5 text-xs ml-1"
+            onClick={() => goToStep(0)}
+          >
+            変更
+          </Button>
+        </div>
+      )}
+
       {/* ステップコンテンツ */}
       <AnimatePresence mode="wait" custom={direction}>
         <motion.div
@@ -206,7 +320,7 @@ const SpotToolWizard = ({
           exit={{ opacity: 0, x: direction > 0 ? -20 : 20 }}
           transition={{ duration: 0.2 }}
         >
-          {currentStep === 0 && <SpotStepTarget state={state} updateState={updateState} />}
+          {currentStep === 0 && <SpotStepTarget state={state} updateState={updateStateWithUrlClear} />}
           {currentStep === 1 && (
             <SpotStepDataCollection state={state} onComplete={goNext} />
           )}
