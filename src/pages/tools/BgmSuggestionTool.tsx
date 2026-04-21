@@ -259,10 +259,7 @@ const BgmSuggestionTool = () => {
           numSuggestions={numSuggestions}
           setNumSuggestions={setNumSuggestions}
           seedInfo={seedInfo}
-          onGenerate={() => {
-            handleGenerate();
-            navigate(`/tools/bgm-suggestion`);
-          }}
+          onGenerate={handleGenerate}
           isRunning={isRunning}
         />
       )}
