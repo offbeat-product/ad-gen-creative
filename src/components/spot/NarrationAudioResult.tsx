@@ -102,6 +102,7 @@ const NarrationAudioResult = ({
   const [playingAssetId, setPlayingAssetId] = useState<string | null>(null);
   const [durations, setDurations] = useState<Record<string, number>>({});
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [activeScriptTab, setActiveScriptTab] = useState<'original' | 'converted'>('original');
 
   useEffect(() => {
     return () => {
