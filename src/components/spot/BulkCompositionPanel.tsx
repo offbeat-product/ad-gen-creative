@@ -5,13 +5,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { useBulkComposition } from '@/hooks/useBulkComposition';
 import BulkCompositionProgress from './BulkCompositionProgress';
 import BulkCompositionDocxDownload from './BulkCompositionDocxDownload';
 import type { useProjectContext } from '@/hooks/useProjectContext';
-import type { GeneratedCopy, AppealAxisCopy } from '@/types/bulk-composition';
+import type { GeneratedCopy, AppealAxisCopy, BannerBrief } from '@/types/bulk-composition';
 
 interface Props {
   projectId: string;
@@ -19,6 +21,16 @@ interface Props {
 }
 
 const DURATION_OPTIONS = [15, 30, 60] as const;
+
+const emptyBrief: BannerBrief = {
+  target_age: '',
+  insight_category: '',
+  insight: '',
+  what_to_say: '',
+  user_situation: '',
+  user_motivation: '',
+  user_merit: '',
+};
 
 const BulkCompositionPanel = ({ projectId, context }: Props) => {
   const bulk = useBulkComposition(projectId);
@@ -30,6 +42,7 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
   const [duration, setDuration] = useState<number>(30);
   const [creativeType, setCreativeType] = useState<'video' | 'banner'>('video');
   const [loading, setLoading] = useState(true);
+  const [bannerBrief, setBannerBrief] = useState<BannerBrief>(emptyBrief);
 
   // Load latest appeal_axis_copy job
   useEffect(() => {
@@ -62,6 +75,21 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
     };
   }, [projectId]);
 
+  // Auto-prefill banner brief from project brief context
+  useEffect(() => {
+    if (!context?.project) return;
+    const p = context.project as any;
+    setBannerBrief((prev) => ({
+      target_age: prev.target_age || p.target_audience || '',
+      insight_category: prev.insight_category || '',
+      insight: prev.insight || p.target_insight || '',
+      what_to_say: prev.what_to_say || p.differentiation || '',
+      user_situation: prev.user_situation || '',
+      user_motivation: prev.user_motivation || '',
+      user_merit: prev.user_merit || '',
+    }));
+  }, [context?.project]);
+
   const selectedCopies = useMemo(
     () => allCopies.filter((c) => selectedPatternIds.has(c.pattern_id)),
     [allCopies, selectedPatternIds]
@@ -74,10 +102,6 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
   };
 
   const handleBulkGenerate = async () => {
-    if (creativeType === 'banner') {
-      toast.info('バナーの一括生成は近日対応予定です');
-      return;
-    }
     if (selectedCopies.length === 0) {
       toast.error('少なくとも1つのコピーを選択してください');
       return;
@@ -85,13 +109,13 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
 
     const estimatedMinutes = Math.ceil((selectedCopies.length * 30) / 60);
     const ok = window.confirm(
-      `${selectedCopies.length}件の構成案を一括生成します。\n完了までおおよそ${estimatedMinutes}分かかります。\n続行しますか?`
+      `${selectedCopies.length}件の${creativeType === 'banner' ? 'バナー' : ''}構成案を一括生成します。\n完了までおおよそ${estimatedMinutes}分かかります。\n続行しますか?`
     );
     if (!ok) return;
 
     const compositionRules =
       context?.rules.filter((r) =>
-        ['storyboard', 'script', 'video_horizontal', 'video_vertical'].includes(
+        ['storyboard', 'script', 'video_horizontal', 'video_vertical', 'banner'].includes(
           r.process_type
         )
       ) ?? [];
@@ -109,6 +133,7 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
       await bulk.startBulkGeneration(appealAxesCopies, {
         duration_seconds: duration,
         creative_type: creativeType,
+        brief: creativeType === 'banner' ? bannerBrief : undefined,
         client_name: projectMeta.client_name,
         product_name: projectMeta.product_name,
         project_name: projectMeta.project_name,
@@ -276,23 +301,18 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
                 type="button"
                 onClick={() => setCreativeType('banner')}
                 className={cn(
-                  'flex flex-col items-center justify-center gap-1 rounded-xl border bg-card p-4 transition-all hover:border-secondary/50',
+                  'flex items-center justify-center gap-2 rounded-xl border bg-card p-4 transition-all hover:border-secondary/50',
                   creativeType === 'banner' &&
                     'border-secondary ring-2 ring-secondary/30'
                 )}
               >
-                <div className="flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4 text-secondary" />
-                  <span className="font-semibold">バナー</span>
-                </div>
-                <span className="text-[10px] text-muted-foreground">
-                  一括生成は近日対応予定
-                </span>
+                <ImageIcon className="h-4 w-4 text-secondary" />
+                <span className="font-semibold">バナー</span>
               </button>
             </div>
           </div>
 
-          {/* Duration */}
+          {/* Duration (video only) */}
           {creativeType === 'video' && (
             <div className="space-y-2">
               <Label>動画尺</Label>
@@ -316,23 +336,80 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
             </div>
           )}
 
+          {/* Banner brief form */}
           {creativeType === 'banner' && (
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                バナーの一括生成は近日対応予定です。動画を選択してください。
-              </AlertDescription>
-            </Alert>
+            <div className="space-y-3 rounded-xl border bg-card p-4">
+              <div className="space-y-1">
+                <h3 className="font-bold">📋 バナー構成案ブリーフ</h3>
+                <p className="text-xs text-muted-foreground">
+                  pptx出力時に左側テーブルに表示される情報です。全項目入力推奨。
+                </p>
+              </div>
+
+              <BriefField
+                label="対象年齢"
+                value={bannerBrief.target_age}
+                onChange={(v) => setBannerBrief({ ...bannerBrief, target_age: v })}
+                placeholder="例: 30〜40代"
+              />
+              <BriefField
+                label="インサイトカテゴリ"
+                value={bannerBrief.insight_category}
+                onChange={(v) =>
+                  setBannerBrief({ ...bannerBrief, insight_category: v })
+                }
+                placeholder="例: ワークライフバランスを重視"
+              />
+              <BriefField
+                label="インサイト"
+                value={bannerBrief.insight}
+                onChange={(v) => setBannerBrief({ ...bannerBrief, insight: v })}
+                placeholder="例: 家庭と両立"
+              />
+              <BriefField
+                label="What to Say"
+                value={bannerBrief.what_to_say}
+                onChange={(v) =>
+                  setBannerBrief({ ...bannerBrief, what_to_say: v })
+                }
+                placeholder="例: 予定が立てやすい働き方"
+                highlight
+              />
+              <BriefField
+                label="ユーザーのシチュエーション"
+                value={bannerBrief.user_situation}
+                onChange={(v) =>
+                  setBannerBrief({ ...bannerBrief, user_situation: v })
+                }
+                multiline
+              />
+              <BriefField
+                label="ユーザーのモチベーション"
+                value={bannerBrief.user_motivation}
+                onChange={(v) =>
+                  setBannerBrief({ ...bannerBrief, user_motivation: v })
+                }
+                multiline
+              />
+              <BriefField
+                label="ユーザーにとってのメリット"
+                value={bannerBrief.user_merit}
+                onChange={(v) =>
+                  setBannerBrief({ ...bannerBrief, user_merit: v })
+                }
+                multiline
+              />
+
+              <p className="text-[11px] text-muted-foreground">
+                💡 ヒント: 案件のオリエン情報があれば自動入力されます
+              </p>
+            </div>
           )}
 
           {/* Generate button */}
           <Button
             onClick={handleBulkGenerate}
-            disabled={
-              bulk.isStarting ||
-              creativeType === 'banner' ||
-              selectedCopies.length === 0
-            }
+            disabled={bulk.isStarting || selectedCopies.length === 0}
             className="w-full h-12"
             size="lg"
             variant="brand"
@@ -341,12 +418,11 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" /> 生成開始中...
               </>
-            ) : creativeType === 'banner' ? (
-              'バナーの一括生成は近日対応予定'
             ) : (
               <>
                 <Rocket className="h-4 w-4 mr-2" />
-                選択した{selectedCopies.length}件の構成案を一括生成
+                選択した{selectedCopies.length}件の
+                {creativeType === 'banner' ? 'バナー' : ''}構成案を一括生成
               </>
             )}
           </Button>
@@ -355,5 +431,53 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
     </div>
   );
 };
+
+interface BriefFieldProps {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  multiline?: boolean;
+  highlight?: boolean;
+}
+
+function BriefField({
+  label,
+  value,
+  onChange,
+  placeholder,
+  multiline,
+  highlight,
+}: BriefFieldProps) {
+  return (
+    <div className="space-y-1">
+      <Label
+        className={cn(
+          'text-xs',
+          highlight && 'font-bold text-secondary'
+        )}
+      >
+        {label}
+        {highlight && ' ⭐'}
+      </Label>
+      {multiline ? (
+        <Textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          rows={2}
+          className="text-sm"
+        />
+      ) : (
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          className="text-sm"
+        />
+      )}
+    </div>
+  );
+}
 
 export default BulkCompositionPanel;
