@@ -290,9 +290,6 @@ const VConResult = ({
         });
 
       setNarrationOptions(opts);
-      if (opts.length > 0 && selectedNarrationJobId === 'none') {
-        setSelectedNarrationJobId(opts[0].job_id);
-      }
     })();
     return () => {
       cancelled = true;
