@@ -44,6 +44,10 @@ export interface BulkCompositionBatch {
   appeal_axes_snapshot: AppealAxisCopy[];
   duration_seconds: number;
   spot_job_ids: string[];
+  na_script_job_ids?: string[];
+  storyboard_job_ids?: string[];
+  with_na_script?: boolean;
+  with_storyboard_images?: boolean;
   created_at: string;
   updated_at: string;
   completed_at: string | null;
@@ -60,7 +64,7 @@ export interface BulkSceneOutput {
 export interface BulkCompositionJob {
   id: string;
   project_id: string;
-  tool_type: 'composition';
+  tool_type: 'composition' | 'narration_script' | 'image_generation';
   status: 'pending' | 'running' | 'completed' | 'failed';
   input_data: {
     bulk_batch_id?: string;
@@ -70,6 +74,8 @@ export interface BulkCompositionJob {
     duration_seconds?: number;
     creative_type?: string;
     pattern_id?: string;
+    parent_composition_job_id?: string;
+    storyboard_kind?: string;
     [key: string]: unknown;
   };
   output_data: {
@@ -81,4 +87,21 @@ export interface BulkCompositionJob {
   error_message: string | null;
   created_at: string;
   completed_at: string | null;
+}
+
+export interface BulkCompositionAsset {
+  id: string;
+  job_id: string;
+  asset_type: string;
+  file_url: string;
+  file_name: string | null;
+  sort_order: number | null;
+  metadata: {
+    cut_number?: number;
+    time_range?: string;
+    section?: string;
+    telop?: string;
+    [key: string]: unknown;
+  } | null;
+  created_at: string;
 }

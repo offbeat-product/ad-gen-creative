@@ -17,6 +17,8 @@ interface StartOptions {
   copyright_text?: string;
   rules?: unknown[];
   correction_patterns?: unknown[];
+  with_na_script?: boolean;
+  with_storyboard_images?: boolean;
 }
 
 export function useBulkComposition(projectId: string) {
@@ -72,6 +74,8 @@ export function useBulkComposition(projectId: string) {
               copyright_text: options.copyright_text,
               rules: options.rules ?? [],
               correction_patterns: options.correction_patterns ?? [],
+              with_na_script: options.with_na_script ?? false,
+              with_storyboard_images: options.with_storyboard_images ?? false,
             },
           }
         );
@@ -125,43 +129,71 @@ export function useBulkComposition(projectId: string) {
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
           table: 'gen_spot_jobs',
         },
         (payload) => {
-          const updatedJob = payload.new as unknown as BulkCompositionJob;
-          if (jobIds.includes(updatedJob.id)) {
-            setJobs((prev) => {
-              const idx = prev.findIndex((j) => j.id === updatedJob.id);
-              if (idx >= 0) {
-                const next = [...prev];
-                next[idx] = updatedJob;
-                return next;
-              }
-              return [...prev, updatedJob];
-            });
-          }
+          const updatedJob = payload.new as unknown as BulkCompositionJob | null;
+          if (!updatedJob) return;
+          // Match either by spot_job_ids (composition jobs) OR by input_data.bulk_batch_id
+          // (covers chained narration_script + image_generation jobs).
+          const inputData = (updatedJob.input_data ?? {}) as Record<string, unknown>;
+          const matchesBatch =
+            jobIds.includes(updatedJob.id) ||
+            inputData.bulk_batch_id === batchId;
+          if (!matchesBatch) return;
+          setJobs((prev) => {
+            const idx = prev.findIndex((j) => j.id === updatedJob.id);
+            if (idx >= 0) {
+              const next = [...prev];
+              next[idx] = updatedJob;
+              return next;
+            }
+            return [...prev, updatedJob];
+          });
         }
       )
       .subscribe();
 
-    // Initial jobs fetch
+    // Initial jobs fetch — composition + chained NA-script + storyboard image jobs
     (async () => {
-      if (jobIds.length === 0) return;
-      const { data: initialJobs } = await supabase
+      const composedQuery = supabase
         .from('gen_spot_jobs')
         .select('*')
-        .in('id', jobIds)
+        .eq('project_id', projectId)
+        .contains('input_data', { bulk_batch_id: batchId })
         .order('created_at', { ascending: true });
-      setJobs((initialJobs || []) as unknown as BulkCompositionJob[]);
+      const { data: chainedJobs } = await composedQuery;
+
+      let merged = (chainedJobs || []) as unknown as BulkCompositionJob[];
+
+      // Fallback: also fetch by explicit IDs in case input_data.bulk_batch_id was not stored.
+      if (jobIds.length > 0) {
+        const { data: byIds } = await supabase
+          .from('gen_spot_jobs')
+          .select('*')
+          .in('id', jobIds);
+        if (byIds) {
+          const seen = new Set(merged.map((j) => j.id));
+          for (const j of byIds as unknown as BulkCompositionJob[]) {
+            if (!seen.has(j.id)) merged.push(j);
+          }
+        }
+      }
+
+      merged = merged.sort(
+        (a, b) =>
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+      setJobs(merged);
     })();
 
     return () => {
       supabase.removeChannel(batchChannel);
       supabase.removeChannel(jobsChannel);
     };
-  }, [currentBatch?.id, currentBatch?.spot_job_ids]);
+  }, [currentBatch?.id, currentBatch?.spot_job_ids, projectId]);
 
   const resetBatch = useCallback(() => {
     setCurrentBatch(null);

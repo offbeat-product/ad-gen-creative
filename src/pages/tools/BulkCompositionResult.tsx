@@ -22,6 +22,7 @@ import type {
   BulkCompositionBatch,
   BulkCompositionJob,
   BulkSceneOutput,
+  BulkCompositionAsset,
 } from '@/types/bulk-composition';
 
 const STEPS = [
@@ -66,17 +67,33 @@ const BulkCompositionResult = () => {
 
       if (batchData) {
         setBatch(batchData as unknown as BulkCompositionBatch);
+
+        // Fetch ALL jobs related to this batch (composition + chained NA + storyboard).
+        const { data: chainedJobs } = await supabase
+          .from('gen_spot_jobs')
+          .select('*')
+          .eq('project_id', projectId)
+          .contains('input_data', { bulk_batch_id: batchId })
+          .order('created_at', { ascending: true });
+
+        let merged = (chainedJobs || []) as unknown as BulkCompositionJob[];
+
+        // Fallback: include explicit spot_job_ids in case input_data lacks bulk_batch_id.
         const jobIds = (batchData.spot_job_ids ?? []) as string[];
         if (jobIds.length > 0) {
-          const { data: jobsData } = await supabase
+          const { data: byIds } = await supabase
             .from('gen_spot_jobs')
             .select('*')
-            .in('id', jobIds)
-            .order('created_at', { ascending: true });
-          if (!cancelled && jobsData) {
-            setJobs(jobsData as unknown as BulkCompositionJob[]);
+            .in('id', jobIds);
+          if (byIds) {
+            const seen = new Set(merged.map((j) => j.id));
+            for (const j of byIds as unknown as BulkCompositionJob[]) {
+              if (!seen.has(j.id)) merged.push(j);
+            }
           }
         }
+
+        if (!cancelled) setJobs(merged);
       }
 
       const { data: project } = await supabase
@@ -126,13 +143,36 @@ const BulkCompositionResult = () => {
     );
   }
 
-  const completedJobs = jobs.filter((j) => j.status === 'completed');
-  const failedJobs = jobs.filter((j) => j.status === 'failed');
+  const compositionJobs = jobs.filter((j) => j.tool_type === 'composition');
+  const naScriptJobs = jobs.filter((j) => j.tool_type === 'narration_script');
+  const storyboardJobs = jobs.filter(
+    (j) =>
+      j.tool_type === 'image_generation' &&
+      (j.input_data as Record<string, unknown>)?.storyboard_kind === 'spot'
+  );
+  const completedJobs = compositionJobs.filter((j) => j.status === 'completed');
+  const failedJobs = compositionJobs.filter((j) => j.status === 'failed');
   const creativeType =
-    (jobs[0]?.input_data as { creative_type?: string })?.creative_type ===
+    (compositionJobs[0]?.input_data as { creative_type?: string })?.creative_type ===
     'banner'
       ? 'banner'
       : 'video';
+
+  // Map chained jobs to their parent composition job id
+  const naByParent = new Map<string, BulkCompositionJob>();
+  for (const nj of naScriptJobs) {
+    const pid = (nj.input_data as Record<string, unknown>)?.parent_composition_job_id as
+      | string
+      | undefined;
+    if (pid) naByParent.set(pid, nj);
+  }
+  const sbByParent = new Map<string, BulkCompositionJob>();
+  for (const sj of storyboardJobs) {
+    const pid = (sj.input_data as Record<string, unknown>)?.parent_composition_job_id as
+      | string
+      | undefined;
+    if (pid) sbByParent.set(pid, sj);
+  }
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
@@ -229,10 +269,10 @@ const BulkCompositionResult = () => {
       {/* Job cards */}
       <div className="space-y-3">
         <h3 className="text-base font-semibold">
-          生成された構成案 ({jobs.length}件)
+          生成された構成案 ({compositionJobs.length}件)
         </h3>
         <div className="space-y-2">
-          {jobs
+          {compositionJobs
             .slice()
             .sort(
               (a, b) =>
@@ -243,6 +283,8 @@ const BulkCompositionResult = () => {
               <JobCard
                 key={job.id}
                 job={job}
+                naScriptJob={naByParent.get(job.id)}
+                storyboardJob={sbByParent.get(job.id)}
                 index={idx + 1}
                 creativeType={creativeType}
               />
@@ -346,10 +388,14 @@ const SummaryCard = ({
 // ====== Job card (accordion) ======
 const JobCard = ({
   job,
+  naScriptJob,
+  storyboardJob,
   index,
   creativeType,
 }: {
   job: BulkCompositionJob;
+  naScriptJob?: BulkCompositionJob;
+  storyboardJob?: BulkCompositionJob;
   index: number;
   creativeType: 'video' | 'banner';
 }) => {
@@ -374,11 +420,21 @@ const JobCard = ({
           {isFailed && <XCircle className="h-5 w-5 text-destructive" />}
         </div>
         <div className="flex-1 min-w-0 space-y-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-bold">#{index}</span>
             <Badge variant="secondary" className="text-[10px] h-5">
               {isCompleted ? '完了' : '失敗'}
             </Badge>
+            {naScriptJob && (
+              <Badge variant="outline" className="text-[10px] h-5">
+                NA{naScriptJob.status === 'completed' ? '✓' : '…'}
+              </Badge>
+            )}
+            {storyboardJob && (
+              <Badge variant="outline" className="text-[10px] h-5">
+                🎬{storyboardJob.status === 'completed' ? '✓' : '…'}
+              </Badge>
+            )}
           </div>
           <div className="text-xs text-muted-foreground line-clamp-1">
             {job.input_data.appeal_axis}
@@ -404,7 +460,7 @@ const JobCard = ({
       </button>
 
       {expanded && isCompleted && (
-        <div className="border-t p-4 bg-muted/20">
+        <div className="border-t p-4 bg-muted/20 space-y-4">
           {creativeType === 'video' ? (
             <VideoSceneList
               scenes={(output.scenes as BulkSceneOutput[]) ?? []}
@@ -416,8 +472,85 @@ const JobCard = ({
               }
             />
           )}
+
+          {/* Storyboard image gallery (video + storyboard generated) */}
+          {creativeType === 'video' && storyboardJob && (
+            <>
+              {storyboardJob.status === 'completed' ? (
+                <StoryboardGallery storyboardJobId={storyboardJob.id} />
+              ) : storyboardJob.status === 'failed' ? (
+                <p className="text-xs text-destructive">
+                  🎬 絵コンテ画像の生成に失敗しました
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  🎬 絵コンテ画像を生成中...
+                </p>
+              )}
+            </>
+          )}
         </div>
       )}
+    </div>
+  );
+};
+
+// ====== Storyboard image gallery ======
+const StoryboardGallery = ({ storyboardJobId }: { storyboardJobId: string }) => {
+  const [images, setImages] = useState<BulkCompositionAsset[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('gen_spot_assets')
+        .select('*')
+        .eq('job_id', storyboardJobId)
+        .eq('asset_type', 'storyboard_image')
+        .order('sort_order', { ascending: true });
+      if (!cancelled && data) {
+        setImages(data as unknown as BulkCompositionAsset[]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [storyboardJobId]);
+
+  if (images.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        🎬 絵コンテ画像が登録されていません
+      </p>
+    );
+  }
+
+  return (
+    <div className="pt-3 border-t">
+      <h4 className="text-xs font-bold mb-2 text-primary">
+        🎬 絵コンテ画像 ({images.length}カット)
+      </h4>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+        {images.map((img) => (
+          <div key={img.id} className="relative">
+            <img
+              src={img.file_url}
+              alt={`Cut ${img.metadata?.cut_number ?? ''}`}
+              loading="lazy"
+              className="w-full aspect-video object-cover rounded border bg-muted"
+            />
+            {img.metadata?.cut_number != null && (
+              <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded font-bold">
+                #{img.metadata.cut_number}
+              </div>
+            )}
+            {img.metadata?.time_range && (
+              <div className="absolute bottom-1 left-1 right-1 bg-black/60 text-white text-[10px] text-center py-0.5 rounded">
+                {img.metadata.time_range}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

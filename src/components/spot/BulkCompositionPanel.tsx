@@ -38,6 +38,8 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
   const [allCopies, setAllCopies] = useState<GeneratedCopy[]>([]);
   const [duration, setDuration] = useState<number>(30);
   const [creativeType, setCreativeType] = useState<'video' | 'banner'>('video');
+  const [withNaScript, setWithNaScript] = useState<boolean>(true);
+  const [withStoryboardImages, setWithStoryboardImages] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   const [bannerBrief, setBannerBrief] = useState<BannerBrief>(emptyBrief);
 
@@ -157,6 +159,9 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
           process_type: r.process_type,
         })),
         correction_patterns: context?.corrections ?? [],
+        with_na_script: creativeType === 'video' ? withNaScript : false,
+        with_storyboard_images:
+          creativeType === 'video' ? withStoryboardImages : false,
       });
       toast.success(`${totalCount}件の構成案を生成開始しました`);
     } catch (err) {
@@ -320,6 +325,56 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Optional add-ons (video only) */}
+          {creativeType === 'video' && (
+            <div className="space-y-3">
+              {/* NA script toggle */}
+              <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-secondary/30 bg-secondary/5 p-4 transition-colors hover:bg-secondary/10">
+                <input
+                  type="checkbox"
+                  checked={withNaScript}
+                  onChange={(e) => setWithNaScript(e.target.checked)}
+                  className="mt-1 h-5 w-5 rounded accent-[hsl(var(--secondary))]"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-sm">📝 NA原稿も一緒に生成する</span>
+                    <Badge variant="outline" className="text-[10px] h-5">推奨</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                    各構成案に対応するナレーション原稿を続けて自動生成します。後で個別に生成する手間が省けます。
+                  </p>
+                </div>
+              </label>
+
+              {/* Storyboard images toggle */}
+              <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-primary/30 bg-primary/5 p-4 transition-colors hover:bg-primary/10">
+                <input
+                  type="checkbox"
+                  checked={withStoryboardImages}
+                  onChange={(e) => setWithStoryboardImages(e.target.checked)}
+                  className="mt-1 h-5 w-5 rounded accent-[hsl(var(--primary))]"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-semibold text-sm">🎬 絵コンテ画像も生成する</span>
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] h-5 border-warning/40 text-warning"
+                    >
+                      生成時間 +15〜20分
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                    各シーンに対応するAI絵コンテ画像(Flux 2 Pro)を自動生成し、pptxに「絵コンテビジュアル」ページを追加します。
+                    <br />
+                    ※画像生成は時間がかかるため、必要なときのみONを推奨。
+                  </p>
+                </div>
+              </label>
             </div>
           )}
 
