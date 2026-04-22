@@ -67,17 +67,33 @@ const BulkCompositionResult = () => {
 
       if (batchData) {
         setBatch(batchData as unknown as BulkCompositionBatch);
+
+        // Fetch ALL jobs related to this batch (composition + chained NA + storyboard).
+        const { data: chainedJobs } = await supabase
+          .from('gen_spot_jobs')
+          .select('*')
+          .eq('project_id', projectId)
+          .contains('input_data', { bulk_batch_id: batchId })
+          .order('created_at', { ascending: true });
+
+        let merged = (chainedJobs || []) as unknown as BulkCompositionJob[];
+
+        // Fallback: include explicit spot_job_ids in case input_data lacks bulk_batch_id.
         const jobIds = (batchData.spot_job_ids ?? []) as string[];
         if (jobIds.length > 0) {
-          const { data: jobsData } = await supabase
+          const { data: byIds } = await supabase
             .from('gen_spot_jobs')
             .select('*')
-            .in('id', jobIds)
-            .order('created_at', { ascending: true });
-          if (!cancelled && jobsData) {
-            setJobs(jobsData as unknown as BulkCompositionJob[]);
+            .in('id', jobIds);
+          if (byIds) {
+            const seen = new Set(merged.map((j) => j.id));
+            for (const j of byIds as unknown as BulkCompositionJob[]) {
+              if (!seen.has(j.id)) merged.push(j);
+            }
           }
         }
+
+        if (!cancelled) setJobs(merged);
       }
 
       const { data: project } = await supabase
