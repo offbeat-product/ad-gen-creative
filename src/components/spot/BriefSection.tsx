@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, KeyboardEvent } from 'react';
 import { motion } from 'framer-motion';
 import { Loader2, Sparkles, Target, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { saveBriefToProject } from '@/lib/brief-persistence';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -173,7 +174,7 @@ const BriefSection = ({
         safeTone = `custom:${brief.tone_custom || ''}`;
       }
 
-      onChange({
+      const nextBrief: BriefData = {
         ad_objective: safeObjective,
         target_audience: brief.target_audience || '',
         target_insight: brief.target_insight || '',
@@ -183,7 +184,13 @@ const BriefSection = ({
         differentiation: brief.differentiation || '',
         ng_words: Array.isArray(brief.ng_words) ? brief.ng_words : [],
         reference_creatives: brief.reference_creatives || '',
-      });
+      };
+      onChange(nextBrief);
+
+      // 永続保存(失敗してもUIはブロックしない)
+      saveBriefToProject(projectId, nextBrief).catch((e) =>
+        console.error('[BriefAutogen] persist error:', e)
+      );
 
       if (typeof brief.hint === 'string') {
         onHintGenerated?.(brief.hint);
