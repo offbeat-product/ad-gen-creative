@@ -344,6 +344,57 @@ const VConResult = ({
     };
   }, [projectId]);
 
+  /* ─── Auto-select narration/BGM from job.input_data on first load ─── */
+  const presetNarrationUrl = (job?.input_data as any)?.narration_audio_url as string | undefined;
+  const presetBgmUrl = (job?.input_data as any)?.bgm_url as string | undefined;
+  const narrationAutoApplied = useRef(false);
+  const bgmAutoApplied = useRef(false);
+
+  useEffect(() => {
+    if (narrationAutoApplied.current) return;
+    if (!presetNarrationUrl) return;
+    const match = narrationOptions.find((o) => o.audio_url === presetNarrationUrl);
+    if (match) {
+      setSelectedNarrationJobId(match.job_id);
+      narrationAutoApplied.current = true;
+    } else if (narrationOptions.length > 0 || presetNarrationUrl) {
+      // Synthesize a one-off option for uploaded files not present in narration_audio jobs
+      const synth: NarrationOption = {
+        job_id: '__preset__',
+        audio_url: presetNarrationUrl,
+        label: 'アップロード音声 (生成時指定)',
+        created_at: new Date().toISOString(),
+      };
+      setNarrationOptions((prev) =>
+        prev.some((p) => p.job_id === '__preset__') ? prev : [synth, ...prev],
+      );
+      setSelectedNarrationJobId('__preset__');
+      narrationAutoApplied.current = true;
+    }
+  }, [presetNarrationUrl, narrationOptions]);
+
+  useEffect(() => {
+    if (bgmAutoApplied.current) return;
+    if (!presetBgmUrl) return;
+    const match = bgmOptions.find((o) => o.audio_url === presetBgmUrl);
+    if (match) {
+      setSelectedBgmAssetId(match.asset_id);
+      bgmAutoApplied.current = true;
+    } else {
+      const synth: BgmOption = {
+        asset_id: '__preset__',
+        audio_url: presetBgmUrl,
+        label: 'アップロードBGM (生成時指定)',
+        created_at: new Date().toISOString(),
+      };
+      setBgmOptions((prev) =>
+        prev.some((p) => p.asset_id === '__preset__') ? prev : [synth, ...prev],
+      );
+      setSelectedBgmAssetId('__preset__');
+      bgmAutoApplied.current = true;
+    }
+  }, [presetBgmUrl, bgmOptions]);
+
   /* ─── Sync volume ─── */
   useEffect(() => {
     if (narrationAudioRef.current) narrationAudioRef.current.volume = narrationVolume;
@@ -557,7 +608,12 @@ const VConResult = ({
               </span>
             </div>
 
-            <VconScreen cut={currentCut} visible={isPlaying || currentTime > 0} />
+            <VconScreen
+              cut={currentCut}
+              visible={isPlaying || currentTime > 0}
+              isPlaying={isPlaying}
+              onToggle={togglePlay}
+            />
 
             {/* Progress bar */}
             <div
