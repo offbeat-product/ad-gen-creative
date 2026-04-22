@@ -313,7 +313,8 @@ const VConResult = ({
         .eq('project_id', projectId)
         .eq('tool_type', 'bgm_suggestion');
       if (!bgmJobs || bgmJobs.length === 0 || cancelled) {
-        setBgmOptions([]);
+        // Don't wipe a synthesized preset if user hasn't created bgm_suggestion jobs yet.
+        setBgmOptions((prev) => prev.filter((p) => p.asset_id === '__preset__'));
         return;
       }
       const bgmJobIds = bgmJobs.map((j) => j.id);
@@ -360,6 +361,18 @@ const VConResult = ({
     ((job?.input_data as any)?.bgm_url as string | undefined);
   const narrationAutoApplied = useRef(false);
   const bgmAutoApplied = useRef(false);
+
+  // Debug log: confirm what URLs were loaded from the V-Con job
+  useEffect(() => {
+    if (!job) return;
+    console.log('[Vcon] Loaded:', {
+      jobId: job.id,
+      cutsCount: cuts.length,
+      totalDuration,
+      narrationUrl: presetNarrationUrl ?? null,
+      bgmUrl: presetBgmUrl ?? null,
+    });
+  }, [job, cuts.length, totalDuration, presetNarrationUrl, presetBgmUrl]);
 
   useEffect(() => {
     if (narrationAutoApplied.current) return;
