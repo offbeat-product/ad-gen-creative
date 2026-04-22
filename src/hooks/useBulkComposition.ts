@@ -9,6 +9,7 @@ import type {
 interface StartOptions {
   duration_seconds?: number;
   creative_type?: 'video' | 'banner';
+  brief?: import('@/types/bulk-composition').BannerBrief;
   client_name?: string;
   product_name?: string;
   project_name?: string;
