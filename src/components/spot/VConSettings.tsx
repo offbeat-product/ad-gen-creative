@@ -392,6 +392,16 @@ const VConSettings = ({
             )}
           </div>
 
+          {/* preview audio for selected existing narration */}
+          {narrationMode === 'existing' && narrationAudioUrl && (
+            <audio
+              key={narrationAudioUrl}
+              src={narrationAudioUrl}
+              controls
+              className="ml-6 w-[calc(100%-1.5rem)] h-9"
+            />
+          )}
+
           {/* upload */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2 cursor-pointer text-sm">
