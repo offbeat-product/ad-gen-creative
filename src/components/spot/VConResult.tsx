@@ -833,7 +833,7 @@ const VConResult = ({
                         </TableRow>
                         {expanded && (
                           <TableRow key={`detail-${cut.cut_number}`} className="bg-muted/30">
-                            <TableCell colSpan={8} className="p-3">
+                            <TableCell colSpan={7} className="p-3">
                               <div className="grid md:grid-cols-2 gap-3 text-xs">
                                 {cut.visual_direction && (
                                   <div>
