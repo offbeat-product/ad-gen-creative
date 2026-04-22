@@ -25,6 +25,10 @@ interface BgmAsset {
   id: string;
   asset_type: string;
   metadata: Record<string, unknown> | null;
+  file_url?: string;
+  file_name?: string | null;
+  file_size_bytes?: number | null;
+  created_at?: string | null;
 }
 
 const BgmSuggestionTool = () => {
@@ -195,7 +199,7 @@ const BgmSuggestionTool = () => {
           .from('gen_spot_assets')
           .select('*')
           .eq('job_id', jobId)
-          .eq('asset_type', 'bgm_suggestion'),
+          .in('asset_type', ['bgm_suggestion', 'bgm_upload']),
       ]);
       if (jobRes.data) setJob(jobRes.data as SpotJob);
       if (assetsRes.data) setAssets(assetsRes.data as unknown as BgmAsset[]);

@@ -13,6 +13,7 @@ import {
   Pause,
   SkipBack,
   Mic,
+  Music,
 } from 'lucide-react';
 import type { useProjectContext } from '@/hooks/useProjectContext';
 import type { SpotWizardState } from '@/hooks/useSpotWizard';
@@ -71,6 +72,13 @@ export interface VconAsset {
 
 interface NarrationOption {
   job_id: string;
+  audio_url: string;
+  label: string;
+  created_at: string;
+}
+
+interface BgmOption {
+  asset_id: string;
   audio_url: string;
   label: string;
   created_at: string;
@@ -178,13 +186,20 @@ const VConResult = ({
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [narrationVolume, setNarrationVolume] = useState(1.0);
+  const [bgmVolume, setBgmVolume] = useState(0.3);
   const [narrationOptions, setNarrationOptions] = useState<NarrationOption[]>([]);
   const [selectedNarrationJobId, setSelectedNarrationJobId] = useState<string>('none');
+  const [bgmOptions, setBgmOptions] = useState<BgmOption[]>([]);
+  const [selectedBgmAssetId, setSelectedBgmAssetId] = useState<string>('none');
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
   const narrationAudioRef = useRef<HTMLAudioElement>(null);
+  const bgmAudioRef = useRef<HTMLAudioElement>(null);
 
   const selectedNarration = narrationOptions.find((o) => o.job_id === selectedNarrationJobId);
   const narrationUrl = selectedNarration?.audio_url ?? null;
+
+  const selectedBgm = bgmOptions.find((o) => o.asset_id === selectedBgmAssetId);
+  const bgmUrl = selectedBgm?.audio_url ?? null;
 
   const currentCut =
     cuts.find((c) => currentTime >= c.time_start && currentTime < c.time_end) ?? null;
@@ -261,10 +276,59 @@ const VConResult = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
+  /* ─── Fetch BGM uploads from same project ─── */
+  useEffect(() => {
+    if (!projectId) return;
+    let cancelled = false;
+    (async () => {
+      const { data: bgmJobs } = await supabase
+        .from('gen_spot_jobs')
+        .select('id')
+        .eq('project_id', projectId)
+        .eq('tool_type', 'bgm_suggestion');
+      if (!bgmJobs || bgmJobs.length === 0 || cancelled) {
+        setBgmOptions([]);
+        return;
+      }
+      const bgmJobIds = bgmJobs.map((j) => j.id);
+      const { data: bgmAssetRows } = await supabase
+        .from('gen_spot_assets')
+        .select('id, file_url, file_name, asset_type, created_at, metadata')
+        .in('job_id', bgmJobIds)
+        .eq('asset_type', 'bgm_upload')
+        .order('created_at', { ascending: false });
+      if (cancelled) return;
+      const opts: BgmOption[] = (bgmAssetRows ?? [])
+        .filter((a: any) => a.file_url)
+        .map((a: any) => {
+          const dateStr = new Date(a.created_at as string).toLocaleString('ja-JP', {
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+          return {
+            asset_id: a.id,
+            audio_url: String(a.file_url),
+            label: `${a.file_name ?? 'BGM'}（${dateStr}）`,
+            created_at: a.created_at as string,
+          };
+        });
+      setBgmOptions(opts);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
   /* ─── Sync volume ─── */
   useEffect(() => {
     if (narrationAudioRef.current) narrationAudioRef.current.volume = narrationVolume;
   }, [narrationVolume]);
+
+  useEffect(() => {
+    if (bgmAudioRef.current) bgmAudioRef.current.volume = bgmVolume;
+  }, [bgmVolume]);
 
   /* ─── Cleanup on unmount ─── */
   useEffect(() => {
@@ -273,12 +337,12 @@ const VConResult = ({
     };
   }, []);
 
-  /* ─── Stop when narration source changes ─── */
+  /* ─── Stop when audio sources change ─── */
   useEffect(() => {
     stopPlayback();
     setCurrentTime(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedNarrationJobId]);
+  }, [selectedNarrationJobId, selectedBgmAssetId]);
 
   const stopPlayback = useCallback(() => {
     setIsPlaying(false);
@@ -287,6 +351,7 @@ const VConResult = ({
       intervalRef.current = undefined;
     }
     narrationAudioRef.current?.pause();
+    bgmAudioRef.current?.pause();
   }, []);
 
   const startPlayback = useCallback(
@@ -305,6 +370,16 @@ const VConResult = ({
         narrationAudioRef.current.play().catch(() => {});
       }
 
+      if (bgmAudioRef.current && bgmUrl) {
+        try {
+          bgmAudioRef.current.currentTime = startT;
+        } catch {
+          /* ignore */
+        }
+        bgmAudioRef.current.volume = bgmVolume;
+        bgmAudioRef.current.play().catch(() => {});
+      }
+
       if (intervalRef.current) clearInterval(intervalRef.current);
       const startWall = Date.now();
       intervalRef.current = setInterval(() => {
@@ -317,12 +392,13 @@ const VConResult = ({
             intervalRef.current = undefined;
           }
           narrationAudioRef.current?.pause();
+          bgmAudioRef.current?.pause();
         } else {
           setCurrentTime(elapsed);
         }
       }, 100);
     },
-    [currentTime, totalDuration, narrationUrl, narrationVolume],
+    [currentTime, totalDuration, narrationUrl, narrationVolume, bgmUrl, bgmVolume],
   );
 
   const togglePlay = useCallback(() => {
@@ -348,6 +424,13 @@ const VConResult = ({
         if (narrationAudioRef.current) {
           try {
             narrationAudioRef.current.currentTime = clamped;
+          } catch {
+            /* ignore */
+          }
+        }
+        if (bgmAudioRef.current) {
+          try {
+            bgmAudioRef.current.currentTime = clamped;
           } catch {
             /* ignore */
           }
@@ -514,6 +597,29 @@ const VConResult = ({
               </div>
             </div>
 
+            {/* BGM volume */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 ml-auto min-w-[180px]">
+                <Music
+                  className={cn(
+                    'h-3.5 w-3.5 shrink-0',
+                    bgmUrl ? 'text-secondary' : 'text-muted-foreground/40',
+                  )}
+                />
+                <Slider
+                  value={[bgmVolume * 100]}
+                  onValueChange={([v]) => setBgmVolume(v / 100)}
+                  max={100}
+                  step={5}
+                  disabled={!bgmUrl}
+                  className="flex-1"
+                />
+                <span className="text-xs text-muted-foreground tabular-nums w-9 text-right">
+                  {Math.round(bgmVolume * 100)}%
+                </span>
+              </div>
+            </div>
+
             {/* Narration source selector */}
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs text-muted-foreground shrink-0">🎙 ナレーション:</span>
@@ -540,11 +646,38 @@ const VConResult = ({
                 </Select>
               )}
             </div>
+
+            {/* BGM source selector */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-muted-foreground shrink-0">🎵 BGM:</span>
+              {bgmOptions.length === 0 ? (
+                <span className="text-xs text-muted-foreground italic">
+                  この案件ではまだBGMがアップロードされていません。BGM提案ツールの結果画面からアップロードできます。
+                </span>
+              ) : (
+                <Select value={selectedBgmAssetId} onValueChange={setSelectedBgmAssetId}>
+                  <SelectTrigger className="h-8 text-xs w-auto min-w-[260px]">
+                    <SelectValue placeholder="BGMを選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">（BGMなし）</SelectItem>
+                    {bgmOptions.map((opt) => (
+                      <SelectItem key={opt.asset_id} value={opt.asset_id}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
 
           {/* Hidden audio */}
           {narrationUrl && (
             <audio ref={narrationAudioRef} src={narrationUrl} preload="auto" />
+          )}
+          {bgmUrl && (
+            <audio ref={bgmAudioRef} src={bgmUrl} preload="auto" loop playsInline />
           )}
 
           {/* Action buttons */}
