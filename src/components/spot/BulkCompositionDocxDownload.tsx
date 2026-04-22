@@ -6,6 +6,10 @@ import {
   generateBulkCompositionDocx,
   downloadBulkDocx,
 } from '@/lib/generate-bulk-composition-docx';
+import {
+  generateBulkBannerPptx,
+  downloadBulkBannerPptx,
+} from '@/lib/pptx/generate-bulk-banner-pptx';
 import type {
   BulkCompositionBatch,
   BulkCompositionJob,
@@ -27,20 +31,41 @@ const sanitize = (s: string) =>
 const BulkCompositionDocxDownload = ({ batch, jobs, projectMeta }: Props) => {
   const [generating, setGenerating] = useState(false);
 
+  const creativeType =
+    (jobs[0]?.input_data as any)?.creative_type === 'banner'
+      ? 'banner'
+      : 'video';
+  const isBanner = creativeType === 'banner';
+
   const handleDownload = async () => {
     setGenerating(true);
     try {
-      const blob = await generateBulkCompositionDocx({
-        batch,
-        jobs,
-        meta: projectMeta,
-      });
-      const fileName = `構成案一括_${sanitize(projectMeta.project_name || 'project')}_${new Date().toISOString().slice(0, 10)}.docx`;
-      downloadBulkDocx(blob, fileName);
-      toast.success('Wordドキュメントをダウンロードしました');
+      const dateStr = new Date().toISOString().slice(0, 10);
+      const baseName = sanitize(projectMeta.project_name || 'project');
+
+      if (isBanner) {
+        const blob = await generateBulkBannerPptx({
+          batch,
+          jobs,
+          meta: projectMeta,
+        });
+        downloadBulkBannerPptx(
+          blob,
+          `バナー構成案一括_${baseName}_${dateStr}.pptx`
+        );
+        toast.success('PowerPointファイルをダウンロードしました');
+      } else {
+        const blob = await generateBulkCompositionDocx({
+          batch,
+          jobs,
+          meta: projectMeta,
+        });
+        downloadBulkDocx(blob, `構成案一括_${baseName}_${dateStr}.docx`);
+        toast.success('Wordドキュメントをダウンロードしました');
+      }
     } catch (err) {
-      console.error('[BulkCompositionDocx]', err);
-      toast.error('docx生成に失敗しました: ' + (err as Error).message);
+      console.error('[BulkCompositionDownload]', err);
+      toast.error('生成に失敗しました: ' + (err as Error).message);
     } finally {
       setGenerating(false);
     }
@@ -52,10 +77,11 @@ const BulkCompositionDocxDownload = ({ batch, jobs, projectMeta }: Props) => {
         <div className="space-y-1">
           <div className="flex items-center gap-2 font-semibold text-success">
             <CheckCircle2 className="h-5 w-5" />
-            構成案の一括生成が完了しました
+            {isBanner ? 'バナー' : '動画'}構成案の一括生成が完了しました
           </div>
           <div className="text-sm text-muted-foreground">
-            {jobs.length}パターンの構成案を1つのdocxファイルにまとめてダウンロードできます
+            {jobs.length}パターンを1つの{isBanner ? 'pptx' : 'docx'}
+            ファイルにまとめてダウンロードできます
           </div>
         </div>
         <Button
@@ -70,7 +96,8 @@ const BulkCompositionDocxDownload = ({ batch, jobs, projectMeta }: Props) => {
             </>
           ) : (
             <>
-              <Download className="h-4 w-4 mr-2" /> 全構成案docx一括ダウンロード
+              <Download className="h-4 w-4 mr-2" />
+              {isBanner ? 'pptx' : 'docx'}一括ダウンロード
             </>
           )}
         </Button>
