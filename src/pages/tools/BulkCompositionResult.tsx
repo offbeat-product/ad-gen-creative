@@ -143,13 +143,36 @@ const BulkCompositionResult = () => {
     );
   }
 
-  const completedJobs = jobs.filter((j) => j.status === 'completed');
-  const failedJobs = jobs.filter((j) => j.status === 'failed');
+  const compositionJobs = jobs.filter((j) => j.tool_type === 'composition');
+  const naScriptJobs = jobs.filter((j) => j.tool_type === 'narration_script');
+  const storyboardJobs = jobs.filter(
+    (j) =>
+      j.tool_type === 'image_generation' &&
+      (j.input_data as Record<string, unknown>)?.storyboard_kind === 'spot'
+  );
+  const completedJobs = compositionJobs.filter((j) => j.status === 'completed');
+  const failedJobs = compositionJobs.filter((j) => j.status === 'failed');
   const creativeType =
-    (jobs[0]?.input_data as { creative_type?: string })?.creative_type ===
+    (compositionJobs[0]?.input_data as { creative_type?: string })?.creative_type ===
     'banner'
       ? 'banner'
       : 'video';
+
+  // Map chained jobs to their parent composition job id
+  const naByParent = new Map<string, BulkCompositionJob>();
+  for (const nj of naScriptJobs) {
+    const pid = (nj.input_data as Record<string, unknown>)?.parent_composition_job_id as
+      | string
+      | undefined;
+    if (pid) naByParent.set(pid, nj);
+  }
+  const sbByParent = new Map<string, BulkCompositionJob>();
+  for (const sj of storyboardJobs) {
+    const pid = (sj.input_data as Record<string, unknown>)?.parent_composition_job_id as
+      | string
+      | undefined;
+    if (pid) sbByParent.set(pid, sj);
+  }
 
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
