@@ -1,698 +1,754 @@
-import pptxgen from 'pptxgenjs';
-import { supabase } from '@/integrations/supabase/client';
-import type {
-  BulkCompositionBatch,
-  BulkCompositionJob,
-} from '@/types/bulk-composition';
+/**
+ * 動画構成案 一括出力 pptx 生成関数
+ * サンプルv4 レイアウト準拠
+ * 
+ * 使い方:
+ *   const blob = await generateBulkVideoPptx({
+ *     batch, compositionJobs, naScriptJobs, storyboardJobs, storyboardAssets, meta
+ *   });
+ *   // blob を download する
+ */
 
-// ===== Design tokens (v4) =====
+import pptxgen from 'pptxgenjs';
+import { supabase } from '@/integrations/supabase/client'; // あなたのSupabaseクライアントのパスに合わせてください
+
+// ==================== Off Beat ブランドカラー ====================
 const COLORS = {
-  primary: '3B82F6',
-  text: '111111',
-  textSub: '1F2937',
-  gray: '9CA3AF',
-  lightBg: 'F8F9FA',
-  white: 'FFFFFF',
+  textBlack: '111111',
+  primaryBlue: '3B82F6',
+  blueHover: '2563EB',
+  gradEnd: '1E40AF',
+  gradAccent: '7DD3FC',
+  bgWhite: 'FFFFFF',
+  textGray: '9CA3AF',
+  textDark: '1F2937',
+  bgLightGray: 'F8F9FA',
   border: 'E5E7EB',
-  tableHeader: 'EFF6FF',
+  naBgLight: 'EFF6FF',
+  partTagBg: 'EFF6FF',
+  partTagText: '1E40AF',
+  imagePlaceholder: 'E5E7EB',
 };
 const FONT = 'Yu Gothic';
-const LOGO_URL = '/images/offbeat_logo_transparent.png';
 
-interface Params {
-  batch: BulkCompositionBatch;
-  compositionJobs: BulkCompositionJob[];
-  naScriptJobs?: BulkCompositionJob[];
-  storyboardJobs?: BulkCompositionJob[];
+// ==================== ロゴ(Base64) ====================
+// offbeat_logo_transparent.png を base64 エンコードして埋め込み
+// 実装時: /public/images/offbeat_logo_transparent.png を fetch して base64 に変換
+async function loadLogoAsBase64(): Promise<string> {
+  try {
+    const response = await fetch('/images/offbeat_logo_transparent.png');
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (err) {
+    console.error('[pptx] Logo load failed:', err);
+    return ''; // ロゴなしで続行
+  }
+}
+
+// ==================== 型定義 ====================
+interface Scene {
+  part: string;           // 冒頭/前半/後半/締め
+  time_range: string;     // 0:00-0:02
+  telop: string;          // テロップ
+  visual: string;         // 映像指示
+}
+
+interface NarrationSection {
+  part: string;
+  time_range: string;
+  text: string;
+}
+
+interface CompositionData {
+  label: string;              // "パターンA"
+  appealAxis: string;         // 訴求軸テキスト(全文)
+  copyText: string;           // コピー
+  intent: string;             // 狙い・意図
+  scenes: Scene[];
+  narration: {
+    sections: NarrationSection[];
+    charCount: number;
+    charLimitSafe: number;
+  };
+  storyboardImages?: Array<{  // 絵コンテ画像URLとメタデータ
+    cut_number: number;
+    image_url: string;
+    part: string;
+    time_range: string;
+  }>;
+}
+
+interface Meta {
+  client_name: string;
+  product_name: string;
+  project_name: string;
+  duration_seconds: number;
+  total_patterns: number;
+  appeal_axes_count: number;
+  copies_per_axis: number;
+  with_storyboard_images: boolean;
+}
+
+// ==================== 訴求軸パース ====================
+function parseAppealAxis(text: string): { tag: string; body: string } {
+  const m = text.match(/^([^:]+?型)[:](.+)$/s);
+  if (m) return { tag: m[1], body: m[2].trim() };
+  const m2 = text.match(/^([^:]+?)[:](.+)$/s);
+  if (m2) return { tag: m2[1], body: m2[2].trim() };
+  return { tag: '', body: text };
+}
+
+// ==================== スライドサイズ定数 ====================
+const SLIDE_W = 13.333;
+const SLIDE_H = 7.5;
+const LOGO_RATIO = 1004 / 227;
+
+// ==================== 画像URL→Base64変換 ====================
+async function imageUrlToBase64(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch (err) {
+    console.warn('[pptx] Image fetch failed:', url, err);
+    return null;
+  }
+}
+
+// ==================== 表紙スライド ====================
+function addCoverSlide(pres: pptxgen, meta: Meta, logoBase64: string) {
+  const slide = pres.addSlide();
+  slide.background = { color: COLORS.bgWhite };
+
+  // ロゴ(左上)
+  if (logoBase64) {
+    const logoH = 0.6;
+    slide.addImage({
+      data: logoBase64,
+      x: 0.5, y: 0.4, w: logoH * LOGO_RATIO, h: logoH,
+    });
+  }
+
+  // タイトル(縦青バー + 「動画構成案」)
+  slide.addShape('rect', {
+    x: 3.5, y: 2.6, w: 0.1, h: 1.0,
+    fill: { color: COLORS.primaryBlue }, line: { type: 'none' },
+  });
+  slide.addText('動画構成案', {
+    x: 3.75, y: 2.5, w: 9.0, h: 0.7,
+    fontSize: 40, bold: true, fontFace: FONT,
+    color: COLORS.textBlack, align: 'left', valign: 'middle',
+  });
+  slide.addText('Video Composition Brief', {
+    x: 3.75, y: 3.15, w: 9.0, h: 0.5,
+    fontSize: 16, italic: true, fontFace: FONT,
+    color: COLORS.textGray, align: 'left', valign: 'middle',
+  });
+
+  // メタテーブル(生成日時なし、「絵コンテ画像含む」なし)
+  const patternLabel = `${meta.total_patterns}パターン(訴求軸${meta.appeal_axes_count}軸 × ${meta.copies_per_axis}コピー)`;
+  const metaRows: [string, string][] = [
+    ['クライアント', meta.client_name],
+    ['商材', meta.product_name],
+    ['案件', meta.project_name],
+    ['動画尺', `${meta.duration_seconds}秒`],
+    ['構成案パターン数', patternLabel],
+  ];
+  let metaY = 4.5;
+  metaRows.forEach(([label, value]) => {
+    slide.addText(label, {
+      x: 3.5, y: metaY, w: 2.5, h: 0.4,
+      fontSize: 11, bold: true, fontFace: FONT,
+      color: COLORS.textGray, valign: 'middle', align: 'left', margin: 0,
+    });
+    slide.addText(value, {
+      x: 6.0, y: metaY, w: 6.5, h: 0.4,
+      fontSize: 11, fontFace: FONT, color: COLORS.textDark,
+      valign: 'middle', align: 'left', margin: 0,
+    });
+    slide.addShape('line', {
+      x: 3.5, y: metaY + 0.38, w: 9.0, h: 0,
+      line: { color: COLORS.border, width: 0.5 },
+    });
+    metaY += 0.4;
+  });
+
+  // Copyright(左下)
+  slide.addText('©Off Beat Inc. All Rights Reserved.', {
+    x: 0.5, y: SLIDE_H - 0.35, w: 5.0, h: 0.25,
+    fontSize: 8, fontFace: FONT, color: COLORS.textGray,
+    align: 'left', valign: 'middle',
+  });
+}
+
+// ==================== テキスト構成案スライド ====================
+function addCompositionSlide(
+  pres: pptxgen,
+  comp: CompositionData,
+  idx: number,
+  total: number,
+  pageNum: number,
+  meta: Meta,
+  logoBase64: string
+) {
+  const slide = pres.addSlide();
+  slide.background = { color: COLORS.bgWhite };
+
+  // ヘッダー: 左上タイトル(青縦バー + パターンA)
+  slide.addShape('rect', {
+    x: 0.5, y: 0.3, w: 0.08, h: 0.5,
+    fill: { color: COLORS.primaryBlue }, line: { type: 'none' },
+  });
+  slide.addText(comp.label, {
+    x: 0.65, y: 0.25, w: 4.0, h: 0.5,
+    fontSize: 20, bold: true, fontFace: FONT,
+    color: COLORS.textBlack, valign: 'middle',
+  });
+  slide.addText(`動画尺 ${meta.duration_seconds}秒  /  全${comp.scenes.length}シーン`, {
+    x: 0.65, y: 0.7, w: 6.0, h: 0.3,
+    fontSize: 10, fontFace: FONT, color: COLORS.textGray,
+    valign: 'middle',
+  });
+
+  // 右上: ロゴ + パターン番号
+  if (logoBase64) {
+    const logoH = 0.4;
+    const logoW = logoH * LOGO_RATIO;
+    slide.addImage({
+      data: logoBase64,
+      x: SLIDE_W - logoW - 0.5, y: 0.25, w: logoW, h: logoH,
+    });
+    slide.addText(`${idx + 1} / ${total}`, {
+      x: SLIDE_W - logoW - 1.4, y: 0.3, w: 0.8, h: 0.4,
+      fontSize: 11, fontFace: FONT, color: COLORS.textGray,
+      align: 'right', valign: 'middle',
+    });
+  }
+
+  // 装飾ライン
+  slide.addShape('rect', {
+    x: 0.5, y: 1.05, w: SLIDE_W - 1.0, h: 0.025,
+    fill: { color: COLORS.primaryBlue }, line: { type: 'none' },
+  });
+
+  // 訴求軸【タグ】+ 本文
+  const topY = 1.25;
+  const labelW = 1.3;
+  const appealH = (comp.appealAxis || '').length > 60 ? 0.6 : 0.45;
+
+  slide.addText('訴求軸', {
+    x: 0.5, y: topY, w: labelW, h: appealH,
+    fontSize: 10, bold: true, fontFace: FONT,
+    color: COLORS.bgWhite, fill: { color: COLORS.primaryBlue },
+    valign: 'middle', align: 'center', margin: 6,
+  });
+
+  const parsed = parseAppealAxis(comp.appealAxis);
+  slide.addText([
+    { text: `【${parsed.tag}】`, options: { bold: true, color: COLORS.primaryBlue, fontSize: 11 } },
+    { text: '  ' + parsed.body, options: { color: COLORS.textDark, fontSize: 10 } },
+  ], {
+    x: 0.5 + labelW, y: topY, w: SLIDE_W - 1.0 - labelW, h: appealH,
+    fontFace: FONT,
+    fill: { color: COLORS.bgLightGray },
+    valign: 'middle', align: 'left', margin: 8,
+  });
+
+  // コピー
+  const copyY = topY + appealH + 0.05;
+  slide.addText('コピー', {
+    x: 0.5, y: copyY, w: labelW, h: 0.45,
+    fontSize: 10, bold: true, fontFace: FONT,
+    color: COLORS.bgWhite, fill: { color: COLORS.blueHover },
+    valign: 'middle', align: 'center', margin: 6,
+  });
+  slide.addText(comp.copyText, {
+    x: 0.5 + labelW, y: copyY, w: SLIDE_W - 1.0 - labelW, h: 0.45,
+    fontSize: 10, bold: true, fontFace: FONT, color: COLORS.textBlack,
+    fill: { color: COLORS.bgLightGray },
+    valign: 'middle', align: 'left', margin: 8,
+  });
+
+  // 字コンテテーブル(左)
+  const contentY = copyY + 0.55;
+  slide.addText('■ 字コンテ', {
+    x: 0.5, y: contentY, w: 5.0, h: 0.3,
+    fontSize: 11, bold: true, fontFace: FONT,
+    color: COLORS.primaryBlue, valign: 'middle',
+  });
+
+  const sceneTableY = contentY + 0.35;
+  const sceneTableX = 0.5;
+  const sceneTableW = 7.2;
+  const numColW = 0.35;
+  const partColW = 0.65;
+  const timeColW = 0.8;
+  const telopColW = 1.55;
+  const visualColW = sceneTableW - numColW - partColW - timeColW - telopColW;
+
+  const sceneHeaderH = 0.3;
+  const sceneHeaders: [string, number, 'center' | 'left'][] = [
+    ['#', numColW, 'center'],
+    ['Part', partColW, 'center'],
+    ['Time', timeColW, 'center'],
+    ['テロップ', telopColW, 'center'],
+    ['映像指示', visualColW, 'center'],
+  ];
+  let hx = sceneTableX;
+  sceneHeaders.forEach(([label, w, align]) => {
+    slide.addText(label, {
+      x: hx, y: sceneTableY, w, h: sceneHeaderH,
+      fontSize: 9, bold: true, fontFace: FONT,
+      color: COLORS.bgWhite, fill: { color: COLORS.textBlack },
+      valign: 'middle', align, margin: 2,
+      line: { color: COLORS.border, width: 0.5 },
+    });
+    hx += w;
+  });
+
+  const bottomReserveY = 6.2;
+  const availH = bottomReserveY - (sceneTableY + sceneHeaderH);
+  const rowH = Math.min(0.28, availH / comp.scenes.length);
+  let ry = sceneTableY + sceneHeaderH;
+  comp.scenes.forEach((scene, i) => {
+    let cx = sceneTableX;
+    const cells: [string, number, 'center' | 'left', string, boolean, boolean][] = [
+      [String(i + 1), numColW, 'center', COLORS.textDark, false, false],
+      [scene.part || '', partColW, 'center', COLORS.partTagText, true, true],
+      [scene.time_range || '', timeColW, 'center', COLORS.textGray, false, false],
+      [scene.telop || '', telopColW, 'left', COLORS.textBlack, true, false],
+      [scene.visual || '', visualColW, 'left', COLORS.textGray, false, false],
+    ];
+    cells.forEach(([text, w, align, color, bold, isPartCell]) => {
+      slide.addText(text, {
+        x: cx, y: ry, w, h: rowH,
+        fontSize: 8, bold, fontFace: FONT, color,
+        fill: isPartCell ? { color: COLORS.partTagBg } : { color: COLORS.bgWhite },
+        valign: 'middle', align, margin: 2,
+        line: { color: COLORS.border, width: 0.3 },
+      });
+      cx += w;
+    });
+    ry += rowH;
+  });
+
+  // NA原稿テーブル(右)
+  const naX = sceneTableX + sceneTableW + 0.2;
+  const naW = SLIDE_W - 0.5 - naX;
+  const n = comp.narration;
+  const withinLimit = n.charCount <= n.charLimitSafe;
+  const naHeaderText = `■ NA原稿  ${n.charCount}文字 / 目安${n.charLimitSafe}文字 ${withinLimit ? '✓' : '⚠'}`;
+
+  slide.addText(naHeaderText, {
+    x: naX, y: contentY, w: naW, h: 0.3,
+    fontSize: 11, bold: true, fontFace: FONT,
+    color: COLORS.primaryBlue, valign: 'middle',
+  });
+
+  const naTableY = contentY + 0.35;
+  const naPartW = 0.65;
+  const naTimeW = 0.85;
+  const naTextW = naW - naPartW - naTimeW;
+
+  const naHeaders: [string, number, 'center' | 'left'][] = [
+    ['Part', naPartW, 'center'],
+    ['Time', naTimeW, 'center'],
+    ['ナレーション', naTextW, 'center'],
+  ];
+  hx = naX;
+  naHeaders.forEach(([label, w, align]) => {
+    slide.addText(label, {
+      x: hx, y: naTableY, w, h: sceneHeaderH,
+      fontSize: 9, bold: true, fontFace: FONT,
+      color: COLORS.bgWhite, fill: { color: COLORS.primaryBlue },
+      valign: 'middle', align, margin: 2,
+      line: { color: COLORS.border, width: 0.5 },
+    });
+    hx += w;
+  });
+
+  const naRowH = Math.min(0.28, availH / n.sections.length);
+  let naY = naTableY + sceneHeaderH;
+  n.sections.forEach((sec) => {
+    let nx = naX;
+    const cells: [string, number, 'center' | 'left', string, boolean, 'part' | 'na'][] = [
+      [sec.part, naPartW, 'center', COLORS.partTagText, true, 'part'],
+      [sec.time_range, naTimeW, 'center', COLORS.textGray, false, 'na'],
+      [sec.text, naTextW, 'left', COLORS.textBlack, true, 'na'],
+    ];
+    cells.forEach(([text, w, align, color, bold, style]) => {
+      const fillColor = style === 'part' ? COLORS.partTagBg : COLORS.naBgLight;
+      slide.addText(text, {
+        x: nx, y: naY, w, h: naRowH,
+        fontSize: 8, bold, fontFace: FONT, color,
+        fill: { color: fillColor },
+        valign: 'middle', align, margin: 2,
+        line: { color: COLORS.border, width: 0.3 },
+      });
+      nx += w;
+    });
+    naY += naRowH;
+  });
+
+  // 狙い・意図(青縦バー + 絵文字なし)
+  const intentY = 6.35;
+  slide.addShape('rect', {
+    x: 0.5, y: intentY, w: 0.06, h: 0.28,
+    fill: { color: COLORS.primaryBlue }, line: { type: 'none' },
+  });
+  slide.addText('狙い・意図', {
+    x: 0.65, y: intentY - 0.02, w: 3.0, h: 0.32,
+    fontSize: 11, bold: true, fontFace: FONT,
+    color: COLORS.primaryBlue, valign: 'middle',
+  });
+  slide.addText(comp.intent || '', {
+    x: 0.5, y: intentY + 0.3, w: SLIDE_W - 1.0, h: 0.7,
+    fontSize: 8.5, fontFace: FONT, color: COLORS.textDark,
+    fill: { color: COLORS.bgLightGray },
+    valign: 'top', align: 'left', margin: 8,
+  });
+
+  // フッター
+  slide.addText('©Off Beat Inc. All Rights Reserved.', {
+    x: 0.5, y: SLIDE_H - 0.3, w: 5.0, h: 0.2,
+    fontSize: 8, fontFace: FONT, color: COLORS.textGray,
+    align: 'left', valign: 'middle',
+  });
+  slide.addText(`${pageNum}`, {
+    x: SLIDE_W - 0.8, y: SLIDE_H - 0.3, w: 0.3, h: 0.2,
+    fontSize: 9, fontFace: FONT, color: COLORS.textGray,
+    align: 'right', valign: 'middle',
+  });
+}
+
+// ==================== 絵コンテビジュアルスライド ====================
+async function addStoryboardVisualSlide(
+  pres: pptxgen,
+  comp: CompositionData,
+  idx: number,
+  total: number,
+  pageNum: number,
+  logoBase64: string
+) {
+  const slide = pres.addSlide();
+  slide.background = { color: COLORS.bgWhite };
+
+  // ヘッダー
+  slide.addShape('rect', {
+    x: 0.5, y: 0.3, w: 0.08, h: 0.5,
+    fill: { color: COLORS.primaryBlue }, line: { type: 'none' },
+  });
+  slide.addText(comp.label, {
+    x: 0.65, y: 0.25, w: 4.0, h: 0.5,
+    fontSize: 20, bold: true, fontFace: FONT,
+    color: COLORS.textBlack, valign: 'middle',
+  });
+  slide.addText(`絵コンテビジュアル  /  全${comp.scenes.length}カット`, {
+    x: 0.65, y: 0.7, w: 6.0, h: 0.3,
+    fontSize: 10, fontFace: FONT, color: COLORS.textGray,
+    valign: 'middle',
+  });
+
+  if (logoBase64) {
+    const logoH = 0.4;
+    const logoW = logoH * LOGO_RATIO;
+    slide.addImage({
+      data: logoBase64,
+      x: SLIDE_W - logoW - 0.5, y: 0.25, w: logoW, h: logoH,
+    });
+    slide.addText(`${idx + 1} / ${total}`, {
+      x: SLIDE_W - logoW - 1.4, y: 0.3, w: 0.8, h: 0.4,
+      fontSize: 11, fontFace: FONT, color: COLORS.textGray,
+      align: 'right', valign: 'middle',
+    });
+  }
+
+  slide.addShape('rect', {
+    x: 0.5, y: 1.05, w: SLIDE_W - 1.0, h: 0.025,
+    fill: { color: COLORS.primaryBlue }, line: { type: 'none' },
+  });
+
+  // グリッド計算(シーン数に応じた最適配置)
+  const gridStartY = 1.3;
+  const gridEndY = SLIDE_H - 0.5;
+  const availGridH = gridEndY - gridStartY;
+  const gridW = SLIDE_W - 1.0;
+
+  const n = comp.scenes.length;
+  let cols: number, rows: number;
+  if (n <= 4) { cols = 4; rows = 1; }
+  else if (n <= 6) { cols = 3; rows = 2; }
+  else if (n <= 8) { cols = 4; rows = 2; }
+  else if (n <= 9) { cols = 3; rows = 3; }
+  else if (n <= 12) { cols = 4; rows = 3; }
+  else if (n <= 15) { cols = 5; rows = 3; }
+  else { cols = 5; rows = Math.ceil(n / 5); }
+
+  const cellGap = 0.15;
+  const cellW = (gridW - cellGap * (cols - 1)) / cols;
+  const cellH = (availGridH - cellGap * (rows - 1)) / rows;
+  const captionH = 0.35;
+  let imgW = cellW;
+  let imgH = imgW * 9 / 16; // 16:9
+  if (imgH > cellH - captionH) {
+    imgH = cellH - captionH;
+    imgW = imgH * 16 / 9;
+  }
+
+  // 各シーンに対応する画像URLを取得(cut_numberで紐付け)
+  const imageByNumber = new Map<number, string>();
+  if (comp.storyboardImages) {
+    comp.storyboardImages.forEach(img => {
+      imageByNumber.set(img.cut_number, img.image_url);
+    });
+  }
+
+  // 各シーンを描画(順次にawait)
+  for (let i = 0; i < comp.scenes.length; i++) {
+    const scene = comp.scenes[i];
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const cx = 0.5 + col * (cellW + cellGap);
+    const cy = gridStartY + row * (cellH + cellGap);
+
+    const imgX = cx + (cellW - imgW) / 2;
+    const imgY = cy;
+
+    // 画像を埋め込む(画像URLがあれば)
+    const imageUrl = imageByNumber.get(i + 1);
+    if (imageUrl) {
+      try {
+        // PowerPointはURLから直接読めるが、CORSで落ちるケース多いのでbase64変換
+        const base64 = await imageUrlToBase64(imageUrl);
+        if (base64) {
+          slide.addImage({
+            data: base64,
+            x: imgX, y: imgY, w: imgW, h: imgH,
+          });
+        } else {
+          // base64化失敗 → プレースホルダー
+          slide.addShape('rect', {
+            x: imgX, y: imgY, w: imgW, h: imgH,
+            fill: { color: COLORS.imagePlaceholder },
+            line: { color: COLORS.border, width: 0.5 },
+          });
+          slide.addText('⚠ 画像読込失敗', {
+            x: imgX, y: imgY, w: imgW, h: imgH,
+            fontSize: 9, fontFace: FONT, color: COLORS.textGray,
+            align: 'center', valign: 'middle',
+          });
+        }
+      } catch (err) {
+        console.error('[pptx] Image error for cut', i + 1, err);
+      }
+    } else {
+      // 画像URLなし → プレースホルダー
+      slide.addShape('rect', {
+        x: imgX, y: imgY, w: imgW, h: imgH,
+        fill: { color: COLORS.imagePlaceholder },
+        line: { color: COLORS.border, width: 0.5 },
+      });
+      slide.addText('🖼 AI絵コンテ画像', {
+        x: imgX, y: imgY, w: imgW, h: imgH,
+        fontSize: 10, fontFace: FONT, color: COLORS.textGray,
+        align: 'center', valign: 'middle',
+      });
+    }
+
+    // シーン番号(左上青タグ)
+    slide.addShape('rect', {
+      x: imgX, y: imgY, w: 0.6, h: 0.35,
+      fill: { color: COLORS.primaryBlue }, line: { type: 'none' },
+    });
+    slide.addText(`#${i + 1}`, {
+      x: imgX, y: imgY, w: 0.6, h: 0.35,
+      fontSize: 13, bold: true, fontFace: FONT, color: COLORS.bgWhite,
+      align: 'center', valign: 'middle',
+    });
+
+    // Part(右上白背景+青枠)
+    slide.addShape('rect', {
+      x: imgX + imgW - 0.6, y: imgY, w: 0.6, h: 0.35,
+      fill: { color: COLORS.bgWhite },
+      line: { color: COLORS.primaryBlue, width: 1.0 },
+    });
+    slide.addText(scene.part, {
+      x: imgX + imgW - 0.6, y: imgY, w: 0.6, h: 0.35,
+      fontSize: 10, bold: true, fontFace: FONT, color: COLORS.primaryBlue,
+      align: 'center', valign: 'middle',
+    });
+
+    // Time(画像下に大きな青文字)
+    slide.addText(scene.time_range, {
+      x: cx, y: cy + imgH + 0.05, w: cellW, h: captionH - 0.05,
+      fontSize: 14, bold: true, fontFace: FONT, color: COLORS.primaryBlue,
+      align: 'center', valign: 'middle',
+    });
+  }
+
+  // フッター
+  slide.addText('©Off Beat Inc. All Rights Reserved.', {
+    x: 0.5, y: SLIDE_H - 0.3, w: 5.0, h: 0.2,
+    fontSize: 8, fontFace: FONT, color: COLORS.textGray,
+    align: 'left', valign: 'middle',
+  });
+  slide.addText(`${pageNum}`, {
+    x: SLIDE_W - 0.8, y: SLIDE_H - 0.3, w: 0.3, h: 0.2,
+    fontSize: 9, fontFace: FONT, color: COLORS.textGray,
+    align: 'right', valign: 'middle',
+  });
+}
+
+// ==================== メインエクスポート ====================
+interface GenerateBulkVideoPptxParams {
+  batch: any; // bulk_composition_batches 行
+  compositionJobs: any[]; // tool_type='composition' のジョブ
+  naScriptJobs?: any[]; // tool_type='narration_script' のジョブ
+  storyboardJobs?: any[]; // tool_type='image_generation' のジョブ
   meta: {
     client_name: string;
     product_name: string;
     project_name: string;
+    appeal_axes_count: number;
+    copies_per_axis: number;
   };
 }
 
-interface SceneData {
-  part?: string;
-  time_range?: string;
-  telop?: string;
-  visual?: string;
-  narration?: string;
-}
+export async function generateBulkVideoPptx(params: GenerateBulkVideoPptxParams): Promise<Blob> {
+  const { batch, compositionJobs, naScriptJobs = [], storyboardJobs = [], meta: metaInput } = params;
 
-interface StoryboardImage {
-  id: string;
-  file_url: string;
-  sort_order: number | null;
-  metadata: {
-    cut_number?: number;
-    time_range?: string;
-    part?: string;
-  } | null;
-}
+  // ロゴ読み込み
+  const logoBase64 = await loadLogoAsBase64();
 
-// ===== Helpers =====
-async function fetchLogoBase64(): Promise<string | null> {
-  try {
-    const res = await fetch(LOGO_URL);
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    return await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
-  }
-}
-
-async function fetchImageBase64(url: string): Promise<string | null> {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const blob = await res.blob();
-    return await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
-  }
-}
-
-function highlightAppealAxis(text: string): { text: string; bold?: boolean; color?: string }[] {
-  // 「〜型」を【】+太字青で強調
-  const match = text.match(/^(.*?)([^\s「」]+型)(.*)$/);
-  if (!match) return [{ text }];
-  return [
-    { text: match[1] },
-    { text: `【${match[2]}】`, bold: true, color: COLORS.primary },
-    { text: match[3] },
-  ];
-}
-
-function addCommonDecorations(
-  slide: pptxgen.Slide,
-  pageNum: number,
-  totalPages: number,
-  logoData: string | null
-) {
-  // 右上ロゴ
-  if (logoData) {
-    slide.addImage({
-      data: logoData,
-      x: 11.4,
-      y: 0.2,
-      w: 1.7,
-      h: 0.45,
-    });
-  }
-  // 左下 Copyright
-  slide.addText('© Off Beat Inc. All Rights Reserved.', {
-    x: 0.35,
-    y: 7.15,
-    w: 6,
-    h: 0.3,
-    fontSize: 9,
-    fontFace: FONT,
-    color: COLORS.gray,
-    align: 'left',
-  });
-  // 右下 ページ番号
-  slide.addText(`${pageNum} / ${totalPages}`, {
-    x: 12.0,
-    y: 7.15,
-    w: 1.0,
-    h: 0.3,
-    fontSize: 9,
-    fontFace: FONT,
-    color: COLORS.gray,
-    align: 'right',
-  });
-}
-
-// ===== Cover slide =====
-function buildCoverSlide(
-  pres: pptxgen,
-  meta: Params['meta'],
-  durationSeconds: number,
-  patternCount: number,
-  appealAxesCount: number,
-  copiesPerAxis: number,
-  pageNum: number,
-  totalPages: number,
-  logoData: string | null
-) {
-  const slide = pres.addSlide();
-  slide.background = { color: COLORS.white };
-
-  // 左の青縦バー
-  slide.addShape('rect', {
-    x: 0.7,
-    y: 2.2,
-    w: 0.12,
-    h: 1.6,
-    fill: { color: COLORS.primary },
-    line: { type: 'none' },
-  });
-
-  // タイトル
-  slide.addText('動画構成案', {
-    x: 1.0,
-    y: 2.2,
-    w: 11,
-    h: 0.9,
-    fontSize: 44,
-    bold: true,
-    fontFace: FONT,
-    color: COLORS.text,
-  });
-
-  // サブタイトル
-  slide.addText('Bulk Generated Composition', {
-    x: 1.0,
-    y: 3.05,
-    w: 11,
-    h: 0.5,
-    fontSize: 18,
-    fontFace: FONT,
-    color: COLORS.gray,
-  });
-
-  // メタテーブル
-  const rows: pptxgen.TableRow[] = [
-    [
-      { text: 'クライアント', options: { bold: true, fill: { color: COLORS.lightBg }, color: COLORS.textSub } },
-      { text: meta.client_name || '-', options: { color: COLORS.text } },
-    ],
-    [
-      { text: '商材', options: { bold: true, fill: { color: COLORS.lightBg }, color: COLORS.textSub } },
-      { text: meta.product_name || '-', options: { color: COLORS.text } },
-    ],
-    [
-      { text: '案件', options: { bold: true, fill: { color: COLORS.lightBg }, color: COLORS.textSub } },
-      { text: meta.project_name || '-', options: { color: COLORS.text } },
-    ],
-    [
-      { text: '動画尺', options: { bold: true, fill: { color: COLORS.lightBg }, color: COLORS.textSub } },
-      { text: `${durationSeconds}秒`, options: { color: COLORS.text } },
-    ],
-    [
-      {
-        text: '構成案パターン数',
-        options: { bold: true, fill: { color: COLORS.lightBg }, color: COLORS.textSub },
-      },
-      {
-        text: `${patternCount}パターン(訴求軸${appealAxesCount}軸 × ${copiesPerAxis}コピー)`,
-        options: { color: COLORS.text },
-      },
-    ],
-  ];
-
-  slide.addTable(rows, {
-    x: 1.0,
-    y: 4.0,
-    w: 11.3,
-    colW: [3.0, 8.3],
-    fontSize: 13,
-    fontFace: FONT,
-    border: { type: 'solid', pt: 1, color: COLORS.border },
-    rowH: 0.45,
-  });
-
-  addCommonDecorations(slide, pageNum, totalPages, logoData);
-}
-
-// ===== Composition text slide =====
-function buildCompositionSlide(
-  pres: pptxgen,
-  job: BulkCompositionJob,
-  naScriptJob: BulkCompositionJob | undefined,
-  index: number,
-  total: number,
-  pageNum: number,
-  totalPages: number,
-  logoData: string | null
-) {
-  const slide = pres.addSlide();
-  slide.background = { color: COLORS.white };
-
-  const input = (job.input_data || {}) as Record<string, unknown>;
-  const output = (job.output_data || {}) as Record<string, unknown>;
-  const scenes = ((output.scenes as SceneData[]) || []).slice(0, 30);
-  const appealAxis = (input.appeal_axis as string) || '';
-  const copyText = (input.copy_text as string) || '';
-  const intent =
-    ((output.intent as string) ||
-      (output.purpose as string) ||
-      (output.intention as string) ||
-      '') as string;
-
-  // ===== ヘッダー: パターン番号 + 訴求軸 =====
-  slide.addText(`#${index} / ${total}`, {
-    x: 0.35,
-    y: 0.25,
-    w: 1.5,
-    h: 0.4,
-    fontSize: 14,
-    bold: true,
-    fontFace: FONT,
-    color: COLORS.primary,
-  });
-
-  // 訴求軸(【型】を強調)
-  slide.addText(highlightAppealAxis(appealAxis), {
-    x: 1.85,
-    y: 0.22,
-    w: 9.4,
-    h: 0.45,
-    fontSize: 14,
-    fontFace: FONT,
-    color: COLORS.textSub,
-  });
-
-  // コピーテキスト
-  slide.addText(`「${copyText}」`, {
-    x: 0.35,
-    y: 0.7,
-    w: 11,
-    h: 0.5,
-    fontSize: 16,
-    bold: true,
-    fontFace: FONT,
-    color: COLORS.text,
-  });
-
-  // ===== 字コンテテーブル(左) =====
-  const sceneRows: pptxgen.TableRow[] = [
-    [
-      { text: '#', options: { bold: true, fill: { color: COLORS.tableHeader }, color: COLORS.textSub, align: 'center' } },
-      { text: 'Time', options: { bold: true, fill: { color: COLORS.tableHeader }, color: COLORS.textSub, align: 'center' } },
-      { text: 'テロップ', options: { bold: true, fill: { color: COLORS.tableHeader }, color: COLORS.textSub } },
-      { text: '映像', options: { bold: true, fill: { color: COLORS.tableHeader }, color: COLORS.textSub } },
-    ],
-    ...scenes.map((s, i) => [
-      { text: String(i + 1), options: { color: COLORS.textSub, align: 'center' as const } },
-      { text: s.time_range || '-', options: { color: COLORS.textSub, align: 'center' as const, fontSize: 9 } },
-      { text: s.telop || '-', options: { color: COLORS.text } },
-      { text: s.visual || '-', options: { color: COLORS.textSub, fontSize: 9 } },
-    ]),
-  ];
-
-  slide.addText('字コンテ', {
-    x: 0.35,
-    y: 1.3,
-    w: 7.5,
-    h: 0.35,
-    fontSize: 12,
-    bold: true,
-    fontFace: FONT,
-    color: COLORS.primary,
-  });
-
-  slide.addTable(sceneRows, {
-    x: 0.35,
-    y: 1.65,
-    w: 7.5,
-    colW: [0.4, 1.0, 3.0, 3.1],
-    fontSize: 10,
-    fontFace: FONT,
-    border: { type: 'solid', pt: 0.5, color: COLORS.border },
-    valign: 'middle',
-  });
-
-  // ===== NA原稿(右) =====
-  slide.addText('NA原稿', {
-    x: 8.0,
-    y: 1.3,
-    w: 5.0,
-    h: 0.35,
-    fontSize: 12,
-    bold: true,
-    fontFace: FONT,
-    color: COLORS.primary,
-  });
-
-  let naText = '(NA原稿は生成されていません)';
-  if (naScriptJob && naScriptJob.status === 'completed') {
-    const naOutput = (naScriptJob.output_data || {}) as Record<string, unknown>;
-    naText =
-      (naOutput.full_script as string) ||
-      (naOutput.script as string) ||
-      '(NA原稿が空です)';
-  } else if (naScriptJob) {
-    naText = '(NA原稿は生成中または失敗)';
-  }
-
-  slide.addText(naText, {
-    x: 8.0,
-    y: 1.65,
-    w: 5.0,
-    h: 4.5,
-    fontSize: 11,
-    fontFace: FONT,
-    color: COLORS.text,
-    valign: 'top',
-    fill: { color: COLORS.lightBg },
-    margin: 8,
-  });
-
-  // ===== 狙い・意図(下) =====
-  if (intent) {
-    // 青縦バー
-    slide.addShape('rect', {
-      x: 0.35,
-      y: 6.35,
-      w: 0.08,
-      h: 0.65,
-      fill: { color: COLORS.primary },
-      line: { type: 'none' },
-    });
-    slide.addText('狙い・意図', {
-      x: 0.5,
-      y: 6.3,
-      w: 2,
-      h: 0.3,
-      fontSize: 11,
-      bold: true,
-      fontFace: FONT,
-      color: COLORS.primary,
-    });
-    slide.addText(intent, {
-      x: 0.5,
-      y: 6.6,
-      w: 12.5,
-      h: 0.45,
-      fontSize: 10,
-      fontFace: FONT,
-      color: COLORS.textSub,
-    });
-  }
-
-  addCommonDecorations(slide, pageNum, totalPages, logoData);
-}
-
-// ===== Storyboard visual slide =====
-function buildStoryboardSlide(
-  pres: pptxgen,
-  job: BulkCompositionJob,
-  images: StoryboardImage[],
-  imageDataMap: Map<string, string>,
-  index: number,
-  total: number,
-  pageNum: number,
-  totalPages: number,
-  logoData: string | null
-) {
-  const slide = pres.addSlide();
-  slide.background = { color: COLORS.white };
-
-  const input = (job.input_data || {}) as Record<string, unknown>;
-  const appealAxis = (input.appeal_axis as string) || '';
-
-  // ===== ヘッダー =====
-  slide.addText(`#${index} / ${total}  絵コンテビジュアル`, {
-    x: 0.35,
-    y: 0.25,
-    w: 11,
-    h: 0.4,
-    fontSize: 14,
-    bold: true,
-    fontFace: FONT,
-    color: COLORS.primary,
-  });
-
-  slide.addText(highlightAppealAxis(appealAxis), {
-    x: 0.35,
-    y: 0.65,
-    w: 12.5,
-    h: 0.4,
-    fontSize: 12,
-    fontFace: FONT,
-    color: COLORS.textSub,
-  });
-
-  // ===== グリッド配置 =====
-  const count = images.length;
-  let cols = 4;
-  let rows = 3;
-  if (count <= 6) {
-    cols = 3;
-    rows = 2;
-  } else if (count <= 12) {
-    cols = 4;
-    rows = 3;
-  } else {
-    cols = 5;
-    rows = Math.ceil(count / 5);
-  }
-
-  const gridX = 0.35;
-  const gridY = 1.2;
-  const gridW = 12.6;
-  const gridH = 5.7;
-  const gap = 0.12;
-  const cardW = (gridW - gap * (cols - 1)) / cols;
-  const imgH = (gridH - gap * (rows - 1)) / rows - 0.35; // image + time label
-
-  images.forEach((img, i) => {
-    const r = Math.floor(i / cols);
-    const c = i % cols;
-    const cardX = gridX + c * (cardW + gap);
-    const cardY = gridY + r * (imgH + 0.35 + gap);
-
-    const data = imageDataMap.get(img.id);
-    if (data) {
-      slide.addImage({
-        data,
-        x: cardX,
-        y: cardY,
-        w: cardW,
-        h: imgH,
-        sizing: { type: 'cover', w: cardW, h: imgH },
-      });
-    } else {
-      slide.addShape('rect', {
-        x: cardX,
-        y: cardY,
-        w: cardW,
-        h: imgH,
-        fill: { color: COLORS.lightBg },
-        line: { color: COLORS.border, width: 0.5 },
-      });
-    }
-
-    // シーン番号タグ(左上)
-    const cutNum = img.metadata?.cut_number ?? i + 1;
-    slide.addShape('rect', {
-      x: cardX + 0.05,
-      y: cardY + 0.05,
-      w: 0.4,
-      h: 0.28,
-      fill: { color: COLORS.primary },
-      line: { type: 'none' },
-    });
-    slide.addText(`#${cutNum}`, {
-      x: cardX + 0.05,
-      y: cardY + 0.05,
-      w: 0.4,
-      h: 0.28,
-      fontSize: 9,
-      bold: true,
-      fontFace: FONT,
-      color: COLORS.white,
-      align: 'center',
-      valign: 'middle',
-    });
-
-    // Part(右上)
-    if (img.metadata?.part) {
-      slide.addText(img.metadata.part, {
-        x: cardX + cardW - 0.7,
-        y: cardY + 0.05,
-        w: 0.65,
-        h: 0.28,
-        fontSize: 8,
-        bold: true,
-        fontFace: FONT,
-        color: COLORS.primary,
-        align: 'center',
-        valign: 'middle',
-        fill: { color: COLORS.white },
-        line: { color: COLORS.primary, width: 0.5 },
-      });
-    }
-
-    // Time(画像下)
-    slide.addText(img.metadata?.time_range || '-', {
-      x: cardX,
-      y: cardY + imgH + 0.02,
-      w: cardW,
-      h: 0.3,
-      fontSize: 11,
-      bold: true,
-      fontFace: FONT,
-      color: COLORS.primary,
-      align: 'center',
-    });
-  });
-
-  addCommonDecorations(slide, pageNum, totalPages, logoData);
-}
-
-// ===== Main entry =====
-export async function generateBulkVideoPptx(params: Params): Promise<Blob> {
-  const {
-    batch,
-    compositionJobs,
-    naScriptJobs = [],
-    storyboardJobs = [],
-    meta,
-  } = params;
-
-  // ロゴ取得
-  const logoData = await fetchLogoBase64();
-
-  // 構成案ジョブをbulk_indexでソート
-  const sortedComps = [...compositionJobs].sort(
-    (a, b) =>
-      (((a.input_data as Record<string, unknown>)?.bulk_index as number) ?? 0) -
-      (((b.input_data as Record<string, unknown>)?.bulk_index as number) ?? 0)
-  );
-
-  // 親ジョブ -> NA/絵コンテ ジョブのマップ
-  const naByParent = new Map<string, BulkCompositionJob>();
-  for (const nj of naScriptJobs) {
-    const pid = (nj.input_data as Record<string, unknown>)
-      ?.parent_composition_job_id as string | undefined;
-    if (pid) naByParent.set(pid, nj);
-  }
-  const sbByParent = new Map<string, BulkCompositionJob>();
-  for (const sj of storyboardJobs) {
-    const pid = (sj.input_data as Record<string, unknown>)
-      ?.parent_composition_job_id as string | undefined;
-    if (pid) sbByParent.set(pid, sj);
-  }
-
-  // 絵コンテ画像を一括取得
-  const sbJobIds = storyboardJobs
-    .filter((j) => j.status === 'completed')
-    .map((j) => j.id);
-  const imagesByJob = new Map<string, StoryboardImage[]>();
-  const imageDataMap = new Map<string, string>();
-
-  if (sbJobIds.length > 0) {
-    const { data: assets } = await supabase
+  // 絵コンテ画像アセット取得
+  let storyboardAssets: any[] = [];
+  if (storyboardJobs.length > 0) {
+    const { data } = await supabase
       .from('gen_spot_assets')
       .select('*')
-      .in('job_id', sbJobIds)
+      .in('job_id', storyboardJobs.map((j: any) => j.id))
       .eq('asset_type', 'storyboard_image')
-      .order('sort_order', { ascending: true });
-
-    if (assets) {
-      for (const a of assets as unknown as Array<
-        StoryboardImage & { job_id: string }
-      >) {
-        const arr = imagesByJob.get(a.job_id) || [];
-        arr.push(a);
-        imagesByJob.set(a.job_id, arr);
-      }
-
-      // 画像をbase64に変換(並列)
-      const allImages = assets as unknown as StoryboardImage[];
-      const results = await Promise.all(
-        allImages.map((img) =>
-          fetchImageBase64(img.file_url).then((d) => ({ id: img.id, d }))
-        )
-      );
-      for (const r of results) {
-        if (r.d) imageDataMap.set(r.id, r.d);
-      }
-    }
+      .order('sort_order');
+    storyboardAssets = data || [];
   }
 
-  // 訴求軸の数を集計(訴求軸ごとのコピー数)
-  const axesSet = new Set<string>();
-  for (const j of sortedComps) {
-    const ax = (j.input_data as Record<string, unknown>)?.appeal_axis as string;
-    if (ax) axesSet.add(ax);
-  }
-  const appealAxesCount = Math.max(1, axesSet.size);
-  const copiesPerAxis = Math.max(
-    1,
-    Math.round(sortedComps.length / appealAxesCount)
-  );
-  const durationSeconds = batch.duration_seconds || 30;
-
-  // ===== 総ページ数を計算 =====
-  // 表紙(1) + 構成案(N) + 絵コンテ(N or 0)
-  const withSb = batch.with_storyboard_images && sbJobIds.length > 0;
-  const totalPages = 1 + sortedComps.length + (withSb ? sortedComps.length : 0);
-
-  // ===== pptx 構築 =====
-  const pres = new pptxgen();
-  pres.defineLayout({ name: 'WIDE_16_9', width: 13.333, height: 7.5 });
-  pres.layout = 'WIDE_16_9';
-
-  let pageNum = 1;
-
-  // 表紙
-  buildCoverSlide(
-    pres,
-    meta,
-    durationSeconds,
-    sortedComps.length,
-    appealAxesCount,
-    copiesPerAxis,
-    pageNum++,
-    totalPages,
-    logoData
-  );
-
-  // 各パターン: テキスト構成案 + (オプション)絵コンテ
-  sortedComps.forEach((job, i) => {
-    buildCompositionSlide(
-      pres,
-      job,
-      naByParent.get(job.id),
-      i + 1,
-      sortedComps.length,
-      pageNum++,
-      totalPages,
-      logoData
-    );
-
-    if (withSb) {
-      const sbJob = sbByParent.get(job.id);
-      const images = sbJob ? imagesByJob.get(sbJob.id) || [] : [];
-      buildStoryboardSlide(
-        pres,
-        job,
-        images,
-        imageDataMap,
-        i + 1,
-        sortedComps.length,
-        pageNum++,
-        totalPages,
-        logoData
-      );
-    }
+  // compositionJobs を bulk_index 順にソート
+  const sortedComps = [...compositionJobs].sort((a, b) => {
+    const ai = (a.input_data?.bulk_index ?? 0) as number;
+    const bi = (b.input_data?.bulk_index ?? 0) as number;
+    return ai - bi;
   });
 
-  const blob = await pres.write({ outputType: 'blob' });
-  return blob as Blob;
-}
+  // NA原稿を parent_composition_job_id で紐付け
+  const naByParent = new Map<string, any>();
+  naScriptJobs.forEach(nj => {
+    const parentId = nj.input_data?.parent_composition_job_id;
+    if (parentId) naByParent.set(parentId, nj);
+  });
 
-export function downloadBulkVideoPptx(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  // 絵コンテ画像ジョブを parent_composition_job_id で紐付け
+  const sbByParent = new Map<string, any>();
+  storyboardJobs.forEach(sj => {
+    const parentId = sj.input_data?.parent_composition_job_id;
+    if (parentId) sbByParent.set(parentId, sj);
+  });
+
+  // 絵コンテ画像アセットを job_id で紐付け
+  const assetsByJob = new Map<string, any[]>();
+  storyboardAssets.forEach(a => {
+    const arr = assetsByJob.get(a.job_id) || [];
+    arr.push(a);
+    assetsByJob.set(a.job_id, arr);
+  });
+
+  // 各パターンを CompositionData に変換
+  const compositions: CompositionData[] = sortedComps.map((job, idx) => {
+    const label = `パターン${String.fromCharCode(65 + idx)}`; // A, B, C...
+    const outputData = job.output_data || {};
+    const inputData = job.input_data || {};
+    const scenes: Scene[] = outputData.scenes || [];
+
+    // NA原稿
+    const naJob = naByParent.get(job.id);
+    const naOutput = naJob?.output_data || {};
+    const naSections: NarrationSection[] = (naOutput.sections || naOutput.narration_sections || []).map((s: any) => ({
+      part: s.part || '',
+      time_range: s.time_range || s.time || '',
+      text: s.text || s.narration || '',
+    }));
+    const charCount = naSections.reduce((sum, s) => sum + (s.text?.length || 0), 0);
+
+    // 絵コンテ画像
+    const sbJob = sbByParent.get(job.id);
+    const assets = sbJob ? (assetsByJob.get(sbJob.id) || []) : [];
+    const storyboardImages = assets.map(a => ({
+      cut_number: a.metadata?.cut_number || a.sort_order,
+      image_url: a.file_url,
+      part: a.metadata?.part || '',
+      time_range: a.metadata?.time_range || '',
+    }));
+
+    return {
+      label,
+      appealAxis: inputData.appeal_axis || outputData.appeal_axis || '',
+      copyText: inputData.copy_text || outputData.copy_text || '',
+      intent: outputData.intent || '', // WF3が出力してなければ空
+      scenes,
+      narration: {
+        sections: naSections,
+        charCount,
+        charLimitSafe: 120, // 30秒動画の目安
+      },
+      storyboardImages,
+    };
+  });
+
+  // Meta
+  const meta: Meta = {
+    client_name: metaInput.client_name,
+    product_name: metaInput.product_name,
+    project_name: metaInput.project_name,
+    duration_seconds: batch.duration_seconds || 30,
+    total_patterns: compositions.length,
+    appeal_axes_count: metaInput.appeal_axes_count,
+    copies_per_axis: metaInput.copies_per_axis,
+    with_storyboard_images: batch.with_storyboard_images === true,
+  };
+
+  // pptx 生成
+  const pres = new pptxgen();
+  pres.defineLayout({ name: 'VIDEO_WIDE', width: SLIDE_W, height: SLIDE_H });
+  pres.layout = 'VIDEO_WIDE';
+
+  // 表紙
+  addCoverSlide(pres, meta, logoBase64);
+
+  // 各パターンスライド
+  let pageNum = 2;
+  for (let idx = 0; idx < compositions.length; idx++) {
+    const comp = compositions[idx];
+    addCompositionSlide(pres, comp, idx, compositions.length, pageNum, meta, logoBase64);
+    pageNum++;
+
+    // 絵コンテ画像ON、かつ画像がある場合のみビジュアルスライドを追加
+    if (meta.with_storyboard_images && comp.storyboardImages && comp.storyboardImages.length > 0) {
+      await addStoryboardVisualSlide(pres, comp, idx, compositions.length, pageNum, logoBase64);
+      pageNum++;
+    }
+  }
+
+  // Blobで出力
+  const data = await pres.write({ outputType: 'blob' });
+  return data as Blob;
 }

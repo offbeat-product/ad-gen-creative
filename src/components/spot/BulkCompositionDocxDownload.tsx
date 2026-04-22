@@ -6,10 +6,18 @@ import {
   generateBulkBannerPptx,
   downloadBulkBannerPptx,
 } from '@/lib/pptx/generate-bulk-banner-pptx';
-import {
-  generateBulkVideoPptx,
-  downloadBulkVideoPptx,
-} from '@/lib/pptx/generate-bulk-video-pptx';
+import { generateBulkVideoPptx } from '@/lib/pptx/generate-bulk-video-pptx';
+
+const downloadBlob = (blob: Blob, filename: string) => {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
 import type {
   BulkCompositionBatch,
   BulkCompositionJob,
@@ -65,17 +73,30 @@ const BulkCompositionDocxDownload = ({ batch, jobs, projectMeta }: Props) => {
         );
         toast.success('PowerPointファイルをダウンロードしました');
       } else {
+        // 訴求軸数とコピー数を集計
+        const axesSet = new Set<string>();
+        for (const j of compositionJobs) {
+          const ax = (j.input_data as Record<string, unknown>)?.appeal_axis as string;
+          if (ax) axesSet.add(ax);
+        }
+        const appealAxesCount = Math.max(1, axesSet.size);
+        const copiesPerAxis = Math.max(
+          1,
+          Math.round(compositionJobs.length / appealAxesCount)
+        );
+
         const blob = await generateBulkVideoPptx({
           batch,
           compositionJobs,
           naScriptJobs,
           storyboardJobs,
-          meta: projectMeta,
+          meta: {
+            ...projectMeta,
+            appeal_axes_count: appealAxesCount,
+            copies_per_axis: copiesPerAxis,
+          },
         });
-        downloadBulkVideoPptx(
-          blob,
-          `動画構成案一括_${baseName}_${dateStr}.pptx`
-        );
+        downloadBlob(blob, `動画構成案一括_${baseName}_${dateStr}.pptx`);
         toast.success('PowerPointファイルをダウンロードしました');
       }
     } catch (err) {
