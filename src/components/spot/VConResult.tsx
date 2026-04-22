@@ -195,13 +195,45 @@ const VConResult = ({
 }: Props) => {
   const [expandedCuts, setExpandedCuts] = useState<Set<number>>(new Set());
 
-  const cuts: VconCut[] = useMemo(
+  const rawCuts: VconCut[] = useMemo(
     () =>
       (assets[0]?.metadata as any)?.cuts ?? (job?.output_data as any)?.cuts ?? [],
     [assets, job],
   );
+
+  /* ─── Narration real duration → scale cuts to match audio length ─── */
+  const [narrationDuration, setNarrationDuration] = useState<number | null>(null);
+
+  const cuts: VconCut[] = useMemo(() => {
+    if (!narrationDuration || rawCuts.length === 0) return rawCuts;
+    const originalTotal = rawCuts[rawCuts.length - 1].time_end;
+    if (!originalTotal || originalTotal <= 0) return rawCuts;
+    const scale = narrationDuration / originalTotal;
+    console.log('[Vcon] Scaling cuts:', {
+      originalTotal,
+      actualNarration: narrationDuration,
+      scale: Number(scale.toFixed(4)),
+    });
+    let currentTime = 0;
+    return rawCuts.map((cut, idx) => {
+      const originalDuration = cut.time_end - cut.time_start;
+      const newDuration = originalDuration * scale;
+      const timeStart = currentTime;
+      const timeEnd =
+        idx === rawCuts.length - 1 ? narrationDuration : currentTime + newDuration;
+      currentTime = timeEnd;
+      return {
+        ...cut,
+        time_start: Math.round(timeStart * 100) / 100,
+        time_end: Math.round(timeEnd * 100) / 100,
+        duration: Math.round((timeEnd - timeStart) * 100) / 100,
+      };
+    });
+  }, [rawCuts, narrationDuration]);
+
   const totalCuts = cuts.length;
   const totalDuration =
+    narrationDuration ??
     (job?.output_data as any)?.total_duration ??
     (cuts.length > 0 ? cuts[cuts.length - 1].time_end : durationSeconds);
 
