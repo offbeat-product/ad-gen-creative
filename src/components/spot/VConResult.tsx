@@ -345,9 +345,13 @@ const VConResult = ({
     };
   }, [projectId]);
 
-  /* ─── Auto-select narration/BGM from job.input_data on first load ─── */
-  const presetNarrationUrl = (job?.input_data as any)?.narration_audio_url as string | undefined;
-  const presetBgmUrl = (job?.input_data as any)?.bgm_url as string | undefined;
+  /* ─── Auto-select narration/BGM from job output_data (or input_data fallback) ─── */
+  const presetNarrationUrl =
+    ((job?.output_data as any)?.narration_audio_url as string | undefined) ??
+    ((job?.input_data as any)?.narration_audio_url as string | undefined);
+  const presetBgmUrl =
+    ((job?.output_data as any)?.bgm_url as string | undefined) ??
+    ((job?.input_data as any)?.bgm_url as string | undefined);
   const narrationAutoApplied = useRef(false);
   const bgmAutoApplied = useRef(false);
 
@@ -358,8 +362,7 @@ const VConResult = ({
     if (match) {
       setSelectedNarrationJobId(match.job_id);
       narrationAutoApplied.current = true;
-    } else if (narrationOptions.length > 0 || presetNarrationUrl) {
-      // Synthesize a one-off option for uploaded files not present in narration_audio jobs
+    } else {
       const synth: NarrationOption = {
         job_id: '__preset__',
         audio_url: presetNarrationUrl,
