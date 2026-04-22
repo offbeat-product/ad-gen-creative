@@ -8,8 +8,11 @@ import {
   FileDown,
   RotateCcw,
 } from 'lucide-react';
-import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
 import { saveAs } from 'file-saver';
+import {
+  generateAppealAxesDocx,
+  downloadDocx,
+} from '@/lib/generate-appeal-axes-docx';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -190,81 +193,43 @@ const AppealAxisResult = ({
               const projectName = context?.project.name ?? 'project';
               const clientName = context?.project.product.client.name ?? '';
               const productName = context?.project.product.name ?? '';
+              const generatedAt = new Date().toISOString().slice(0, 10);
 
-              const children: Paragraph[] = [
-                new Paragraph({
-                  text: '訴求軸・コピー生成結果',
-                  heading: HeadingLevel.HEADING_1,
-                }),
-                new Paragraph({
-                  children: [new TextRun({ text: `クライアント: ${clientName}` })],
-                }),
-                new Paragraph({
-                  children: [new TextRun({ text: `商材: ${productName}` })],
-                }),
-                new Paragraph({
-                  children: [new TextRun({ text: `案件: ${projectName}` })],
-                }),
-                new Paragraph({ text: '' }),
-              ];
-
-              appealAxes.forEach((axis, i) => {
-                const axisNum = i + 1;
-                children.push(
-                  new Paragraph({
-                    text: `訴求軸${axisNum}: ${axis.text}`,
-                    heading: HeadingLevel.HEADING_2,
-                  })
-                );
-                if (axis.reasoning) {
-                  children.push(
-                    new Paragraph({
-                      children: [
-                        new TextRun({
-                          text: `根拠: ${axis.reasoning}`,
-                          italics: true,
-                          color: '666666',
-                        }),
-                      ],
-                    })
+              const data = {
+                meta: {
+                  client_name: clientName,
+                  product_name: productName,
+                  project_name: projectName,
+                  generated_at: generatedAt,
+                },
+                appeal_axes: appealAxes.map((axis, idx) => {
+                  const axisNum = idx + 1;
+                  const axisCopies = copies.filter(
+                    (c) => c.appeal_axis_index === axisNum
                   );
-                }
-                children.push(new Paragraph({ text: '' }));
-                const axisCopies = copies.filter((c) => c.appeal_axis_index === axisNum);
-                axisCopies.forEach((c) => {
-                  children.push(
-                    new Paragraph({
-                      children: [
-                        new TextRun({ text: `${c.pattern_id}. `, bold: true }),
-                        new TextRun({ text: c.copy_text, bold: true, size: 24 }),
-                      ],
-                    })
-                  );
-                  if (c.hook) {
-                    children.push(
-                      new Paragraph({
-                        children: [
-                          new TextRun({
-                            text: `   狙い: ${c.hook}`,
-                            italics: true,
-                            size: 20,
-                            color: '666666',
-                          }),
-                        ],
-                      })
-                    );
-                  }
-                });
-                children.push(new Paragraph({ text: '' }));
-              });
+                  const labelMatch = axis.text.match(/^【(.+?)】(.+)$/);
+                  return {
+                    index: axisNum,
+                    type_label: labelMatch ? labelMatch[1] : undefined,
+                    text: labelMatch ? labelMatch[2].trim() : axis.text,
+                    reasoning: axis.reasoning ?? '',
+                    copies: axisCopies.map((c) => ({
+                      label: c.pattern_id,
+                      text: c.copy_text,
+                      intent: c.hook ?? '',
+                    })),
+                  };
+                }),
+              };
 
-              const doc = new Document({ sections: [{ children }] });
-              const blob = await Packer.toBlob(doc);
-              saveAs(
-                blob,
-                `訴求軸コピー_${projectName}_${new Date().toISOString().split('T')[0]}.docx`
-              );
-              toast.success('Wordドキュメントをダウンロードしました');
+              try {
+                const blob = await generateAppealAxesDocx(data);
+                downloadDocx(blob, `訴求軸コピー_${projectName}_${generatedAt}.docx`);
+                toast.success('Wordドキュメントをダウンロードしました');
+              } catch (e) {
+                console.error('[AppealAxes Docx]', e);
+                toast.error('Wordダウンロードに失敗しました');
+              }
             };
 
             const handleGoToComposition = (c: CopyItem) => {

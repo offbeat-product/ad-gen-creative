@@ -11,7 +11,10 @@ import {
   Clock,
   Sparkles,
 } from 'lucide-react';
-import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
+import {
+  generateNAScriptDocx,
+  downloadDocx,
+} from '@/lib/generate-na-script-docx';
 import { saveAs } from 'file-saver';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -110,44 +113,57 @@ const NarrationScriptResult = ({
     const projectName = context?.project.name ?? 'project';
     const clientName = context?.project.product.client.name ?? '';
     const productName = context?.project.product.name ?? '';
+    const generatedAt = new Date().toISOString().slice(0, 10);
 
-    const children: Paragraph[] = [
-      new Paragraph({ text: 'NA原稿', heading: HeadingLevel.HEADING_1 }),
-      new Paragraph({ children: [new TextRun({ text: `クライアント: ${clientName}` })] }),
-      new Paragraph({ children: [new TextRun({ text: `商材: ${productName}` })] }),
-      new Paragraph({ children: [new TextRun({ text: `案件: ${projectName}` })] }),
-      new Paragraph({
-        children: [new TextRun({ text: `尺: ${assetDuration}秒 / 文字数: ${charCount}` })],
-      }),
-      new Paragraph({ text: '' }),
-      new Paragraph({ text: '全体スクリプト', heading: HeadingLevel.HEADING_2 }),
-    ];
+    const validParts = ['冒頭', '前半', '後半', '締め'] as const;
+    type Part = (typeof validParts)[number];
+    const normalizePart = (p: string): Part =>
+      (validParts as readonly string[]).includes(p) ? (p as Part) : '冒頭';
 
-    fullScript.split('\n').forEach((line) => {
-      children.push(new Paragraph({ children: [new TextRun({ text: line })] }));
-    });
+    // メタから取得できなければ、尺ベースで安全/厳格上限を概算 (約6.5字/秒, 約7.5字/秒)
+    const meta = (firstAsset?.metadata ?? {}) as Record<string, unknown>;
+    const targetDuration =
+      (meta.target_duration_seconds as number | undefined) ?? assetDuration;
+    const charLimitSafe =
+      (meta.char_limit_safe as number | undefined) ??
+      Math.floor(targetDuration * 6.5);
+    const charLimitStrict =
+      (meta.char_limit_strict as number | undefined) ??
+      Math.floor(targetDuration * 7.5);
+    const warningMessage =
+      (meta.warning_message as string | null | undefined) ?? null;
+    const appealAxis = (meta.appeal_axis as string | undefined) ?? '';
+    const copyText = (meta.copy_text as string | undefined) ?? '';
 
-    if (sections.length > 0) {
-      children.push(new Paragraph({ text: '' }));
-      children.push(new Paragraph({ text: 'パート別', heading: HeadingLevel.HEADING_2 }));
-      sections.forEach((sec) => {
-        children.push(
-          new Paragraph({
-            text: `${sec.part}${sec.time_range ? ` (${sec.time_range})` : ''}`,
-            heading: HeadingLevel.HEADING_3,
-          })
-        );
-        sec.text.split('\n').forEach((line) => {
-          children.push(new Paragraph({ children: [new TextRun({ text: line })] }));
-        });
-        children.push(new Paragraph({ text: '' }));
-      });
+    const data = {
+      meta: {
+        client_name: clientName,
+        product_name: productName,
+        project_name: projectName,
+        generated_at: generatedAt,
+        target_duration_seconds: targetDuration,
+        char_count: charCount,
+        char_limit_safe: charLimitSafe,
+        char_limit_strict: charLimitStrict,
+        warning_message: warningMessage,
+        appeal_axis: appealAxis,
+        copy_text: copyText,
+      },
+      sections: sections.map((s) => ({
+        part: normalizePart(s.part),
+        time_range: s.time_range ?? '',
+        text: s.text,
+      })),
+    };
+
+    try {
+      const blob = await generateNAScriptDocx(data);
+      downloadDocx(blob, `NA原稿_${projectName}_${generatedAt}.docx`);
+      toast.success('Wordドキュメントをダウンロードしました');
+    } catch (e) {
+      console.error('[NA Script Docx]', e);
+      toast.error('Wordダウンロードに失敗しました');
     }
-
-    const doc = new Document({ sections: [{ children }] });
-    const blob = await Packer.toBlob(doc);
-    saveAs(blob, `NA原稿_${projectName}_${new Date().toISOString().split('T')[0]}.docx`);
-    toast.success('Wordドキュメントをダウンロードしました');
   };
 
   const handleGoToNarrationAudio = () => {

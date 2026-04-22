@@ -13,8 +13,11 @@ import {
   Clock,
   Sparkles,
 } from 'lucide-react';
-import { Document, Packer, Paragraph, TextRun, HeadingLevel } from 'docx';
 import { saveAs } from 'file-saver';
+import {
+  generateCompositionDocx,
+  downloadDocx,
+} from '@/lib/generate-composition-docx';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -137,64 +140,43 @@ const CompositionResult = ({
     const projectName = context?.project.name ?? 'project';
     const clientName = context?.project.product.client.name ?? '';
     const productName = context?.project.product.name ?? '';
+    const generatedAt = new Date().toISOString().slice(0, 10);
 
-    const children: Paragraph[] = [
-      new Paragraph({ text: '構成案・字コンテ', heading: HeadingLevel.HEADING_1 }),
-      new Paragraph({ children: [new TextRun({ text: `クライアント: ${clientName}` })] }),
-      new Paragraph({ children: [new TextRun({ text: `商材: ${productName}` })] }),
-      new Paragraph({ children: [new TextRun({ text: `案件: ${projectName}` })] }),
-      new Paragraph({ children: [new TextRun({ text: `訴求軸: ${appealAxis}` })] }),
-      new Paragraph({ children: [new TextRun({ text: `コピー: ${copyText}` })] }),
-      new Paragraph({
-        children: [new TextRun({ text: `尺: ${assetDuration}秒 / タイプ: ${creativeType}` })],
-      }),
-      new Paragraph({ text: '' }),
-    ];
+    const validParts = ['冒頭', '前半', '後半', '締め'] as const;
+    type Part = (typeof validParts)[number];
+    const normalizePart = (p: string): Part =>
+      (validParts as readonly string[]).includes(p) ? (p as Part) : '冒頭';
 
-    scenes.forEach((s) => {
-      children.push(
-        new Paragraph({
-          text: `${s.part}${s.time_range ? ` (${s.time_range})` : ''}`,
-          heading: HeadingLevel.HEADING_2,
-        })
-      );
-      if (s.telop) {
-        children.push(
-          new Paragraph({
-            children: [
-              new TextRun({ text: 'テロップ: ', bold: true }),
-              new TextRun({ text: s.telop }),
-            ],
-          })
-        );
-      }
-      if (s.visual) {
-        children.push(
-          new Paragraph({
-            children: [
-              new TextRun({ text: '映像: ', bold: true }),
-              new TextRun({ text: s.visual }),
-            ],
-          })
-        );
-      }
-      if (s.narration) {
-        children.push(
-          new Paragraph({
-            children: [
-              new TextRun({ text: 'ナレーション: ', bold: true }),
-              new TextRun({ text: s.narration }),
-            ],
-          })
-        );
-      }
-      children.push(new Paragraph({ text: '' }));
-    });
+    const data = {
+      meta: {
+        client_name: clientName,
+        product_name: productName,
+        project_name: projectName,
+        generated_at: generatedAt,
+        creative_type: (creativeType === 'static' ? 'static' : 'video') as
+          | 'video'
+          | 'static',
+        duration_seconds: assetDuration,
+        appeal_axis: appealAxis,
+        copy_text: copyText,
+      },
+      scenes: scenes.map((s) => ({
+        part: normalizePart(s.part),
+        time_range: s.time_range ?? '',
+        telop: s.telop ?? '',
+        visual: s.visual ?? '',
+        narration: s.narration,
+      })),
+    };
 
-    const doc = new Document({ sections: [{ children }] });
-    const blob = await Packer.toBlob(doc);
-    saveAs(blob, `構成案_${projectName}_${new Date().toISOString().split('T')[0]}.docx`);
-    toast.success('Wordドキュメントをダウンロードしました');
+    try {
+      const blob = await generateCompositionDocx(data);
+      downloadDocx(blob, `構成案字コンテ_${projectName}_${generatedAt}.docx`);
+      toast.success('Wordドキュメントをダウンロードしました');
+    } catch (e) {
+      console.error('[Composition Docx]', e);
+      toast.error('Wordダウンロードに失敗しました');
+    }
   };
 
   const handleGoToImageGeneration = (scenes: Scene[]) => {
