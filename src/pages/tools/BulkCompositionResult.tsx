@@ -269,10 +269,10 @@ const BulkCompositionResult = () => {
       {/* Job cards */}
       <div className="space-y-3">
         <h3 className="text-base font-semibold">
-          生成された構成案 ({jobs.length}件)
+          生成された構成案 ({compositionJobs.length}件)
         </h3>
         <div className="space-y-2">
-          {jobs
+          {compositionJobs
             .slice()
             .sort(
               (a, b) =>
@@ -283,6 +283,8 @@ const BulkCompositionResult = () => {
               <JobCard
                 key={job.id}
                 job={job}
+                naScriptJob={naByParent.get(job.id)}
+                storyboardJob={sbByParent.get(job.id)}
                 index={idx + 1}
                 creativeType={creativeType}
               />
