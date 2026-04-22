@@ -428,6 +428,13 @@ const VConResult = ({
             /* ignore */
           }
         }
+        if (bgmAudioRef.current) {
+          try {
+            bgmAudioRef.current.currentTime = clamped;
+          } catch {
+            /* ignore */
+          }
+        }
       }
     },
     [isPlaying, stopPlayback, startPlayback, totalDuration],
