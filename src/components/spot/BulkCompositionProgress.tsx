@@ -133,7 +133,7 @@ const BulkCompositionProgress = ({ batch, jobs }: Props) => {
       )}
 
       <div className="space-y-2">
-        {jobs
+        {compositionJobs
           .slice()
           .sort(
             (a, b) =>
