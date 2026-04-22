@@ -43,6 +43,7 @@ export function useBulkComposition(projectId: string) {
               appeal_axes_copies: appealAxesCopies,
               duration_seconds: options.duration_seconds ?? 30,
               creative_type: options.creative_type ?? 'video',
+              brief: options.brief,
               client_name: options.client_name,
               product_name: options.product_name,
               project_name: options.project_name,
