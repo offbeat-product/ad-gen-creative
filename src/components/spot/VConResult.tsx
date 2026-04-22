@@ -289,7 +289,12 @@ const VConResult = ({
           };
         });
 
-      setNarrationOptions(opts);
+      // Preserve any synthesized preset entry (from output_data.narration_audio_url
+      // that doesn't match a fetched job) so auto-selection survives the fetch.
+      setNarrationOptions((prev) => {
+        const preset = prev.find((p) => p.job_id === '__preset__');
+        return preset ? [preset, ...opts.filter((o) => o.audio_url !== preset.audio_url)] : opts;
+      });
     })();
     return () => {
       cancelled = true;
@@ -335,7 +340,11 @@ const VConResult = ({
             created_at: a.created_at as string,
           };
         });
-      setBgmOptions(opts);
+      // Preserve any synthesized preset entry from output_data.bgm_url
+      setBgmOptions((prev) => {
+        const preset = prev.find((p) => p.asset_id === '__preset__');
+        return preset ? [preset, ...opts.filter((o) => o.audio_url !== preset.audio_url)] : opts;
+      });
     })();
     return () => {
       cancelled = true;
