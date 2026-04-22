@@ -169,6 +169,7 @@ const AppealAxisSettings = ({
           value={briefData}
           onChange={setBriefData}
           onLpScrapedContentLoaded={onLpScrapedContentLoaded}
+          onHintGenerated={setHint}
         />
       )}
 

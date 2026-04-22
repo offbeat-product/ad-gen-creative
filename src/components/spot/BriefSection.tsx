@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, KeyboardEvent } from 'react';
 import { motion } from 'framer-motion';
-import { Download, Save, Loader2, Target, X } from 'lucide-react';
+import { Loader2, Sparkles, Target, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,6 +45,7 @@ interface BriefSectionProps {
   value: BriefData;
   onChange: (brief: BriefData) => void;
   onLpScrapedContentLoaded?: (content: string | null) => void;
+  onHintGenerated?: (hint: string) => void;
 }
 
 const OBJECTIVES = [
@@ -67,9 +68,10 @@ const BriefSection = ({
   value,
   onChange,
   onLpScrapedContentLoaded,
+  onHintGenerated,
 }: BriefSectionProps) => {
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [isGeneratingBrief, setIsGeneratingBrief] = useState(false);
   const [ngInput, setNgInput] = useState('');
 
   const update = useCallback(
@@ -131,30 +133,81 @@ const BriefSection = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
-  const saveToProject = async () => {
-    if (!projectId) return;
-    setSaving(true);
-    const { error } = await supabase
-      .from('projects')
-      .update({
-        ad_objective: value.ad_objective || null,
-        target_audience: value.target_audience || null,
-        target_insight: value.target_insight || null,
-        lp_url: value.lp_url || null,
-        lp_summary: value.lp_summary || null,
-        tone_preset: value.tone_preset || null,
-        differentiation: value.differentiation || null,
-        ng_words: value.ng_words.length > 0 ? value.ng_words : null,
-        reference_creatives: value.reference_creatives || null,
-      } as any)
-      .eq('id', projectId);
-    setSaving(false);
-
-    if (error) {
-      toast.error(`保存失敗: ${error.message}`);
+  const handleAutoGenerateBrief = async () => {
+    if (!projectId) {
+      toast.error('プロジェクトが選択されていません');
       return;
     }
-    toast.success('✓ 案件にブリーフを保存しました');
+    setIsGeneratingBrief(true);
+    try {
+      const response = await fetch(
+        'https://offbeat-inc.app.n8n.cloud/webhook/adgen-brief-autogen',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ project_id: projectId }),
+          signal: AbortSignal.timeout(60000),
+        }
+      );
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      const data = await response.json();
+      console.log('[BriefAutogen] Response:', data);
+      if (!data.success || !data.brief) {
+        throw new Error(data.error || 'ブリーフデータが空で返されました');
+      }
+      const brief = data.brief;
+
+      // ad_objective: label→value
+      const objMatch = OBJECTIVES.find((o) => o.label === brief.ad_objective);
+      const safeObjective = objMatch?.value ?? '';
+
+      // tone_preset: label→value, custom→'custom:xxx'
+      const toneMatch = TONES.find((t) => t.label === brief.tone_preset);
+      let safeTone = '';
+      if (toneMatch) {
+        safeTone = toneMatch.value;
+      } else if (brief.tone_preset === 'custom' || brief.tone_custom) {
+        safeTone = `custom:${brief.tone_custom || ''}`;
+      }
+
+      onChange({
+        ad_objective: safeObjective,
+        target_audience: brief.target_audience || '',
+        target_insight: brief.target_insight || '',
+        lp_url: brief.lp_url || '',
+        lp_summary: brief.lp_summary || '',
+        tone_preset: safeTone,
+        differentiation: brief.differentiation || '',
+        ng_words: Array.isArray(brief.ng_words) ? brief.ng_words : [],
+        reference_creatives: brief.reference_creatives || '',
+      });
+
+      if (typeof brief.hint === 'string') {
+        onHintGenerated?.(brief.hint);
+      }
+
+      const info = data.source_count || {};
+      const infoMsg = [
+        info.reference_materials_count ? `参考資料 ${info.reference_materials_count}件` : null,
+        info.has_lp_info ? 'LP情報' : null,
+        info.has_ad_gen_info ? '登録済み企画情報' : null,
+      ]
+        .filter(Boolean)
+        .join(' / ');
+      toast.success(
+        `広告ブリーフを自動生成しました${infoMsg ? `\n(参照元: ${infoMsg})` : ''}`
+      );
+    } catch (error) {
+      console.error('[BriefAutogen] Error:', error);
+      toast.error(
+        `ブリーフの自動生成に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`
+      );
+    } finally {
+      setIsGeneratingBrief(false);
+    }
   };
 
   // tone_preset: 'friendly'|'dramatic'|'logical'|'edgy'|'custom:xxx'
@@ -221,33 +274,27 @@ const BriefSection = ({
             animate={{ opacity: 1 }}
             className="space-y-6"
           >
-            {/* アクションボタン */}
-            <div className="flex flex-wrap gap-2 justify-end">
+            {/* AI自動生成ボタン */}
+            <div className="flex justify-end">
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => loadFromProject(false)}
-                disabled={loading}
-              >
-                {loading ? (
-                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                ) : (
-                  <Download className="h-3 w-3 mr-1" />
-                )}
-                保存済みブリーフを読み込み
-              </Button>
-              <Button
+                type="button"
                 variant="brand"
-                size="sm"
-                onClick={saveToProject}
-                disabled={saving}
+                size="lg"
+                onClick={handleAutoGenerateBrief}
+                disabled={isGeneratingBrief || !projectId}
+                title="プロジェクト情報・オリエンシート等からAIがブリーフを一括作成します"
               >
-                {saving ? (
-                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                {isGeneratingBrief ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    生成中...
+                  </>
                 ) : (
-                  <Save className="h-3 w-3 mr-1" />
+                  <>
+                    <Sparkles className="mr-2 h-5 w-5" />
+                    AIで自動生成
+                  </>
                 )}
-                ブリーフを案件に保存
               </Button>
             </div>
 
