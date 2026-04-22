@@ -28,7 +28,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
-const COUNT_OPTIONS = [1, 2, 3, 4, 5] as const;
+const COUNT_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 
 interface Props {
   context: ReturnType<typeof useProjectContext>['context'];
@@ -241,12 +241,17 @@ const AppealAxisSettings = ({
         </div>
       </div>
 
-      <Alert>
+      <Alert variant={totalPatterns >= 50 ? 'destructive' : 'default'}>
         <AlertDescription>
           <span className="font-semibold text-foreground">
             {numAppealAxes} × {numCopies} = 合計{totalPatterns}パターン
           </span>
           <span className="text-muted-foreground"> 生成されます</span>
+          {totalPatterns >= 50 && (
+            <div className="mt-1 text-xs">
+              ⚠ {totalPatterns}パターンの生成には数分かかる場合があります
+            </div>
+          )}
         </AlertDescription>
       </Alert>
 
