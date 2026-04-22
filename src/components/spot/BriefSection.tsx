@@ -45,6 +45,7 @@ interface BriefSectionProps {
   value: BriefData;
   onChange: (brief: BriefData) => void;
   onLpScrapedContentLoaded?: (content: string | null) => void;
+  onHintGenerated?: (hint: string) => void;
 }
 
 const OBJECTIVES = [
