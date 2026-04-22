@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import VconDownloadButton from './VconDownloadButton';
 
 export interface VconCut {
   cut_number: number;
@@ -194,13 +195,45 @@ const VConResult = ({
 }: Props) => {
   const [expandedCuts, setExpandedCuts] = useState<Set<number>>(new Set());
 
-  const cuts: VconCut[] = useMemo(
+  const rawCuts: VconCut[] = useMemo(
     () =>
       (assets[0]?.metadata as any)?.cuts ?? (job?.output_data as any)?.cuts ?? [],
     [assets, job],
   );
+
+  /* ─── Narration real duration → scale cuts to match audio length ─── */
+  const [narrationDuration, setNarrationDuration] = useState<number | null>(null);
+
+  const cuts: VconCut[] = useMemo(() => {
+    if (!narrationDuration || rawCuts.length === 0) return rawCuts;
+    const originalTotal = rawCuts[rawCuts.length - 1].time_end;
+    if (!originalTotal || originalTotal <= 0) return rawCuts;
+    const scale = narrationDuration / originalTotal;
+    console.log('[Vcon] Scaling cuts:', {
+      originalTotal,
+      actualNarration: narrationDuration,
+      scale: Number(scale.toFixed(4)),
+    });
+    let currentTime = 0;
+    return rawCuts.map((cut, idx) => {
+      const originalDuration = cut.time_end - cut.time_start;
+      const newDuration = originalDuration * scale;
+      const timeStart = currentTime;
+      const timeEnd =
+        idx === rawCuts.length - 1 ? narrationDuration : currentTime + newDuration;
+      currentTime = timeEnd;
+      return {
+        ...cut,
+        time_start: Math.round(timeStart * 100) / 100,
+        time_end: Math.round(timeEnd * 100) / 100,
+        duration: Math.round((timeEnd - timeStart) * 100) / 100,
+      };
+    });
+  }, [rawCuts, narrationDuration]);
+
   const totalCuts = cuts.length;
   const totalDuration =
+    narrationDuration ??
     (job?.output_data as any)?.total_duration ??
     (cuts.length > 0 ? cuts[cuts.length - 1].time_end : durationSeconds);
 
@@ -438,6 +471,7 @@ const VConResult = ({
   useEffect(() => {
     stopPlayback();
     setCurrentTime(0);
+    setNarrationDuration(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedNarrationJobId, selectedBgmAssetId]);
 
@@ -740,19 +774,39 @@ const VConResult = ({
                   <span className="italic">なし</span>
                 )}
               </div>
+              {narrationDuration && (
+                <div className="text-[11px]">
+                  ℹ️ ナレーション音声の実尺(
+                  <span className="text-foreground font-medium">
+                    {narrationDuration.toFixed(1)}秒
+                  </span>
+                  )に合わせて、テロップタイミングを自動調整しています
+                </div>
+              )}
             </div>
           </div>
 
           {/* Hidden audio */}
           {narrationUrl && (
-            <audio ref={narrationAudioRef} src={narrationUrl} preload="auto" />
+            <audio
+              ref={narrationAudioRef}
+              src={narrationUrl}
+              preload="metadata"
+              onLoadedMetadata={() => {
+                const d = narrationAudioRef.current?.duration;
+                if (d && Number.isFinite(d) && d > 0) {
+                  console.log('[Narration] Real duration:', d);
+                  setNarrationDuration(d);
+                }
+              }}
+            />
           )}
           {bgmUrl && (
             <audio ref={bgmAudioRef} src={bgmUrl} preload="auto" loop playsInline />
           )}
 
           {/* Action buttons */}
-          <div className="flex items-center justify-end gap-1.5 pt-2 border-t">
+          <div className="flex flex-wrap items-center justify-end gap-1.5 pt-2 border-t">
             <Button variant="outline" size="sm" onClick={handleExportJson}>
               <Download className="h-3.5 w-3.5 mr-1" /> JSONエクスポート
             </Button>
@@ -766,6 +820,14 @@ const VConResult = ({
                 <Film className="h-3.5 w-3.5 mr-1" /> カルーセル動画へ
               </Button>
             </Link>
+            <VconDownloadButton
+              cuts={cuts}
+              narrationUrl={narrationUrl}
+              bgmUrl={bgmUrl}
+              totalDuration={totalDuration}
+              narrationVolume={narrationVolume}
+              bgmVolume={bgmVolume}
+            />
           </div>
 
           {/* ─── Cut list (clickable) ─── */}
