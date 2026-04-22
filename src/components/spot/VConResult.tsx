@@ -13,6 +13,7 @@ import {
   Pause,
   SkipBack,
   Mic,
+  Music,
 } from 'lucide-react';
 import type { useProjectContext } from '@/hooks/useProjectContext';
 import type { SpotWizardState } from '@/hooks/useSpotWizard';
@@ -71,6 +72,13 @@ export interface VconAsset {
 
 interface NarrationOption {
   job_id: string;
+  audio_url: string;
+  label: string;
+  created_at: string;
+}
+
+interface BgmOption {
+  asset_id: string;
   audio_url: string;
   label: string;
   created_at: string;
