@@ -159,6 +159,9 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
           process_type: r.process_type,
         })),
         correction_patterns: context?.corrections ?? [],
+        with_na_script: creativeType === 'video' ? withNaScript : false,
+        with_storyboard_images:
+          creativeType === 'video' ? withStoryboardImages : false,
       });
       toast.success(`${totalCount}件の構成案を生成開始しました`);
     } catch (err) {
