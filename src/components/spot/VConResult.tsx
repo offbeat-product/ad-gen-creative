@@ -817,17 +817,6 @@ const VConResult = ({
                               </Badge>
                             )}
                           </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {cut.narration ? (
-                              cut.narration.length > 30 ? (
-                                cut.narration.slice(0, 30) + '...'
-                              ) : (
-                                cut.narration
-                              )
-                            ) : (
-                              <span className="text-muted-foreground/60">(なし)</span>
-                            )}
-                          </TableCell>
                           <TableCell
                             className="text-center"
                             onClick={(e) => {
