@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, KeyboardEvent } from 'react';
 import { motion } from 'framer-motion';
 import { Loader2, Sparkles, Target, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { saveBriefToProject } from '@/lib/brief-persistence';
+import { loadCurrentBrief, saveBriefAsNewVersion } from '@/lib/brief-persistence';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -86,44 +86,32 @@ const BriefSection = ({
     async (silent = false) => {
       if (!projectId) return;
       setLoading(true);
-      const { data, error } = await supabase
+      // 履歴対応: project_briefs(is_current=true)を最優先、無ければprojectsからフォールバック
+      const loaded = await loadCurrentBrief(projectId);
+
+      // lp_scraped_content だけは projects テーブル固有なので別途取得
+      const { data: extra } = await supabase
         .from('projects')
-        .select(
-          'ad_objective, target_audience, target_insight, lp_url, lp_summary, tone_preset, differentiation, ng_words, reference_creatives, lp_scraped_content'
-        )
+        .select('lp_scraped_content')
         .eq('id', projectId)
-        .single();
+        .maybeSingle();
       setLoading(false);
 
-      if (error) {
-        if (!silent) toast.error(`読み込み失敗: ${error.message}`);
-        return;
+      if (loaded) {
+        onChange(loaded);
+        const hasContent =
+          loaded.ad_objective ||
+          loaded.target_audience ||
+          loaded.target_insight ||
+          loaded.lp_url ||
+          loaded.tone_preset;
+        if (!silent && hasContent) {
+          toast.success('✓ ブリーフを読み込みました');
+        }
       }
-      if (!data) return;
-
-      const loaded: BriefData = {
-        ad_objective: (data as any).ad_objective ?? '',
-        target_audience: (data as any).target_audience ?? '',
-        target_insight: (data as any).target_insight ?? '',
-        lp_url: (data as any).lp_url ?? '',
-        lp_summary: (data as any).lp_summary ?? '',
-        tone_preset: (data as any).tone_preset ?? '',
-        differentiation: (data as any).differentiation ?? '',
-        ng_words: ((data as any).ng_words ?? []) as string[],
-        reference_creatives: (data as any).reference_creatives ?? '',
-      };
-      onChange(loaded);
-      onLpScrapedContentLoaded?.((data as any).lp_scraped_content ?? null);
-
-      const hasContent =
-        loaded.ad_objective ||
-        loaded.target_audience ||
-        loaded.target_insight ||
-        loaded.lp_url ||
-        loaded.tone_preset;
-      if (!silent && hasContent) {
-        toast.success('✓ ブリーフを読み込みました');
-      }
+      onLpScrapedContentLoaded?.(
+        (extra as { lp_scraped_content?: string | null } | null)?.lp_scraped_content ?? null
+      );
     },
     [projectId, onChange, onLpScrapedContentLoaded]
   );
@@ -187,10 +175,13 @@ const BriefSection = ({
       };
       onChange(nextBrief);
 
-      // 永続保存(失敗してもUIはブロックしない)
-      saveBriefToProject(projectId, nextBrief).catch((e) =>
-        console.error('[BriefAutogen] persist error:', e)
-      );
+      // 履歴に新バージョンとして保存(source='ai_autogen')
+      saveBriefAsNewVersion(
+        projectId,
+        { ...nextBrief, hint: typeof brief.hint === 'string' ? brief.hint : undefined } as BriefData & { hint?: string },
+        'ai_autogen',
+        'AI自動生成による作成'
+      ).catch((e) => console.error('[BriefAutogen] persist error:', e));
 
       if (typeof brief.hint === 'string') {
         onHintGenerated?.(brief.hint);

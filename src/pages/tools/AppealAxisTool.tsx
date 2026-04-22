@@ -10,7 +10,7 @@ import AppealAxisResult, {
   type SpotAsset,
 } from '@/components/spot/AppealAxisResult';
 import { type BriefData, EMPTY_BRIEF } from '@/components/spot/BriefSection';
-import { saveBriefToProject } from '@/lib/brief-persistence';
+import { saveBriefAsNewVersion } from '@/lib/brief-persistence';
 
 const N8N_WEBHOOK_URL =
   'https://offbeat-inc.app.n8n.cloud/webhook/adgen-spot-appeal-axis-copy';
@@ -116,10 +116,13 @@ const AppealAxisTool = () => {
         const handleGenerate = async () => {
           if (!state.projectId || !user) return;
 
-          // 生成前に広告ブリーフを永続保存(失敗してもブロックしない)
-          await saveBriefToProject(state.projectId, briefData).catch((e) =>
-            console.error('[AppealAxis] brief persist error:', e)
-          );
+          // 生成前に広告ブリーフを履歴へ保存(失敗してもブロックしない)
+          await saveBriefAsNewVersion(
+            state.projectId,
+            briefData,
+            'generation_trigger',
+            '訴求軸・コピー生成時点のブリーフ'
+          ).catch((e) => console.error('[AppealAxis] brief persist error:', e));
 
           const { data: newJob, error: jobError } = await supabase
             .from('gen_spot_jobs')

@@ -1672,6 +1672,74 @@ export type Database = {
           },
         ]
       }
+      project_briefs: {
+        Row: {
+          ad_objective: string | null
+          created_at: string
+          created_by: string | null
+          differentiation: string | null
+          hint: string | null
+          id: string
+          is_current: boolean
+          lp_summary: string | null
+          lp_url: string | null
+          ng_words: string[] | null
+          note: string | null
+          project_id: string
+          reference_creatives: string | null
+          source: string
+          target_audience: string | null
+          target_insight: string | null
+          tone_preset: string | null
+        }
+        Insert: {
+          ad_objective?: string | null
+          created_at?: string
+          created_by?: string | null
+          differentiation?: string | null
+          hint?: string | null
+          id?: string
+          is_current?: boolean
+          lp_summary?: string | null
+          lp_url?: string | null
+          ng_words?: string[] | null
+          note?: string | null
+          project_id: string
+          reference_creatives?: string | null
+          source?: string
+          target_audience?: string | null
+          target_insight?: string | null
+          tone_preset?: string | null
+        }
+        Update: {
+          ad_objective?: string | null
+          created_at?: string
+          created_by?: string | null
+          differentiation?: string | null
+          hint?: string | null
+          id?: string
+          is_current?: boolean
+          lp_summary?: string | null
+          lp_url?: string | null
+          ng_words?: string[] | null
+          note?: string | null
+          project_id?: string
+          reference_creatives?: string | null
+          source?: string
+          target_audience?: string | null
+          target_insight?: string | null
+          tone_preset?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_briefs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_collaborators: {
         Row: {
           creator_id: string
