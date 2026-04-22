@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { useBulkComposition } from '@/hooks/useBulkComposition';
 import BulkCompositionProgress from './BulkCompositionProgress';
-import BulkCompositionDocxDownload from './BulkCompositionDocxDownload';
+
 import type { useProjectContext } from '@/hooks/useProjectContext';
 import type { GeneratedCopy, AppealAxisCopy, BannerBrief } from '@/types/bulk-composition';
 
