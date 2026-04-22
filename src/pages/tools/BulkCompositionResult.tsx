@@ -22,6 +22,7 @@ import type {
   BulkCompositionBatch,
   BulkCompositionJob,
   BulkSceneOutput,
+  BulkCompositionAsset,
 } from '@/types/bulk-composition';
 
 const STEPS = [
