@@ -7,6 +7,7 @@ import {
   FileText,
   FileDown,
   RotateCcw,
+  Rocket,
 } from 'lucide-react';
 import { saveAs } from 'file-saver';
 import {
@@ -128,9 +129,22 @@ const AppealAxisResult = ({
       {/* トップバー */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold font-display tracking-tight">生成結果</h2>
-        <Button variant="outline" size="sm" onClick={onStartNew}>
-          <RotateCcw className="h-3 w-3 mr-1" /> 新しく生成する
-        </Button>
+        <div className="flex items-center gap-2">
+          {state.projectId && job?.status === 'completed' && (
+            <Button
+              variant="brand"
+              size="sm"
+              onClick={() =>
+                navigate(`/tools/composition?project_id=${state.projectId}&mode=bulk`)
+              }
+            >
+              <Rocket className="h-3 w-3 mr-1" /> 構成案一括生成
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={onStartNew}>
+            <RotateCcw className="h-3 w-3 mr-1" /> 新しく生成する
+          </Button>
+        </div>
       </div>
 
       <div className="rounded-xl border bg-card p-5 space-y-4">
