@@ -774,6 +774,15 @@ const VConResult = ({
                   <span className="italic">なし</span>
                 )}
               </div>
+              {narrationDuration && (
+                <div className="text-[11px]">
+                  ℹ️ ナレーション音声の実尺(
+                  <span className="text-foreground font-medium">
+                    {narrationDuration.toFixed(1)}秒
+                  </span>
+                  )に合わせて、テロップタイミングを自動調整しています
+                </div>
+              )}
             </div>
           </div>
 
