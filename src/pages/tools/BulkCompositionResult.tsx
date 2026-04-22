@@ -261,7 +261,7 @@ const BulkCompositionResult = () => {
       {completedJobs.length > 0 && projectMeta && (
         <BulkCompositionDocxDownload
           batch={batch}
-          jobs={completedJobs}
+          jobs={jobs}
           projectMeta={projectMeta}
         />
       )}

@@ -3,13 +3,13 @@ import { Download, Loader2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import {
-  generateBulkCompositionDocx,
-  downloadBulkDocx,
-} from '@/lib/generate-bulk-composition-docx';
-import {
   generateBulkBannerPptx,
   downloadBulkBannerPptx,
 } from '@/lib/pptx/generate-bulk-banner-pptx';
+import {
+  generateBulkVideoPptx,
+  downloadBulkVideoPptx,
+} from '@/lib/pptx/generate-bulk-video-pptx';
 import type {
   BulkCompositionBatch,
   BulkCompositionJob,
@@ -31,8 +31,18 @@ const sanitize = (s: string) =>
 const BulkCompositionDocxDownload = ({ batch, jobs, projectMeta }: Props) => {
   const [generating, setGenerating] = useState(false);
 
+  // composition jobs only (NA・絵コンテは含めない)
+  const compositionJobs = jobs.filter((j) => j.tool_type === 'composition');
+  const naScriptJobs = jobs.filter((j) => j.tool_type === 'narration_script');
+  const storyboardJobs = jobs.filter(
+    (j) =>
+      j.tool_type === 'image_generation' &&
+      (j.input_data as Record<string, unknown>)?.storyboard_kind === 'spot'
+  );
+
   const creativeType =
-    (jobs[0]?.input_data as any)?.creative_type === 'banner'
+    (compositionJobs[0]?.input_data as Record<string, unknown>)
+      ?.creative_type === 'banner'
       ? 'banner'
       : 'video';
   const isBanner = creativeType === 'banner';
@@ -46,7 +56,7 @@ const BulkCompositionDocxDownload = ({ batch, jobs, projectMeta }: Props) => {
       if (isBanner) {
         const blob = await generateBulkBannerPptx({
           batch,
-          jobs,
+          jobs: compositionJobs,
           meta: projectMeta,
         });
         downloadBulkBannerPptx(
@@ -55,13 +65,18 @@ const BulkCompositionDocxDownload = ({ batch, jobs, projectMeta }: Props) => {
         );
         toast.success('PowerPointファイルをダウンロードしました');
       } else {
-        const blob = await generateBulkCompositionDocx({
+        const blob = await generateBulkVideoPptx({
           batch,
-          jobs,
+          compositionJobs,
+          naScriptJobs,
+          storyboardJobs,
           meta: projectMeta,
         });
-        downloadBulkDocx(blob, `構成案一括_${baseName}_${dateStr}.docx`);
-        toast.success('Wordドキュメントをダウンロードしました');
+        downloadBulkVideoPptx(
+          blob,
+          `動画構成案一括_${baseName}_${dateStr}.pptx`
+        );
+        toast.success('PowerPointファイルをダウンロードしました');
       }
     } catch (err) {
       console.error('[BulkCompositionDownload]', err);
@@ -80,7 +95,7 @@ const BulkCompositionDocxDownload = ({ batch, jobs, projectMeta }: Props) => {
             {isBanner ? 'バナー' : '動画'}構成案の一括生成が完了しました
           </div>
           <div className="text-sm text-muted-foreground">
-            {jobs.length}パターンを1つの{isBanner ? 'pptx' : 'docx'}
+            {compositionJobs.length}パターンを1つのpptx
             ファイルにまとめてダウンロードできます
           </div>
         </div>
@@ -88,7 +103,7 @@ const BulkCompositionDocxDownload = ({ batch, jobs, projectMeta }: Props) => {
           variant="brand"
           size="lg"
           onClick={handleDownload}
-          disabled={generating || jobs.length === 0}
+          disabled={generating || compositionJobs.length === 0}
         >
           {generating ? (
             <>
@@ -97,7 +112,7 @@ const BulkCompositionDocxDownload = ({ batch, jobs, projectMeta }: Props) => {
           ) : (
             <>
               <Download className="h-4 w-4 mr-2" />
-              {isBanner ? 'pptx' : 'docx'}一括ダウンロード
+              pptx一括ダウンロード
             </>
           )}
         </Button>
