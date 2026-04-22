@@ -16,6 +16,16 @@ export interface AppealAxisCopy {
   hook?: string;
 }
 
+export interface BannerBrief {
+  target_age?: string;
+  insight_category?: string;
+  insight?: string;
+  what_to_say?: string;
+  user_situation?: string;
+  user_motivation?: string;
+  user_merit?: string;
+}
+
 export type BulkBatchStatus =
   | 'running'
   | 'completed'
