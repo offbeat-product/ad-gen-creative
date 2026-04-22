@@ -276,10 +276,59 @@ const VConResult = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
+  /* ─── Fetch BGM uploads from same project ─── */
+  useEffect(() => {
+    if (!projectId) return;
+    let cancelled = false;
+    (async () => {
+      const { data: bgmJobs } = await supabase
+        .from('gen_spot_jobs')
+        .select('id')
+        .eq('project_id', projectId)
+        .eq('tool_type', 'bgm_suggestion');
+      if (!bgmJobs || bgmJobs.length === 0 || cancelled) {
+        setBgmOptions([]);
+        return;
+      }
+      const bgmJobIds = bgmJobs.map((j) => j.id);
+      const { data: bgmAssetRows } = await supabase
+        .from('gen_spot_assets')
+        .select('id, file_url, file_name, asset_type, created_at, metadata')
+        .in('job_id', bgmJobIds)
+        .eq('asset_type', 'bgm_upload')
+        .order('created_at', { ascending: false });
+      if (cancelled) return;
+      const opts: BgmOption[] = (bgmAssetRows ?? [])
+        .filter((a: any) => a.file_url)
+        .map((a: any) => {
+          const dateStr = new Date(a.created_at as string).toLocaleString('ja-JP', {
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+          });
+          return {
+            asset_id: a.id,
+            audio_url: String(a.file_url),
+            label: `${a.file_name ?? 'BGM'}（${dateStr}）`,
+            created_at: a.created_at as string,
+          };
+        });
+      setBgmOptions(opts);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
   /* ─── Sync volume ─── */
   useEffect(() => {
     if (narrationAudioRef.current) narrationAudioRef.current.volume = narrationVolume;
   }, [narrationVolume]);
+
+  useEffect(() => {
+    if (bgmAudioRef.current) bgmAudioRef.current.volume = bgmVolume;
+  }, [bgmVolume]);
 
   /* ─── Cleanup on unmount ─── */
   useEffect(() => {
@@ -288,12 +337,12 @@ const VConResult = ({
     };
   }, []);
 
-  /* ─── Stop when narration source changes ─── */
+  /* ─── Stop when audio sources change ─── */
   useEffect(() => {
     stopPlayback();
     setCurrentTime(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedNarrationJobId]);
+  }, [selectedNarrationJobId, selectedBgmAssetId]);
 
   const stopPlayback = useCallback(() => {
     setIsPlaying(false);
@@ -302,6 +351,7 @@ const VConResult = ({
       intervalRef.current = undefined;
     }
     narrationAudioRef.current?.pause();
+    bgmAudioRef.current?.pause();
   }, []);
 
   const startPlayback = useCallback(
@@ -320,6 +370,16 @@ const VConResult = ({
         narrationAudioRef.current.play().catch(() => {});
       }
 
+      if (bgmAudioRef.current && bgmUrl) {
+        try {
+          bgmAudioRef.current.currentTime = startT;
+        } catch {
+          /* ignore */
+        }
+        bgmAudioRef.current.volume = bgmVolume;
+        bgmAudioRef.current.play().catch(() => {});
+      }
+
       if (intervalRef.current) clearInterval(intervalRef.current);
       const startWall = Date.now();
       intervalRef.current = setInterval(() => {
@@ -332,12 +392,13 @@ const VConResult = ({
             intervalRef.current = undefined;
           }
           narrationAudioRef.current?.pause();
+          bgmAudioRef.current?.pause();
         } else {
           setCurrentTime(elapsed);
         }
       }, 100);
     },
-    [currentTime, totalDuration, narrationUrl, narrationVolume],
+    [currentTime, totalDuration, narrationUrl, narrationVolume, bgmUrl, bgmVolume],
   );
 
   const togglePlay = useCallback(() => {
