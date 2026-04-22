@@ -1,4 +1,4 @@
-import { Loader2, Sparkles } from 'lucide-react';
+import { Loader2, Sparkles, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -13,6 +13,18 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import BriefSection, { type BriefData } from '@/components/spot/BriefSection';
 import type { useProjectContext } from '@/hooks/useProjectContext';
+import { useState } from 'react';
+import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const COUNT_OPTIONS = [1, 2, 3, 4, 5] as const;
 
@@ -47,6 +59,74 @@ const AppealAxisSettings = ({
   onGenerate,
   isRunning,
 }: Props) => {
+  const [isGeneratingBrief, setIsGeneratingBrief] = useState(false);
+  const [showOverwriteDialog, setShowOverwriteDialog] = useState(false);
+
+  const handleAutoGenerateBrief = async () => {
+    if (!projectId) {
+      toast.error('プロジェクトが選択されていません');
+      return;
+    }
+
+    // 既存hintがある場合は確認ダイアログを表示
+    if (hint && hint.trim().length > 0) {
+      setShowOverwriteDialog(true);
+      return;
+    }
+
+    await executeBriefAutogen();
+  };
+
+  const executeBriefAutogen = async () => {
+    setShowOverwriteDialog(false);
+    setIsGeneratingBrief(true);
+
+    try {
+      const response = await fetch(
+        'https://offbeat-inc.app.n8n.cloud/webhook/adgen-brief-autogen',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ project_id: projectId }),
+          signal: AbortSignal.timeout(60000),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('[BriefAutogen] Response:', data);
+
+      if (!data.success || !data.brief_text) {
+        throw new Error(data.error || 'ブリーフが空で返されました');
+      }
+
+      setHint(data.brief_text);
+
+      // 情報量を通知(参考情報)
+      const info = data.source_count || {};
+      const infoMsg = [
+        info.reference_materials_count ? `参考資料 ${info.reference_materials_count}件` : null,
+        info.has_lp_info ? 'LP情報あり' : null,
+        info.has_ad_gen_info ? '広告企画情報あり' : null,
+      ].filter(Boolean).join(' / ');
+
+      toast.success(
+        `ブリーフを自動生成しました${infoMsg ? ` (${infoMsg})` : ''}`
+      );
+    } catch (error) {
+      console.error('[BriefAutogen] Error:', error);
+      toast.error(
+        `ブリーフの自動生成に失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`
+      );
+    } finally {
+      setIsGeneratingBrief(false);
+    }
+  };
+
   const relevantRules =
     context?.rules.filter((r) =>
       ['script', 'banner_draft', 'banner_design'].includes(r.process_type)
@@ -144,18 +224,61 @@ const AppealAxisSettings = ({
       </Alert>
 
       <div className="space-y-2">
-        <Label htmlFor="hint">ヒント (任意)</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="hint">ヒント (任意)</Label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleAutoGenerateBrief}
+            disabled={isGeneratingBrief || !projectId}
+            title="プロジェクト情報・オリエンシート等から広告コピーのブリーフを自動作成します"
+          >
+            {isGeneratingBrief ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                生成中...
+              </>
+            ) : (
+              <>
+                <Wand2 className="mr-2 h-4 w-4" />
+                AIで自動生成
+              </>
+            )}
+          </Button>
+        </div>
         <Textarea
           id="hint"
           value={hint}
           onChange={(e) => setHint(e.target.value)}
-          rows={3}
-          placeholder="特に意識してほしいターゲット・トーン・要素など"
+          rows={8}
+          className="font-mono text-sm"
+          placeholder="訴求軸・コピー生成のヒントや方向性(自動生成ボタンで一括入力も可能)"
         />
         <p className="text-xs text-muted-foreground">
           ブリーフに書き切れない細かい指示を追加で書けます
         </p>
       </div>
+
+      {/* 上書き確認ダイアログ */}
+      <AlertDialog open={showOverwriteDialog} onOpenChange={setShowOverwriteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>既存のhintを上書きしますか?</AlertDialogTitle>
+            <AlertDialogDescription>
+              自動生成したブリーフが現在のhintを上書きします。この操作は元に戻せません。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowOverwriteDialog(false)}>
+              キャンセル
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={executeBriefAutogen}>
+              上書きする
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {(!briefData.ad_objective || !briefData.target_audience) && (
         <Alert variant="destructive">
