@@ -72,11 +72,13 @@ export type Database = {
           duration_seconds: number | null
           failed_count: number | null
           id: string
+          na_script_job_ids: string[]
           project_id: string
           spot_job_ids: string[] | null
           status: string | null
           total_count: number
           updated_at: string | null
+          with_na_script: boolean
         }
         Insert: {
           appeal_axes_snapshot?: Json | null
@@ -87,11 +89,13 @@ export type Database = {
           duration_seconds?: number | null
           failed_count?: number | null
           id?: string
+          na_script_job_ids?: string[]
           project_id: string
           spot_job_ids?: string[] | null
           status?: string | null
           total_count: number
           updated_at?: string | null
+          with_na_script?: boolean
         }
         Update: {
           appeal_axes_snapshot?: Json | null
@@ -102,11 +106,13 @@ export type Database = {
           duration_seconds?: number | null
           failed_count?: number | null
           id?: string
+          na_script_job_ids?: string[]
           project_id?: string
           spot_job_ids?: string[] | null
           status?: string | null
           total_count?: number
           updated_at?: string | null
+          with_na_script?: boolean
         }
         Relationships: [
           {
@@ -3067,6 +3073,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      scenes_json_to_composition_text: {
+        Args: { p_scenes: Json }
+        Returns: string
+      }
       send_slack_notification:
         | { Args: { body: Json; channel_type: string }; Returns: undefined }
         | { Args: { message: string }; Returns: undefined }
@@ -3074,6 +3084,18 @@ export type Database = {
       track_creator_access: {
         Args: { p_share_token: string }
         Returns: undefined
+      }
+      trigger_na_script_generation: {
+        Args: {
+          p_client_name?: string
+          p_composition_text: string
+          p_duration_seconds: number
+          p_product_name?: string
+          p_project_id: string
+          p_project_name?: string
+          p_spot_job_id: string
+        }
+        Returns: number
       }
       upload_file_as_creator: {
         Args: {
