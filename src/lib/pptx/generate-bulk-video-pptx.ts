@@ -631,16 +631,31 @@ export async function generateBulkVideoPptx(params: GenerateBulkVideoPptxParams)
   // ロゴ読み込み
   const logoBase64 = await loadLogoAsBase64();
 
-  // 絵コンテ画像アセット取得
+  // 絵コンテ画像アセット取得(空URL除外 + 重複排除)
   let storyboardAssets: any[] = [];
   if (storyboardJobs.length > 0) {
-    const { data } = await supabase
+    const { data: rawAssets } = await supabase
       .from('gen_spot_assets')
       .select('*')
       .in('job_id', storyboardJobs.map((j: any) => j.id))
       .eq('asset_type', 'storyboard_image')
+      .not('file_url', 'is', null)
+      .neq('file_url', '')
       .order('sort_order');
-    storyboardAssets = data || [];
+
+    // job_id + cut_number 単位で重複排除(最新のcreated_atを採用)
+    const seen = new Map<string, any>();
+    (rawAssets || []).forEach((a: any) => {
+      const cutNumber = a.metadata?.cut_number || a.sort_order;
+      const key = `${a.job_id}-${cutNumber}`;
+      const existing = seen.get(key);
+      if (!existing || new Date(a.created_at) > new Date(existing.created_at)) {
+        seen.set(key, a);
+      }
+    });
+    storyboardAssets = Array.from(seen.values()).sort(
+      (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)
+    );
   }
 
   // compositionJobs を bulk_index 順にソート
