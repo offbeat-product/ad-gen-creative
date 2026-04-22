@@ -806,7 +806,7 @@ const VConResult = ({
           )}
 
           {/* Action buttons */}
-          <div className="flex items-center justify-end gap-1.5 pt-2 border-t">
+          <div className="flex flex-wrap items-center justify-end gap-1.5 pt-2 border-t">
             <Button variant="outline" size="sm" onClick={handleExportJson}>
               <Download className="h-3.5 w-3.5 mr-1" /> JSONエクスポート
             </Button>
@@ -820,6 +820,14 @@ const VConResult = ({
                 <Film className="h-3.5 w-3.5 mr-1" /> カルーセル動画へ
               </Button>
             </Link>
+            <VconDownloadButton
+              cuts={cuts}
+              narrationUrl={narrationUrl}
+              bgmUrl={bgmUrl}
+              totalDuration={totalDuration}
+              narrationVolume={narrationVolume}
+              bgmVolume={bgmVolume}
+            />
           </div>
 
           {/* ─── Cut list (clickable) ─── */}
