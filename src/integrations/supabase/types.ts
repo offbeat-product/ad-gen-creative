@@ -76,9 +76,11 @@ export type Database = {
           project_id: string
           spot_job_ids: string[] | null
           status: string | null
+          storyboard_job_ids: string[]
           total_count: number
           updated_at: string | null
           with_na_script: boolean
+          with_storyboard_images: boolean
         }
         Insert: {
           appeal_axes_snapshot?: Json | null
@@ -93,9 +95,11 @@ export type Database = {
           project_id: string
           spot_job_ids?: string[] | null
           status?: string | null
+          storyboard_job_ids?: string[]
           total_count: number
           updated_at?: string | null
           with_na_script?: boolean
+          with_storyboard_images?: boolean
         }
         Update: {
           appeal_axes_snapshot?: Json | null
@@ -110,9 +114,11 @@ export type Database = {
           project_id?: string
           spot_job_ids?: string[] | null
           status?: string | null
+          storyboard_job_ids?: string[]
           total_count?: number
           updated_at?: string | null
           with_na_script?: boolean
+          with_storyboard_images?: boolean
         }
         Relationships: [
           {
@@ -3093,6 +3099,20 @@ export type Database = {
           p_product_name?: string
           p_project_id: string
           p_project_name?: string
+          p_spot_job_id: string
+        }
+        Returns: number
+      }
+      trigger_storyboard_image_generation: {
+        Args: {
+          p_appeal_axis?: string
+          p_client_name?: string
+          p_copy_text?: string
+          p_creative_style?: string
+          p_product_name?: string
+          p_project_id: string
+          p_project_name?: string
+          p_scenes: Json
           p_spot_job_id: string
         }
         Returns: number
