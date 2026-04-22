@@ -151,7 +151,7 @@ const VConTool = () => {
             return;
           }
 
-          const inputData: Record<string, unknown> = {
+          const inputData = {
             composition,
             composition_job_id: compositionJobId,
             duration_seconds: durationSeconds,
