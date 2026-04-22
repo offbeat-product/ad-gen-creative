@@ -597,6 +597,29 @@ const VConResult = ({
               </div>
             </div>
 
+            {/* BGM volume */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 ml-auto min-w-[180px]">
+                <Music
+                  className={cn(
+                    'h-3.5 w-3.5 shrink-0',
+                    bgmUrl ? 'text-secondary' : 'text-muted-foreground/40',
+                  )}
+                />
+                <Slider
+                  value={[bgmVolume * 100]}
+                  onValueChange={([v]) => setBgmVolume(v / 100)}
+                  max={100}
+                  step={5}
+                  disabled={!bgmUrl}
+                  className="flex-1"
+                />
+                <span className="text-xs text-muted-foreground tabular-nums w-9 text-right">
+                  {Math.round(bgmVolume * 100)}%
+                </span>
+              </div>
+            </div>
+
             {/* Narration source selector */}
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs text-muted-foreground shrink-0">🎙 ナレーション:</span>
@@ -623,11 +646,38 @@ const VConResult = ({
                 </Select>
               )}
             </div>
+
+            {/* BGM source selector */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-muted-foreground shrink-0">🎵 BGM:</span>
+              {bgmOptions.length === 0 ? (
+                <span className="text-xs text-muted-foreground italic">
+                  この案件ではまだBGMがアップロードされていません。BGM提案ツールの結果画面からアップロードできます。
+                </span>
+              ) : (
+                <Select value={selectedBgmAssetId} onValueChange={setSelectedBgmAssetId}>
+                  <SelectTrigger className="h-8 text-xs w-auto min-w-[260px]">
+                    <SelectValue placeholder="BGMを選択" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">（BGMなし）</SelectItem>
+                    {bgmOptions.map((opt) => (
+                      <SelectItem key={opt.asset_id} value={opt.asset_id}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
 
           {/* Hidden audio */}
           {narrationUrl && (
             <audio ref={narrationAudioRef} src={narrationUrl} preload="auto" />
+          )}
+          {bgmUrl && (
+            <audio ref={bgmAudioRef} src={bgmUrl} preload="auto" loop playsInline />
           )}
 
           {/* Action buttons */}
