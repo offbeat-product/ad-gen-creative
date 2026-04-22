@@ -2,10 +2,7 @@ import { useState } from 'react';
 import { Download, Loader2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
-import {
-  generateBulkBannerPptx,
-  downloadBulkBannerPptx,
-} from '@/lib/pptx/generate-bulk-banner-pptx';
+import { generateBulkBannerPptx } from '@/lib/pptx/generate-bulk-banner-pptx';
 import { generateBulkVideoPptx } from '@/lib/pptx/generate-bulk-video-pptx';
 
 const downloadBlob = (blob: Blob, filename: string) => {
@@ -62,15 +59,29 @@ const BulkCompositionDocxDownload = ({ batch, jobs, projectMeta }: Props) => {
       const baseName = sanitize(projectMeta.project_name || 'project');
 
       if (isBanner) {
+        // バナー: 訴求軸数を集計
+        const axesSet = new Set<string>();
+        for (const j of compositionJobs) {
+          const ax = (j.input_data as Record<string, unknown>)?.appeal_axis as string;
+          if (ax) axesSet.add(ax);
+        }
+        const appealAxesCount = Math.max(1, axesSet.size);
+        const copiesPerAxis = Math.max(
+          1,
+          Math.round(compositionJobs.length / appealAxesCount)
+        );
+
         const blob = await generateBulkBannerPptx({
           batch,
-          jobs: compositionJobs,
-          meta: projectMeta,
+          compositionJobs,
+          meta: {
+            ...projectMeta,
+            appeal_axes_count: appealAxesCount,
+            copies_per_axis: copiesPerAxis,
+            banner_type: 'デジタル静止画広告',
+          },
         });
-        downloadBulkBannerPptx(
-          blob,
-          `バナー構成案一括_${baseName}_${dateStr}.pptx`
-        );
+        downloadBlob(blob, `バナー構成案一括_${baseName}_${dateStr}.pptx`);
         toast.success('PowerPointファイルをダウンロードしました');
       } else {
         // 訴求軸数とコピー数を集計

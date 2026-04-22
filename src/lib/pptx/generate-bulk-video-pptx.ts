@@ -205,45 +205,40 @@ function addCompositionSlide(
   const slide = pres.addSlide();
   slide.background = { color: COLORS.bgWhite };
 
-  // ヘッダー: 左上タイトル(青縦バー + パターンA)
+  // ヘッダー: 左上タイトル(青縦バー + パターンA) - v4.1
   slide.addShape('rect', {
-    x: 0.5, y: 0.3, w: 0.08, h: 0.5,
+    x: 0.5, y: 0.4, w: 0.08, h: 0.5,
     fill: { color: COLORS.primaryBlue }, line: { type: 'none' },
   });
   slide.addText(comp.label, {
-    x: 0.65, y: 0.25, w: 4.0, h: 0.5,
+    x: 0.65, y: 0.35, w: 4.0, h: 0.5,
     fontSize: 20, bold: true, fontFace: FONT,
     color: COLORS.textBlack, valign: 'middle',
   });
   slide.addText(`動画尺 ${meta.duration_seconds}秒  /  全${comp.scenes.length}シーン`, {
-    x: 0.65, y: 0.7, w: 6.0, h: 0.3,
+    x: 0.65, y: 0.8, w: 6.0, h: 0.3,
     fontSize: 10, fontFace: FONT, color: COLORS.textGray,
     valign: 'middle',
   });
 
-  // 右上: ロゴ + パターン番号
+  // 右上: ロゴのみ(パターン番号削除) - v4.1
   if (logoBase64) {
-    const logoH = 0.4;
+    const logoH = 0.5;
     const logoW = logoH * LOGO_RATIO;
     slide.addImage({
       data: logoBase64,
-      x: SLIDE_W - logoW - 0.5, y: 0.25, w: logoW, h: logoH,
-    });
-    slide.addText(`${idx + 1} / ${total}`, {
-      x: SLIDE_W - logoW - 1.4, y: 0.3, w: 0.8, h: 0.4,
-      fontSize: 11, fontFace: FONT, color: COLORS.textGray,
-      align: 'right', valign: 'middle',
+      x: SLIDE_W - logoW - 0.5, y: 0.4, w: logoW, h: logoH,
     });
   }
 
   // 装飾ライン
   slide.addShape('rect', {
-    x: 0.5, y: 1.05, w: SLIDE_W - 1.0, h: 0.025,
+    x: 0.5, y: 1.15, w: SLIDE_W - 1.0, h: 0.025,
     fill: { color: COLORS.primaryBlue }, line: { type: 'none' },
   });
 
   // 訴求軸【タグ】+ 本文
-  const topY = 1.25;
+  const topY = 1.35;
   const labelW = 1.3;
   const appealH = (comp.appealAxis || '').length > 60 ? 0.6 : 0.45;
 
@@ -419,16 +414,11 @@ function addCompositionSlide(
     valign: 'top', align: 'left', margin: 8,
   });
 
-  // フッター
+  // フッター - v4.1: ページ番号削除
   slide.addText('©Off Beat Inc. All Rights Reserved.', {
     x: 0.5, y: SLIDE_H - 0.3, w: 5.0, h: 0.2,
     fontSize: 8, fontFace: FONT, color: COLORS.textGray,
     align: 'left', valign: 'middle',
-  });
-  slide.addText(`${pageNum}`, {
-    x: SLIDE_W - 0.8, y: SLIDE_H - 0.3, w: 0.3, h: 0.2,
-    fontSize: 9, fontFace: FONT, color: COLORS.textGray,
-    align: 'right', valign: 'middle',
   });
 }
 
@@ -444,43 +434,38 @@ async function addStoryboardVisualSlide(
   const slide = pres.addSlide();
   slide.background = { color: COLORS.bgWhite };
 
-  // ヘッダー
+  // ヘッダー - v4.1
   slide.addShape('rect', {
-    x: 0.5, y: 0.3, w: 0.08, h: 0.5,
+    x: 0.5, y: 0.4, w: 0.08, h: 0.5,
     fill: { color: COLORS.primaryBlue }, line: { type: 'none' },
   });
   slide.addText(comp.label, {
-    x: 0.65, y: 0.25, w: 4.0, h: 0.5,
+    x: 0.65, y: 0.35, w: 4.0, h: 0.5,
     fontSize: 20, bold: true, fontFace: FONT,
     color: COLORS.textBlack, valign: 'middle',
   });
   slide.addText(`絵コンテビジュアル  /  全${comp.scenes.length}カット`, {
-    x: 0.65, y: 0.7, w: 6.0, h: 0.3,
+    x: 0.65, y: 0.8, w: 6.0, h: 0.3,
     fontSize: 10, fontFace: FONT, color: COLORS.textGray,
     valign: 'middle',
   });
 
   if (logoBase64) {
-    const logoH = 0.4;
+    const logoH = 0.5;
     const logoW = logoH * LOGO_RATIO;
     slide.addImage({
       data: logoBase64,
-      x: SLIDE_W - logoW - 0.5, y: 0.25, w: logoW, h: logoH,
-    });
-    slide.addText(`${idx + 1} / ${total}`, {
-      x: SLIDE_W - logoW - 1.4, y: 0.3, w: 0.8, h: 0.4,
-      fontSize: 11, fontFace: FONT, color: COLORS.textGray,
-      align: 'right', valign: 'middle',
+      x: SLIDE_W - logoW - 0.5, y: 0.4, w: logoW, h: logoH,
     });
   }
 
   slide.addShape('rect', {
-    x: 0.5, y: 1.05, w: SLIDE_W - 1.0, h: 0.025,
+    x: 0.5, y: 1.15, w: SLIDE_W - 1.0, h: 0.025,
     fill: { color: COLORS.primaryBlue }, line: { type: 'none' },
   });
 
   // グリッド計算(シーン数に応じた最適配置)
-  const gridStartY = 1.3;
+  const gridStartY = 1.4;
   const gridEndY = SLIDE_H - 0.5;
   const availGridH = gridEndY - gridStartY;
   const gridW = SLIDE_W - 1.0;
@@ -597,16 +582,11 @@ async function addStoryboardVisualSlide(
     });
   }
 
-  // フッター
+  // フッター - v4.1: ページ番号削除
   slide.addText('©Off Beat Inc. All Rights Reserved.', {
     x: 0.5, y: SLIDE_H - 0.3, w: 5.0, h: 0.2,
     fontSize: 8, fontFace: FONT, color: COLORS.textGray,
     align: 'left', valign: 'middle',
-  });
-  slide.addText(`${pageNum}`, {
-    x: SLIDE_W - 0.8, y: SLIDE_H - 0.3, w: 0.3, h: 0.2,
-    fontSize: 9, fontFace: FONT, color: COLORS.textGray,
-    align: 'right', valign: 'middle',
   });
 }
 
