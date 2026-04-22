@@ -224,18 +224,61 @@ const AppealAxisSettings = ({
       </Alert>
 
       <div className="space-y-2">
-        <Label htmlFor="hint">ヒント (任意)</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="hint">ヒント (任意)</Label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleAutoGenerateBrief}
+            disabled={isGeneratingBrief || !projectId}
+            title="プロジェクト情報・オリエンシート等から広告コピーのブリーフを自動作成します"
+          >
+            {isGeneratingBrief ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                生成中...
+              </>
+            ) : (
+              <>
+                <Wand2 className="mr-2 h-4 w-4" />
+                AIで自動生成
+              </>
+            )}
+          </Button>
+        </div>
         <Textarea
           id="hint"
           value={hint}
           onChange={(e) => setHint(e.target.value)}
-          rows={3}
-          placeholder="特に意識してほしいターゲット・トーン・要素など"
+          rows={8}
+          className="font-mono text-sm"
+          placeholder="訴求軸・コピー生成のヒントや方向性(自動生成ボタンで一括入力も可能)"
         />
         <p className="text-xs text-muted-foreground">
           ブリーフに書き切れない細かい指示を追加で書けます
         </p>
       </div>
+
+      {/* 上書き確認ダイアログ */}
+      <AlertDialog open={showOverwriteDialog} onOpenChange={setShowOverwriteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>既存のhintを上書きしますか?</AlertDialogTitle>
+            <AlertDialogDescription>
+              自動生成したブリーフが現在のhintを上書きします。この操作は元に戻せません。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowOverwriteDialog(false)}>
+              キャンセル
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={executeBriefAutogen}>
+              上書きする
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {(!briefData.ad_objective || !briefData.target_audience) && (
         <Alert variant="destructive">
