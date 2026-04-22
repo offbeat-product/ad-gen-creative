@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Loader2, Rocket, Film, Image as ImageIcon, Clock, AlertCircle } from 'lucide-react';
+import { Loader2, Rocket, Film, Image as ImageIcon, Clock, AlertCircle, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { useBulkComposition } from '@/hooks/useBulkComposition';
 import BulkCompositionProgress from './BulkCompositionProgress';
@@ -36,9 +36,6 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
   const bulk = useBulkComposition(projectId);
 
   const [allCopies, setAllCopies] = useState<GeneratedCopy[]>([]);
-  const [selectedPatternIds, setSelectedPatternIds] = useState<Set<string>>(
-    new Set()
-  );
   const [duration, setDuration] = useState<number>(30);
   const [creativeType, setCreativeType] = useState<'video' | 'banner'>('video');
   const [loading, setLoading] = useState(true);
@@ -65,9 +62,7 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
       const output = (latestJob?.output_data ?? {}) as {
         copies?: GeneratedCopy[];
       };
-      const copies = output.copies ?? [];
-      setAllCopies(copies);
-      setSelectedPatternIds(new Set(copies.map((c) => c.pattern_id)));
+      setAllCopies(output.copies ?? []);
       setLoading(false);
     })();
     return () => {
@@ -90,10 +85,27 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
     }));
   }, [context?.project]);
 
-  const selectedCopies = useMemo(
-    () => allCopies.filter((c) => selectedPatternIds.has(c.pattern_id)),
-    [allCopies, selectedPatternIds]
-  );
+  // 訴求軸ごとにグルーピング
+  const groupedByAxis = useMemo(() => {
+    const groups = new Map<
+      number,
+      { axis_index: number; axis_text: string; copies: GeneratedCopy[] }
+    >();
+    for (const copy of allCopies) {
+      const idx = copy.appeal_axis_index;
+      if (!groups.has(idx)) {
+        groups.set(idx, {
+          axis_index: idx,
+          axis_text: copy.appeal_axis_text,
+          copies: [],
+        });
+      }
+      groups.get(idx)!.copies.push(copy);
+    }
+    return Array.from(groups.values()).sort((a, b) => a.axis_index - b.axis_index);
+  }, [allCopies]);
+
+  const totalCount = allCopies.length;
 
   const projectMeta = {
     client_name: context?.project.product.client.name ?? '',
@@ -102,14 +114,14 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
   };
 
   const handleBulkGenerate = async () => {
-    if (selectedCopies.length === 0) {
-      toast.error('少なくとも1つのコピーを選択してください');
+    if (totalCount === 0) {
+      toast.error('生成対象のコピーがありません');
       return;
     }
 
-    const estimatedMinutes = Math.ceil((selectedCopies.length * 30) / 60);
+    const estimatedMinutes = Math.max(1, Math.ceil((totalCount * 30) / 60));
     const ok = window.confirm(
-      `${selectedCopies.length}件の${creativeType === 'banner' ? 'バナー' : ''}構成案を一括生成します。\n完了までおおよそ${estimatedMinutes}分かかります。\n続行しますか?`
+      `${totalCount}件の${creativeType === 'banner' ? 'バナー' : ''}構成案を一括生成します。\n完了までおおよそ${estimatedMinutes}分かかります。\n続行しますか?`
     );
     if (!ok) return;
 
@@ -120,7 +132,7 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
         )
       ) ?? [];
 
-    const appealAxesCopies: AppealAxisCopy[] = selectedCopies.map((c) => ({
+    const appealAxesCopies: AppealAxisCopy[] = allCopies.map((c) => ({
       appeal_axis: c.appeal_axis_text,
       copy_text: c.copy_text,
       pattern_id: c.pattern_id,
@@ -146,7 +158,7 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
         })),
         correction_patterns: context?.corrections ?? [],
       });
-      toast.success(`${selectedCopies.length}件の構成案を生成開始しました`);
+      toast.success(`${totalCount}件の構成案を生成開始しました`);
     } catch (err) {
       toast.error(`エラー: ${(err as Error).message}`);
     }
@@ -160,10 +172,7 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
         <h2 className="text-xl font-bold font-display tracking-tight">
           🚀 構成案 一括生成
         </h2>
-        <BulkCompositionProgress
-          batch={bulk.currentBatch}
-          jobs={bulk.jobs}
-        />
+        <BulkCompositionProgress batch={bulk.currentBatch} jobs={bulk.jobs} />
         {bulk.isAllFinished && completedJobs.length > 0 && (
           <BulkCompositionDocxDownload
             batch={bulk.currentBatch}
@@ -209,73 +218,60 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
         </Alert>
       ) : (
         <>
-          {/* Copies list */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-base">
-                生成対象コピー ({selectedCopies.length} / {allCopies.length})
-              </Label>
-              <div className="flex items-center gap-1 text-xs">
-                <button
-                  type="button"
-                  className="text-secondary hover:underline"
-                  onClick={() =>
-                    setSelectedPatternIds(
-                      new Set(allCopies.map((c) => c.pattern_id))
-                    )
-                  }
-                >
-                  全選択
-                </button>
-                <span className="text-muted-foreground">|</span>
-                <button
-                  type="button"
-                  className="text-secondary hover:underline"
-                  onClick={() => setSelectedPatternIds(new Set())}
-                >
-                  全解除
-                </button>
-              </div>
+          {/* 引き継ぎカード: 訴求軸ごとに階層表示 */}
+          <div className="rounded-xl border bg-card p-5 space-y-4">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Sparkles className="h-4 w-4 text-secondary" />
+              <h3 className="font-semibold text-sm">
+                訴求軸・コピー生成ツールから引き継ぎ
+              </h3>
+              <Badge variant="secondary" className="ml-auto">
+                全{totalCount}パターンを一括生成
+              </Badge>
             </div>
 
-            <div className="space-y-2 max-h-96 overflow-y-auto rounded-xl border bg-card p-2">
-              {allCopies.map((copy) => {
-                const checked = selectedPatternIds.has(copy.pattern_id);
+            <div className="space-y-4">
+              {groupedByAxis.map((group, axisIdx) => {
+                const axisLabel = String.fromCharCode(65 + axisIdx);
                 return (
-                  <label
-                    key={copy.pattern_id}
-                    htmlFor={`copy-${copy.pattern_id}`}
-                    className={cn(
-                      'flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all',
-                      checked
-                        ? 'border-secondary bg-secondary-wash/30'
-                        : 'border-border hover:border-secondary/50'
-                    )}
+                  <div
+                    key={group.axis_index}
+                    className="rounded-lg border bg-background overflow-hidden"
                   >
-                    <Checkbox
-                      id={`copy-${copy.pattern_id}`}
-                      checked={checked}
-                      onCheckedChange={(v) => {
-                        const next = new Set(selectedPatternIds);
-                        if (v) next.add(copy.pattern_id);
-                        else next.delete(copy.pattern_id);
-                        setSelectedPatternIds(next);
-                      }}
-                      className="mt-0.5"
-                    />
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <div className="text-xs font-semibold text-secondary uppercase tracking-wide">
-                        パターン {copy.pattern_id} / 訴求軸{' '}
-                        {copy.appeal_axis_index}
-                      </div>
-                      <div className="text-xs text-muted-foreground line-clamp-1">
-                        {copy.appeal_axis_text}
-                      </div>
-                      <div className="text-sm font-medium line-clamp-2">
-                        「{copy.copy_text}」
-                      </div>
+                    <div className="bg-muted px-4 py-2.5 flex items-start gap-2">
+                      <Badge variant="outline" className="shrink-0 mt-0.5">
+                        訴求軸{axisLabel}
+                      </Badge>
+                      <span className="text-sm font-medium leading-relaxed">
+                        {group.axis_text}
+                      </span>
                     </div>
-                  </label>
+                    <div className="divide-y">
+                      {group.copies.map((copy, copyIdx) => (
+                        <div
+                          key={copy.pattern_id}
+                          className="px-4 py-2.5 flex items-start gap-2"
+                        >
+                          <span className="text-secondary text-sm font-bold shrink-0">
+                            ▸
+                          </span>
+                          <div className="min-w-0 flex-1 space-y-0.5">
+                            <div className="text-xs text-muted-foreground">
+                              コピー{copyIdx + 1}
+                            </div>
+                            <div className="text-sm leading-relaxed">
+                              「{copy.copy_text}」
+                            </div>
+                            {copy.hook && (
+                              <div className="text-xs text-muted-foreground">
+                                💡 狙い: {copy.hook}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 );
               })}
             </div>
@@ -409,7 +405,7 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
           {/* Generate button */}
           <Button
             onClick={handleBulkGenerate}
-            disabled={bulk.isStarting || selectedCopies.length === 0}
+            disabled={bulk.isStarting || totalCount === 0}
             className="w-full h-12"
             size="lg"
             variant="brand"
@@ -421,8 +417,7 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
             ) : (
               <>
                 <Rocket className="h-4 w-4 mr-2" />
-                選択した{selectedCopies.length}件の
-                {creativeType === 'banner' ? 'バナー' : ''}構成案を一括生成
+                構成案を生成({totalCount}パターン一括)
               </>
             )}
           </Button>
@@ -451,12 +446,7 @@ function BriefField({
 }: BriefFieldProps) {
   return (
     <div className="space-y-1">
-      <Label
-        className={cn(
-          'text-xs',
-          highlight && 'font-bold text-secondary'
-        )}
-      >
+      <Label className={cn('text-xs', highlight && 'font-bold text-secondary')}>
         {label}
         {highlight && ' ⭐'}
       </Label>
