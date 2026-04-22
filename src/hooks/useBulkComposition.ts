@@ -74,6 +74,8 @@ export function useBulkComposition(projectId: string) {
               copyright_text: options.copyright_text,
               rules: options.rules ?? [],
               correction_patterns: options.correction_patterns ?? [],
+              with_na_script: options.with_na_script ?? false,
+              with_storyboard_images: options.with_storyboard_images ?? false,
             },
           }
         );
