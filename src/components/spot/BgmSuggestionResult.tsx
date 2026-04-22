@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useRef, useState } from 'react';
 import {
   CheckCircle2,
   AlertCircle,
@@ -7,12 +8,18 @@ import {
   ArrowRight,
   Music,
   ExternalLink,
+  Upload,
+  Play,
+  Pause,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 import type { SpotWizardState } from '@/hooks/useSpotWizard';
 import type { useProjectContext } from '@/hooks/useProjectContext';
 
@@ -28,6 +35,10 @@ export interface BgmAsset {
   id: string;
   asset_type: string;
   metadata: Record<string, any> | null;
+  file_url?: string;
+  file_name?: string | null;
+  file_size_bytes?: number | null;
+  created_at?: string | null;
 }
 
 export interface BgmSuggestion {
@@ -55,13 +66,33 @@ interface Props {
   durationSeconds: 15 | 30 | 60;
   creativeType: 'video' | 'banner';
   onStartNew: () => void;
+  onAssetsChanged?: () => void;
 }
+
+const ALLOWED_TYPES = [
+  'audio/mpeg',
+  'audio/mp3',
+  'audio/wav',
+  'audio/wave',
+  'audio/x-wav',
+  'audio/x-m4a',
+  'audio/m4a',
+  'audio/mp4',
+];
+const MAX_SIZE = 20 * 1024 * 1024;
 
 const formatDateTime = (iso?: string | null): string => {
   if (!iso) return '';
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+const formatFileSize = (bytes?: number | null) => {
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 };
 
 const BgmSuggestionResult = ({
@@ -77,9 +108,16 @@ const BgmSuggestionResult = ({
   durationSeconds,
   creativeType,
   onStartNew,
+  onAssetsChanged,
 }: Props) => {
   const navigate = useNavigate();
   const isRunning = job?.status === 'pending' || job?.status === 'running';
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [previewingId, setPreviewingId] = useState<string | null>(null);
 
   if (!jobId || !job) {
     return (
@@ -89,10 +127,13 @@ const BgmSuggestionResult = ({
     );
   }
 
+  const suggestionAsset = assets.find((a) => a.asset_type === 'bgm_suggestion');
   const suggestions: BgmSuggestion[] =
-    (assets[0]?.metadata as any)?.bgm_suggestions ??
+    (suggestionAsset?.metadata as any)?.bgm_suggestions ??
     (job?.output_data as any)?.bgm_suggestions ??
     [];
+
+  const uploadedBgms = assets.filter((a) => a.asset_type === 'bgm_upload');
 
   const statusBadge = () => {
     if (job.status === 'completed') {
@@ -135,10 +176,110 @@ const BgmSuggestionResult = ({
         project_id: state.projectId,
         client_id: state.clientId,
         product_id: state.productId,
-      })
+      }),
     );
     toast.success('全コンテンツをVコン生成に引き継ぎます');
     navigate('/tools/vcon');
+  };
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const file = files[0];
+
+    if (file.size > MAX_SIZE) {
+      toast.error('BGMファイルは20MB以下にしてください');
+      return;
+    }
+    if (!ALLOWED_TYPES.includes(file.type) && !/\.(mp3|wav|m4a)$/i.test(file.name)) {
+      toast.error('MP3, WAV, M4A形式のみ対応しています');
+      return;
+    }
+    if (!state.projectId) {
+      toast.error('プロジェクトが未選択です');
+      return;
+    }
+
+    setIsUploading(true);
+    const timestamp = Date.now();
+    const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const storagePath = `bgm/${state.projectId}/${timestamp}_${sanitizedName}`;
+
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from('audios')
+        .upload(storagePath, file, { upsert: false, contentType: file.type || undefined });
+      if (uploadError) throw uploadError;
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from('audios').getPublicUrl(storagePath);
+
+      const { error: insertError } = await supabase.from('gen_spot_assets').insert({
+        job_id: jobId,
+        asset_type: 'bgm_upload',
+        file_url: publicUrl,
+        file_name: file.name,
+        file_size_bytes: file.size,
+        is_selected: true,
+        metadata: {
+          source: 'manual_upload',
+          storage_path: storagePath,
+          uploaded_at: new Date().toISOString(),
+        },
+      });
+
+      if (insertError) {
+        await supabase.storage.from('audios').remove([storagePath]);
+        throw insertError;
+      }
+
+      toast.success('BGMをアップロードしました');
+      onAssetsChanged?.();
+    } catch (e: any) {
+      toast.error(`アップロード失敗: ${e?.message ?? 'unknown error'}`);
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDelete = async (bgm: BgmAsset) => {
+    if (!confirm(`「${bgm.file_name ?? 'BGM'}」を削除しますか？`)) return;
+    try {
+      const storagePath = (bgm.metadata as any)?.storage_path;
+      if (storagePath) {
+        await supabase.storage.from('audios').remove([storagePath]);
+      }
+      const { error } = await supabase.from('gen_spot_assets').delete().eq('id', bgm.id);
+      if (error) throw error;
+      toast.success('BGMを削除しました');
+      if (previewingId === bgm.id) {
+        previewAudioRef.current?.pause();
+        setPreviewingId(null);
+      }
+      onAssetsChanged?.();
+    } catch (e: any) {
+      toast.error(`削除失敗: ${e?.message ?? 'unknown'}`);
+    }
+  };
+
+  const handlePreview = (bgm: BgmAsset) => {
+    if (!bgm.file_url) return;
+    if (previewingId === bgm.id) {
+      previewAudioRef.current?.pause();
+      setPreviewingId(null);
+      return;
+    }
+    if (!previewAudioRef.current) {
+      previewAudioRef.current = new Audio();
+      previewAudioRef.current.addEventListener('ended', () => setPreviewingId(null));
+    }
+    previewAudioRef.current.src = bgm.file_url;
+    previewAudioRef.current.play().catch((err) => {
+      toast.error(`再生失敗: ${err?.message ?? 'unknown'}`);
+      setPreviewingId(null);
+    });
+    setPreviewingId(bgm.id);
   };
 
   return (
@@ -153,9 +294,7 @@ const BgmSuggestionResult = ({
             </span>
           )}
           {suggestions.length > 0 && (
-            <span className="text-xs text-muted-foreground">
-              候補 {suggestions.length}件
-            </span>
+            <span className="text-xs text-muted-foreground">候補 {suggestions.length}件</span>
           )}
         </div>
         <div className="flex flex-wrap gap-2 overflow-x-auto">
@@ -180,18 +319,11 @@ const BgmSuggestionResult = ({
             </div>
             <div className="text-center space-y-2 max-w-md">
               <div className="text-base font-semibold">
-                {job.status === 'pending'
-                  ? '生成準備中...'
-                  : '🎵 BGM候補を生成しています...'}
+                {job.status === 'pending' ? '生成準備中...' : '🎵 BGM候補を生成しています...'}
               </div>
-              <div className="text-sm text-muted-foreground">
-                30秒ほどお待ちください。
-              </div>
+              <div className="text-sm text-muted-foreground">30秒ほどお待ちください。</div>
             </div>
-            <Progress
-              value={job.status === 'running' ? 60 : 20}
-              className="w-full max-w-md"
-            />
+            <Progress value={job.status === 'running' ? 60 : 20} className="w-full max-w-md" />
           </div>
         </div>
       )}
@@ -255,9 +387,7 @@ const BgmSuggestionResult = ({
                 )}
               </div>
 
-              {s.description && (
-                <div className="text-sm font-medium">「{s.description}」</div>
-              )}
+              {s.description && <div className="text-sm font-medium">「{s.description}」</div>}
 
               {s.reason && (
                 <div className="text-xs text-muted-foreground">
@@ -279,6 +409,115 @@ const BgmSuggestionResult = ({
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* BGMアップロードエリア */}
+      {job.status === 'completed' && (
+        <div className="rounded-xl border bg-card p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Music className="h-4 w-4 text-secondary" />
+            <h3 className="text-sm font-semibold">この案件用のBGMをアップロード</h3>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Envato Elements 等で入手したBGMファイルをアップロードすると、Vコンプレビュー画面で
+            ナレーションと同期再生できるようになります。
+          </p>
+
+          <div
+            className={cn(
+              'rounded-lg border-2 border-dashed p-6 text-center cursor-pointer transition-colors',
+              isDragging ? 'border-primary bg-primary-wash' : 'border-border hover:bg-muted/40',
+              isUploading && 'opacity-60 pointer-events-none',
+            )}
+            onClick={() => fileInputRef.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDragging(true);
+            }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setIsDragging(false);
+              handleFiles(e.dataTransfer.files);
+            }}
+          >
+            {isUploading ? (
+              <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                アップロード中...
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-1.5 text-sm text-muted-foreground">
+                <Upload className="h-5 w-5" />
+                <div>
+                  <span className="font-medium text-foreground">クリックして選択</span> または
+                  ドラッグ&ドロップ
+                </div>
+                <div className="text-xs">対応形式: MP3 / WAV / M4A (最大20MB)</div>
+              </div>
+            )}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/x-m4a,audio/m4a,audio/mp4,.mp3,.wav,.m4a"
+              className="hidden"
+              onChange={(e) => handleFiles(e.target.files)}
+            />
+          </div>
+
+          {/* アップロード済み一覧 */}
+          {uploadedBgms.length > 0 && (
+            <div className="space-y-1.5 pt-1">
+              <div className="text-xs font-semibold text-muted-foreground">
+                アップロード済みBGM ({uploadedBgms.length})
+              </div>
+              {uploadedBgms.map((bgm) => {
+                const isPreviewing = previewingId === bgm.id;
+                return (
+                  <div
+                    key={bgm.id}
+                    className="flex items-center gap-2 p-2 border rounded-md bg-muted/30"
+                  >
+                    <Music className="h-4 w-4 text-secondary shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">
+                        {bgm.file_name ?? 'unnamed'}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">
+                        {formatFileSize(bgm.file_size_bytes)}
+                        {bgm.created_at && ` · ${formatDateTime(bgm.created_at)}`}
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handlePreview(bgm)}
+                      className="h-8"
+                    >
+                      {isPreviewing ? (
+                        <>
+                          <Pause className="h-3.5 w-3.5 mr-1" /> 停止
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-3.5 w-3.5 mr-1" /> 試聴
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(bgm)}
+                      className="h-8 text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
