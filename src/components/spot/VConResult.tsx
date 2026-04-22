@@ -290,9 +290,6 @@ const VConResult = ({
         });
 
       setNarrationOptions(opts);
-      if (opts.length > 0 && selectedNarrationJobId === 'none') {
-        setSelectedNarrationJobId(opts[0].job_id);
-      }
     })();
     return () => {
       cancelled = true;
@@ -345,9 +342,13 @@ const VConResult = ({
     };
   }, [projectId]);
 
-  /* ─── Auto-select narration/BGM from job.input_data on first load ─── */
-  const presetNarrationUrl = (job?.input_data as any)?.narration_audio_url as string | undefined;
-  const presetBgmUrl = (job?.input_data as any)?.bgm_url as string | undefined;
+  /* ─── Auto-select narration/BGM from job output_data (or input_data fallback) ─── */
+  const presetNarrationUrl =
+    ((job?.output_data as any)?.narration_audio_url as string | undefined) ??
+    ((job?.input_data as any)?.narration_audio_url as string | undefined);
+  const presetBgmUrl =
+    ((job?.output_data as any)?.bgm_url as string | undefined) ??
+    ((job?.input_data as any)?.bgm_url as string | undefined);
   const narrationAutoApplied = useRef(false);
   const bgmAutoApplied = useRef(false);
 
@@ -358,8 +359,7 @@ const VConResult = ({
     if (match) {
       setSelectedNarrationJobId(match.job_id);
       narrationAutoApplied.current = true;
-    } else if (narrationOptions.length > 0 || presetNarrationUrl) {
-      // Synthesize a one-off option for uploaded files not present in narration_audio jobs
+    } else {
       const synth: NarrationOption = {
         job_id: '__preset__',
         audio_url: presetNarrationUrl,
@@ -700,55 +700,24 @@ const VConResult = ({
               </div>
             </div>
 
-            {/* Narration source selector */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-muted-foreground shrink-0">🎙 ナレーション:</span>
-              {narrationOptions.length === 0 ? (
-                <span className="text-xs text-muted-foreground italic">
-                  この案件ではまだナレーション音声が生成されていません。先にナレーション音声生成ツールで作成してください。
-                </span>
-              ) : (
-                <Select
-                  value={selectedNarrationJobId}
-                  onValueChange={setSelectedNarrationJobId}
-                >
-                  <SelectTrigger className="h-8 text-xs w-auto min-w-[260px]">
-                    <SelectValue placeholder="ナレーション音声を選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">（ナレーションなし）</SelectItem>
-                    {narrationOptions.map((opt) => (
-                      <SelectItem key={opt.job_id} value={opt.job_id}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-
-            {/* BGM source selector */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-muted-foreground shrink-0">🎵 BGM:</span>
-              {bgmOptions.length === 0 ? (
-                <span className="text-xs text-muted-foreground italic">
-                  この案件ではまだBGMがアップロードされていません。BGM提案ツールの結果画面からアップロードできます。
-                </span>
-              ) : (
-                <Select value={selectedBgmAssetId} onValueChange={setSelectedBgmAssetId}>
-                  <SelectTrigger className="h-8 text-xs w-auto min-w-[260px]">
-                    <SelectValue placeholder="BGMを選択" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">（BGMなし）</SelectItem>
-                    {bgmOptions.map((opt) => (
-                      <SelectItem key={opt.asset_id} value={opt.asset_id}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+            {/* Fixed status display (Vコン is a frozen design doc) */}
+            <div className="text-xs text-muted-foreground space-y-1 pt-1">
+              <div>
+                🎙 ナレーション:{' '}
+                {narrationUrl ? (
+                  <span className="text-foreground font-medium">設定済み</span>
+                ) : (
+                  <span className="italic">なし</span>
+                )}
+              </div>
+              <div>
+                🎵 BGM:{' '}
+                {bgmUrl ? (
+                  <span className="text-foreground font-medium">設定済み</span>
+                ) : (
+                  <span className="italic">なし</span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -790,7 +759,6 @@ const VConResult = ({
                     <TableHead className="w-16 text-center">秒</TableHead>
                     <TableHead className="w-24">セクション</TableHead>
                     <TableHead>テロップ</TableHead>
-                    <TableHead>ナレーション</TableHead>
                     <TableHead className="w-8"></TableHead>
                   </TableRow>
                 </TableHeader>
@@ -849,17 +817,6 @@ const VConResult = ({
                               </Badge>
                             )}
                           </TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {cut.narration ? (
-                              cut.narration.length > 30 ? (
-                                cut.narration.slice(0, 30) + '...'
-                              ) : (
-                                cut.narration
-                              )
-                            ) : (
-                              <span className="text-muted-foreground/60">(なし)</span>
-                            )}
-                          </TableCell>
                           <TableCell
                             className="text-center"
                             onClick={(e) => {
@@ -876,7 +833,7 @@ const VConResult = ({
                         </TableRow>
                         {expanded && (
                           <TableRow key={`detail-${cut.cut_number}`} className="bg-muted/30">
-                            <TableCell colSpan={8} className="p-3">
+                            <TableCell colSpan={7} className="p-3">
                               <div className="grid md:grid-cols-2 gap-3 text-xs">
                                 {cut.visual_direction && (
                                   <div>

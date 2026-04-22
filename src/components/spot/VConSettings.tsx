@@ -392,6 +392,16 @@ const VConSettings = ({
             )}
           </div>
 
+          {/* preview audio for selected existing narration */}
+          {narrationMode === 'existing' && narrationAudioUrl && (
+            <audio
+              key={narrationAudioUrl}
+              src={narrationAudioUrl}
+              controls
+              className="ml-6 w-[calc(100%-1.5rem)] h-9"
+            />
+          )}
+
           {/* upload */}
           <div className="space-y-2">
             <Label className="flex items-center gap-2 cursor-pointer text-sm">
@@ -445,6 +455,16 @@ const VConSettings = ({
             )}
           </div>
 
+          {/* preview audio for uploaded narration */}
+          {narrationMode === 'upload' && uploadedNarration && (
+            <audio
+              key={uploadedNarration.url}
+              src={uploadedNarration.url}
+              controls
+              className="ml-6 w-[calc(100%-1.5rem)] h-9"
+            />
+          )}
+
           {/* none */}
           <Label className="flex items-center gap-2 cursor-pointer text-sm">
             <RadioGroupItem value="none" />
@@ -460,36 +480,10 @@ const VConSettings = ({
         </Label>
 
         <RadioGroup
-          value={bgmMode}
+          value={bgmMode === 'existing' ? 'upload' : bgmMode}
           onValueChange={(v) => setBgmMode(v as AudioSourceMode)}
           className="space-y-3"
         >
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2 cursor-pointer text-sm">
-              <RadioGroupItem value="existing" disabled={bgmOptions.length === 0} />
-              アップロード済みBGMから選択
-              {bgmOptions.length === 0 && (
-                <span className="text-[11px] text-muted-foreground">
-                  (BGM提案ツールでアップロード可能)
-                </span>
-              )}
-            </Label>
-            {bgmMode === 'existing' && bgmOptions.length > 0 && (
-              <Select value={selectedBgmAssetId} onValueChange={setSelectedBgmAssetId}>
-                <SelectTrigger className="ml-6 w-[calc(100%-1.5rem)]">
-                  <SelectValue placeholder="BGMを選択" />
-                </SelectTrigger>
-                <SelectContent>
-                  {bgmOptions.map((opt) => (
-                    <SelectItem key={opt.asset_id} value={opt.asset_id}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
-
           <div className="space-y-2">
             <Label className="flex items-center gap-2 cursor-pointer text-sm">
               <RadioGroupItem value="upload" />
@@ -538,6 +532,14 @@ const VConSettings = ({
                     e.target.value = '';
                   }}
                 />
+                {uploadedBgm && (
+                  <audio
+                    key={uploadedBgm.url}
+                    src={uploadedBgm.url}
+                    controls
+                    className="w-full h-9"
+                  />
+                )}
               </div>
             )}
           </div>
@@ -548,6 +550,8 @@ const VConSettings = ({
           </Label>
         </RadioGroup>
       </div>
+
+      {/* (BGM section was rendered above) */}
 
       {/* === 実行 === */}
       <Button
