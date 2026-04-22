@@ -9,6 +9,9 @@ import CompositionResult, {
   type SpotJob,
   type SpotAsset,
 } from '@/components/spot/CompositionResult';
+import BulkCompositionPanel from '@/components/spot/BulkCompositionPanel';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Rocket, Wand2 } from 'lucide-react';
 
 const N8N_WEBHOOK_URL = 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-spot-composition';
 const TOOL_TYPE = 'composition';
@@ -202,20 +205,48 @@ const CompositionTool = () => {
         };
 
         return (
-          <CompositionSettings
-            context={context}
-            appealAxis={appealAxis}
-            setAppealAxis={setAppealAxis}
-            copyText={copyText}
-            setCopyText={setCopyText}
-            duration={duration}
-            setDuration={setDuration}
-            creativeType={creativeType}
-            setCreativeType={setCreativeType}
-            seedInfo={seedInfo}
-            onGenerate={handleGenerate}
-            isRunning={isRunning}
-          />
+          <Tabs defaultValue="individual" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-2 h-auto">
+              <TabsTrigger value="individual" className="gap-2 py-2.5">
+                <Wand2 className="h-4 w-4" />
+                個別生成
+              </TabsTrigger>
+              <TabsTrigger value="bulk" className="gap-2 py-2.5">
+                <Rocket className="h-4 w-4" />
+                🚀 一括生成
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="individual" className="mt-0">
+              <CompositionSettings
+                context={context}
+                appealAxis={appealAxis}
+                setAppealAxis={setAppealAxis}
+                copyText={copyText}
+                setCopyText={setCopyText}
+                duration={duration}
+                setDuration={setDuration}
+                creativeType={creativeType}
+                setCreativeType={setCreativeType}
+                seedInfo={seedInfo}
+                onGenerate={handleGenerate}
+                isRunning={isRunning}
+              />
+            </TabsContent>
+
+            <TabsContent value="bulk" className="mt-0">
+              {state.projectId ? (
+                <BulkCompositionPanel
+                  projectId={state.projectId}
+                  context={context}
+                />
+              ) : (
+                <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">
+                  案件を選択してください
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         );
       }}
       renderResult={({ context }) => (

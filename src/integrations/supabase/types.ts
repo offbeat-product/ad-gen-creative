@@ -62,6 +62,62 @@ export type Database = {
         }
         Relationships: []
       }
+      bulk_composition_batches: {
+        Row: {
+          appeal_axes_snapshot: Json | null
+          completed_at: string | null
+          completed_count: number | null
+          created_at: string | null
+          created_by: string | null
+          duration_seconds: number | null
+          failed_count: number | null
+          id: string
+          project_id: string
+          spot_job_ids: string[] | null
+          status: string | null
+          total_count: number
+          updated_at: string | null
+        }
+        Insert: {
+          appeal_axes_snapshot?: Json | null
+          completed_at?: string | null
+          completed_count?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          duration_seconds?: number | null
+          failed_count?: number | null
+          id?: string
+          project_id: string
+          spot_job_ids?: string[] | null
+          status?: string | null
+          total_count: number
+          updated_at?: string | null
+        }
+        Update: {
+          appeal_axes_snapshot?: Json | null
+          completed_at?: string | null
+          completed_count?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          duration_seconds?: number | null
+          failed_count?: number | null
+          id?: string
+          project_id?: string
+          spot_job_ids?: string[] | null
+          status?: string | null
+          total_count?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bulk_composition_batches_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       check_feedback: {
         Row: {
           ai_judgment: string
@@ -1686,6 +1742,7 @@ export type Database = {
           ng_words: string[] | null
           note: string | null
           project_id: string
+          reference_banner_urls: string[] | null
           reference_creatives: string | null
           source: string
           target_audience: string | null
@@ -1705,6 +1762,7 @@ export type Database = {
           ng_words?: string[] | null
           note?: string | null
           project_id: string
+          reference_banner_urls?: string[] | null
           reference_creatives?: string | null
           source?: string
           target_audience?: string | null
@@ -1724,6 +1782,7 @@ export type Database = {
           ng_words?: string[] | null
           note?: string | null
           project_id?: string
+          reference_banner_urls?: string[] | null
           reference_creatives?: string | null
           source?: string
           target_audience?: string | null
@@ -2025,6 +2084,7 @@ export type Database = {
           product_id: string | null
           production_pattern: string | null
           project_code: string | null
+          reference_banner_urls: string[] | null
           reference_creatives: string | null
           schedule_business_days: number | null
           sort_order: number | null
@@ -2061,6 +2121,7 @@ export type Database = {
           product_id?: string | null
           production_pattern?: string | null
           project_code?: string | null
+          reference_banner_urls?: string[] | null
           reference_creatives?: string | null
           schedule_business_days?: number | null
           sort_order?: number | null
@@ -2097,6 +2158,7 @@ export type Database = {
           product_id?: string | null
           production_pattern?: string | null
           project_code?: string | null
+          reference_banner_urls?: string[] | null
           reference_creatives?: string | null
           schedule_business_days?: number | null
           sort_order?: number | null
