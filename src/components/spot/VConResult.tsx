@@ -59,6 +59,7 @@ export interface SpotJob {
   status: string | null;
   error_message: string | null;
   output_data: Record<string, unknown> | null;
+  input_data?: Record<string, unknown> | null;
   created_at?: string | null;
   project_id?: string | null;
 }
@@ -107,7 +108,17 @@ const formatTime = (s: number) => {
 };
 
 /* ─── Vcon Player Screen ─── */
-const VconScreen = ({ cut, visible }: { cut: VconCut | null; visible: boolean }) => {
+const VconScreen = ({
+  cut,
+  visible,
+  isPlaying,
+  onToggle,
+}: {
+  cut: VconCut | null;
+  visible: boolean;
+  isPlaying: boolean;
+  onToggle: () => void;
+}) => {
   const fontSize =
     cut?.text_size === 'large'
       ? 'clamp(1.5rem, 5vw, 2.5rem)'
@@ -119,10 +130,20 @@ const VconScreen = ({ cut, visible }: { cut: VconCut | null; visible: boolean })
 
   return (
     <div
-      className="relative w-full rounded-xl overflow-hidden bg-black"
+      role="button"
+      tabIndex={0}
+      aria-label={isPlaying ? '一時停止' : '再生'}
+      onClick={onToggle}
+      onKeyDown={(e) => {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          onToggle();
+        }
+      }}
+      className="relative w-full rounded-xl overflow-hidden bg-black cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       style={{ aspectRatio: '16/9' }}
     >
-      {cut && visible ? (
+      {cut && visible && (
         <div
           key={cut.cut_number}
           className={cn(
@@ -141,7 +162,7 @@ const VconScreen = ({ cut, visible }: { cut: VconCut | null; visible: boolean })
             {cut.telop}
           </p>
           {cut.annotations && cut.annotations.length > 0 && (
-            <div className="absolute bottom-3 left-4 space-y-0.5">
+            <div className="absolute bottom-3 left-4 space-y-0.5 pointer-events-none">
               {cut.annotations.map((a, i) => (
                 <p key={i} className="text-[11px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
                   {a}
@@ -150,9 +171,12 @@ const VconScreen = ({ cut, visible }: { cut: VconCut | null; visible: boolean })
             </div>
           )}
         </div>
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Play className="h-12 w-12" style={{ color: 'rgba(255,255,255,0.25)' }} />
+      )}
+      {!isPlaying && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+            <Play className="h-8 w-8 text-white ml-1" />
+          </div>
         </div>
       )}
     </div>
@@ -320,6 +344,57 @@ const VConResult = ({
       cancelled = true;
     };
   }, [projectId]);
+
+  /* ─── Auto-select narration/BGM from job.input_data on first load ─── */
+  const presetNarrationUrl = (job?.input_data as any)?.narration_audio_url as string | undefined;
+  const presetBgmUrl = (job?.input_data as any)?.bgm_url as string | undefined;
+  const narrationAutoApplied = useRef(false);
+  const bgmAutoApplied = useRef(false);
+
+  useEffect(() => {
+    if (narrationAutoApplied.current) return;
+    if (!presetNarrationUrl) return;
+    const match = narrationOptions.find((o) => o.audio_url === presetNarrationUrl);
+    if (match) {
+      setSelectedNarrationJobId(match.job_id);
+      narrationAutoApplied.current = true;
+    } else if (narrationOptions.length > 0 || presetNarrationUrl) {
+      // Synthesize a one-off option for uploaded files not present in narration_audio jobs
+      const synth: NarrationOption = {
+        job_id: '__preset__',
+        audio_url: presetNarrationUrl,
+        label: 'アップロード音声 (生成時指定)',
+        created_at: new Date().toISOString(),
+      };
+      setNarrationOptions((prev) =>
+        prev.some((p) => p.job_id === '__preset__') ? prev : [synth, ...prev],
+      );
+      setSelectedNarrationJobId('__preset__');
+      narrationAutoApplied.current = true;
+    }
+  }, [presetNarrationUrl, narrationOptions]);
+
+  useEffect(() => {
+    if (bgmAutoApplied.current) return;
+    if (!presetBgmUrl) return;
+    const match = bgmOptions.find((o) => o.audio_url === presetBgmUrl);
+    if (match) {
+      setSelectedBgmAssetId(match.asset_id);
+      bgmAutoApplied.current = true;
+    } else {
+      const synth: BgmOption = {
+        asset_id: '__preset__',
+        audio_url: presetBgmUrl,
+        label: 'アップロードBGM (生成時指定)',
+        created_at: new Date().toISOString(),
+      };
+      setBgmOptions((prev) =>
+        prev.some((p) => p.asset_id === '__preset__') ? prev : [synth, ...prev],
+      );
+      setSelectedBgmAssetId('__preset__');
+      bgmAutoApplied.current = true;
+    }
+  }, [presetBgmUrl, bgmOptions]);
 
   /* ─── Sync volume ─── */
   useEffect(() => {
@@ -534,7 +609,12 @@ const VConResult = ({
               </span>
             </div>
 
-            <VconScreen cut={currentCut} visible={isPlaying || currentTime > 0} />
+            <VconScreen
+              cut={currentCut}
+              visible={isPlaying || currentTime > 0}
+              isPlaying={isPlaying}
+              onToggle={togglePlay}
+            />
 
             {/* Progress bar */}
             <div

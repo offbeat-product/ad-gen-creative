@@ -4,14 +4,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import SpotToolWizard from '@/components/spot/SpotToolWizard';
-import VConSettings, {
-  type DurationSec,
-  type CreativeType,
-} from '@/components/spot/VConSettings';
-import VConResult, {
-  type SpotJob,
-  type VconAsset,
-} from '@/components/spot/VConResult';
+import VConSettings, { type DurationSec } from '@/components/spot/VConSettings';
+import VConResult, { type SpotJob, type VconAsset } from '@/components/spot/VConResult';
 
 const N8N_WEBHOOK_URL = 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-spot-vcon';
 const TOOL_TYPE = 'vcon';
@@ -20,15 +14,11 @@ interface VConSeed {
   client_id?: string | null;
   product_id?: string | null;
   project_id?: string | null;
-  appeal_axis?: string;
-  copy_text?: string;
   composition?: string;
-  narration_script?: string;
+  composition_job_id?: string;
   duration_seconds?: number;
-  creative_type?: 'video' | 'banner';
-  bgm_suggestions?: unknown;
-  from_tool?: string;
-  from_job_id?: string;
+  narration_audio_url?: string | null;
+  bgm_url?: string | null;
 }
 
 const VConTool = () => {
@@ -36,11 +26,10 @@ const VConTool = () => {
   const { state, updateState } = useSpotWizard();
 
   const [composition, setComposition] = useState('');
-  const [narrationScript, setNarrationScript] = useState('');
-  const [appealAxis, setAppealAxis] = useState('');
-  const [copyText, setCopyText] = useState('');
+  const [compositionJobId, setCompositionJobId] = useState<string | null>(null);
   const [durationSeconds, setDurationSeconds] = useState<DurationSec>(30);
-  const [creativeType, setCreativeType] = useState<CreativeType>('video');
+  const [narrationAudioUrl, setNarrationAudioUrl] = useState<string | null>(null);
+  const [bgmUrl, setBgmUrl] = useState<string | null>(null);
 
   const [jobId, setJobId] = useState<string | null>(null);
   const [job, setJob] = useState<SpotJob | null>(null);
@@ -61,10 +50,8 @@ const VConTool = () => {
           projectId: seed.project_id ?? null,
         });
       }
-      if (seed.appeal_axis) setAppealAxis(seed.appeal_axis);
-      if (seed.copy_text) setCopyText(seed.copy_text);
       if (seed.composition) setComposition(seed.composition);
-      if (seed.narration_script) setNarrationScript(seed.narration_script);
+      if (seed.composition_job_id) setCompositionJobId(seed.composition_job_id);
       if (
         seed.duration_seconds === 15 ||
         seed.duration_seconds === 30 ||
@@ -72,9 +59,8 @@ const VConTool = () => {
       ) {
         setDurationSeconds(seed.duration_seconds);
       }
-      if (seed.creative_type === 'video' || seed.creative_type === 'banner') {
-        setCreativeType(seed.creative_type);
-      }
+      if (seed.narration_audio_url) setNarrationAudioUrl(seed.narration_audio_url);
+      if (seed.bgm_url) setBgmUrl(seed.bgm_url);
       sessionStorage.removeItem('vcon_seed');
       toast.info('上流ツールから入力を引き継ぎました');
     } catch (e) {
@@ -87,12 +73,13 @@ const VConTool = () => {
     (jid: string, _projectId: string, inputData: Record<string, unknown>) => {
       setJobId(jid);
       if (inputData.composition) setComposition(String(inputData.composition));
-      if (inputData.narration_script) setNarrationScript(String(inputData.narration_script));
-      if (inputData.appeal_axis) setAppealAxis(String(inputData.appeal_axis));
-      if (inputData.copy_text) setCopyText(String(inputData.copy_text));
+      if (inputData.composition_job_id)
+        setCompositionJobId(String(inputData.composition_job_id));
       if (inputData.duration_seconds)
         setDurationSeconds(Number(inputData.duration_seconds) as DurationSec);
-      if (inputData.creative_type) setCreativeType(inputData.creative_type as CreativeType);
+      if (inputData.narration_audio_url)
+        setNarrationAudioUrl(String(inputData.narration_audio_url));
+      if (inputData.bgm_url) setBgmUrl(String(inputData.bgm_url));
     },
     []
   );
@@ -149,36 +136,35 @@ const VConTool = () => {
   return (
     <SpotToolWizard
       toolTitle="Vコン作成"
-      toolDescription="構成案・NA原稿からカット単位のテロップ設計書(Vコン)を生成します"
+      toolDescription="構成案 + ナレーション/BGM を組み合わせて、動画として再生確認できるVコンを生成します"
       toolEmoji="🎬"
       toolType={TOOL_TYPE}
       state={state}
       updateState={updateState}
       jobId={jobId}
       onRestoreJob={handleRestoreJob}
-      renderSettings={({ context }) => {
+      renderSettings={() => {
         const handleGenerate = async () => {
           if (!state.projectId || !user) return;
-          if (!composition.trim() && !narrationScript.trim()) return;
+          if (!composition.trim()) {
+            toast.error('構成案を入力してください');
+            return;
+          }
 
-          const relevantRules =
-            context?.rules.filter((r) =>
-              ['vcon', 'script', 'storyboard'].some((t) => r.process_type.includes(t))
-            ) ?? [];
+          const inputData = {
+            composition,
+            composition_job_id: compositionJobId,
+            duration_seconds: durationSeconds,
+            narration_audio_url: narrationAudioUrl,
+            bgm_url: bgmUrl,
+          };
 
           const { data: newJob, error } = await supabase
             .from('gen_spot_jobs')
             .insert({
               project_id: state.projectId,
               tool_type: TOOL_TYPE,
-              input_data: {
-                composition: composition || null,
-                narration_script: narrationScript || null,
-                appeal_axis: appealAxis || null,
-                copy_text: copyText || null,
-                duration_seconds: durationSeconds,
-                creative_type: creativeType,
-              },
+              input_data: inputData,
               status: 'pending',
               created_by: user.id,
             })
@@ -194,30 +180,20 @@ const VConTool = () => {
           setJob(newJob as SpotJob);
           setAssets([]);
 
+          const payload: Record<string, unknown> = {
+            spot_job_id: newJob.id,
+            project_id: state.projectId,
+            composition_job_id: compositionJobId,
+            composition: compositionJobId ? null : composition,
+            narration_audio_url: narrationAudioUrl,
+            bgm_url: bgmUrl,
+            duration_seconds: durationSeconds,
+          };
+
           fetch(N8N_WEBHOOK_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              spot_job_id: newJob.id,
-              project_id: state.projectId,
-              composition: composition || null,
-              narration_script: narrationScript || null,
-              appeal_axis: appealAxis || null,
-              copy_text: copyText || null,
-              duration_seconds: durationSeconds,
-              creative_type: creativeType,
-              copyright_text: context?.project.copyright_text ?? null,
-              client_name: context?.project.product.client.name ?? null,
-              product_name: context?.project.product.name ?? null,
-              project_name: context?.project.name ?? null,
-              rules: relevantRules.map((r) => ({
-                rule_id: r.rule_id,
-                title: r.title,
-                description: r.description,
-                severity: r.severity,
-                category: r.category,
-              })),
-            }),
+            body: JSON.stringify(payload),
           }).catch((e) => console.error('n8n webhook error:', e));
 
           toast.success('Vコン生成を開始しました');
@@ -225,20 +201,18 @@ const VConTool = () => {
 
         return (
           <VConSettings
-            context={context}
+            context={undefined}
             projectId={state.projectId}
             composition={composition}
             setComposition={setComposition}
-            narrationScript={narrationScript}
-            setNarrationScript={setNarrationScript}
-            appealAxis={appealAxis}
-            setAppealAxis={setAppealAxis}
-            copyText={copyText}
-            setCopyText={setCopyText}
+            compositionJobId={compositionJobId}
+            setCompositionJobId={setCompositionJobId}
             durationSeconds={durationSeconds}
             setDurationSeconds={setDurationSeconds}
-            creativeType={creativeType}
-            setCreativeType={setCreativeType}
+            narrationAudioUrl={narrationAudioUrl}
+            setNarrationAudioUrl={setNarrationAudioUrl}
+            bgmUrl={bgmUrl}
+            setBgmUrl={setBgmUrl}
             onGenerate={handleGenerate}
             isRunning={isRunning}
           />
@@ -250,7 +224,7 @@ const VConTool = () => {
           assets={assets}
           jobId={jobId}
           durationSeconds={durationSeconds}
-          creativeType={creativeType}
+          creativeType="video"
           context={context}
           state={state}
           onStartNew={handleStartNew}
