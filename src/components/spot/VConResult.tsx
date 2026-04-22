@@ -25,11 +25,11 @@ import {
 
 export interface VconCut {
   cut_number: number;
-  start_seconds: number;
-  end_seconds: number;
-  duration_seconds: number;
+  time_start: number;
+  time_end: number;
+  duration: number;
   section?: string;
-  text_overlay?: string;
+  telop?: string;
   narration?: string;
   visual_direction?: string;
   text_position?: string;
@@ -216,14 +216,14 @@ const VConResult = ({
                           {cut.cut_number}
                         </TableCell>
                         <TableCell className="text-xs tabular-nums">
-                          {formatTimeRange(cut.start_seconds, cut.end_seconds)}
+                          {formatTimeRange(cut.time_start, cut.time_end)}
                         </TableCell>
                         <TableCell className="text-center text-xs tabular-nums">
-                          {fmt(cut.duration_seconds)}s
+                          {fmt(cut.duration)}s
                         </TableCell>
                         <TableCell className="text-xs">{cut.section ?? '-'}</TableCell>
-                        <TableCell className="text-xs font-medium">
-                          {cut.text_overlay || (
+                        <TableCell className="text-xs font-medium whitespace-pre-wrap">
+                          {cut.telop || (
                             <span className="text-muted-foreground/60">(なし)</span>
                           )}
                         </TableCell>
