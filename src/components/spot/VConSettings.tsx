@@ -455,10 +455,98 @@ const VConSettings = ({
             )}
           </div>
 
+          {/* preview audio for uploaded narration */}
+          {narrationMode === 'upload' && uploadedNarration && (
+            <audio
+              key={uploadedNarration.url}
+              src={uploadedNarration.url}
+              controls
+              className="ml-6 w-[calc(100%-1.5rem)] h-9"
+            />
+          )}
+
           {/* none */}
           <Label className="flex items-center gap-2 cursor-pointer text-sm">
             <RadioGroupItem value="none" />
             ナレーションなし
+          </Label>
+        </RadioGroup>
+      </div>
+
+      {/* === BGM === */}
+      <div className="rounded-xl border bg-card p-4 space-y-3">
+        <Label className="text-sm font-bold flex items-center gap-1.5">
+          <Music className="h-4 w-4" /> BGM (任意)
+        </Label>
+
+        <RadioGroup
+          value={bgmMode === 'existing' ? 'upload' : bgmMode}
+          onValueChange={(v) => setBgmMode(v as AudioSourceMode)}
+          className="space-y-3"
+        >
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2 cursor-pointer text-sm">
+              <RadioGroupItem value="upload" />
+              ファイルをアップロード
+            </Label>
+            {bgmMode === 'upload' && (
+              <div className="ml-6 space-y-2">
+                {!uploadedBgm ? (
+                  <div
+                    onClick={() => bgmInputRef.current?.click()}
+                    className="rounded-lg border-2 border-dashed p-4 text-center text-xs text-muted-foreground cursor-pointer hover:border-secondary hover:bg-secondary-wash/20 transition-colors"
+                  >
+                    {bgmUploading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" /> アップロード中...
+                      </span>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mx-auto mb-1" />
+                        MP3 / WAV / M4A をクリックして選択 (最大20MB)
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 rounded-md border bg-muted/30 px-3 py-2 text-xs">
+                    <Music className="h-3.5 w-3.5 text-secondary" />
+                    <span className="flex-1 truncate">{uploadedBgm.name}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setUploadedBgm(null)}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )}
+                <input
+                  ref={bgmInputRef}
+                  type="file"
+                  accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/x-m4a,audio/mp4"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleBgmUpload(f);
+                    e.target.value = '';
+                  }}
+                />
+                {uploadedBgm && (
+                  <audio
+                    key={uploadedBgm.url}
+                    src={uploadedBgm.url}
+                    controls
+                    className="w-full h-9"
+                  />
+                )}
+              </div>
+            )}
+          </div>
+
+          <Label className="flex items-center gap-2 cursor-pointer text-sm">
+            <RadioGroupItem value="none" />
+            BGMなし
           </Label>
         </RadioGroup>
       </div>
