@@ -1,4 +1,4 @@
-import { Loader2, Sparkles, Wand2 } from 'lucide-react';
+import { History, Loader2, Sparkles, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
@@ -12,6 +12,8 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import BriefSection, { type BriefData } from '@/components/spot/BriefSection';
+import BriefHistoryPanel from '@/components/spot/BriefHistoryPanel';
+import { loadCurrentBrief } from '@/lib/brief-persistence';
 import type { useProjectContext } from '@/hooks/useProjectContext';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -61,6 +63,7 @@ const AppealAxisSettings = ({
 }: Props) => {
   const [isGeneratingBrief, setIsGeneratingBrief] = useState(false);
   const [showOverwriteDialog, setShowOverwriteDialog] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   const handleAutoGenerateBrief = async () => {
     if (!projectId) {
@@ -164,13 +167,36 @@ const AppealAxisSettings = ({
       )}
 
       {projectId && (
-        <BriefSection
-          projectId={projectId}
-          value={briefData}
-          onChange={setBriefData}
-          onLpScrapedContentLoaded={onLpScrapedContentLoaded}
-          onHintGenerated={setHint}
-        />
+        <div className="space-y-2">
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowHistory(true)}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              <History className="h-3.5 w-3.5 mr-1" />
+              📜 履歴を見る
+            </Button>
+          </div>
+          <BriefSection
+            projectId={projectId}
+            value={briefData}
+            onChange={setBriefData}
+            onLpScrapedContentLoaded={onLpScrapedContentLoaded}
+            onHintGenerated={setHint}
+          />
+          <BriefHistoryPanel
+            projectId={projectId}
+            open={showHistory}
+            onOpenChange={setShowHistory}
+            onRestored={async () => {
+              const reloaded = await loadCurrentBrief(projectId);
+              if (reloaded) setBriefData(reloaded);
+            }}
+          />
+        </div>
       )}
 
       <Separator className="my-2" />
