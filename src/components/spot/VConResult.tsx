@@ -64,8 +64,10 @@ interface Props {
   onStartNew: () => void;
 }
 
-const formatTimeRange = (start: number, end: number) =>
-  `${start.toFixed(1)}-${end.toFixed(1)}s`;
+const fmt = (n: unknown) => (typeof n === 'number' && Number.isFinite(n) ? n.toFixed(1) : '0.0');
+
+const formatTimeRange = (start: number | undefined, end: number | undefined) =>
+  `${fmt(start)}-${fmt(end)}s`;
 
 const VConResult = ({
   job,
@@ -217,7 +219,7 @@ const VConResult = ({
                           {formatTimeRange(cut.start_seconds, cut.end_seconds)}
                         </TableCell>
                         <TableCell className="text-center text-xs tabular-nums">
-                          {cut.duration_seconds.toFixed(1)}s
+                          {fmt(cut.duration_seconds)}s
                         </TableCell>
                         <TableCell className="text-xs">{cut.section ?? '-'}</TableCell>
                         <TableCell className="text-xs font-medium">
