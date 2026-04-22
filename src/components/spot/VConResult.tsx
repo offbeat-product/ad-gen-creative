@@ -759,7 +759,6 @@ const VConResult = ({
                     <TableHead className="w-16 text-center">秒</TableHead>
                     <TableHead className="w-24">セクション</TableHead>
                     <TableHead>テロップ</TableHead>
-                    <TableHead>ナレーション</TableHead>
                     <TableHead className="w-8"></TableHead>
                   </TableRow>
                 </TableHeader>
