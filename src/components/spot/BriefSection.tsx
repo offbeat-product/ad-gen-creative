@@ -68,9 +68,10 @@ const BriefSection = ({
   value,
   onChange,
   onLpScrapedContentLoaded,
+  onHintGenerated,
 }: BriefSectionProps) => {
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [isGeneratingBrief, setIsGeneratingBrief] = useState(false);
   const [ngInput, setNgInput] = useState('');
 
   const update = useCallback(
