@@ -38,6 +38,8 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
   const [allCopies, setAllCopies] = useState<GeneratedCopy[]>([]);
   const [duration, setDuration] = useState<number>(30);
   const [creativeType, setCreativeType] = useState<'video' | 'banner'>('video');
+  const [withNaScript, setWithNaScript] = useState<boolean>(true);
+  const [withStoryboardImages, setWithStoryboardImages] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   const [bannerBrief, setBannerBrief] = useState<BannerBrief>(emptyBrief);
 
