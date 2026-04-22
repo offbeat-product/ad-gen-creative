@@ -25,11 +25,11 @@ import {
 
 export interface VconCut {
   cut_number: number;
-  start_seconds: number;
-  end_seconds: number;
-  duration_seconds: number;
+  time_start: number;
+  time_end: number;
+  duration: number;
   section?: string;
-  text_overlay?: string;
+  telop?: string;
   narration?: string;
   visual_direction?: string;
   text_position?: string;
