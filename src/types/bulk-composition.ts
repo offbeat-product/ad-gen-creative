@@ -44,6 +44,10 @@ export interface BulkCompositionBatch {
   appeal_axes_snapshot: AppealAxisCopy[];
   duration_seconds: number;
   spot_job_ids: string[];
+  na_script_job_ids?: string[];
+  storyboard_job_ids?: string[];
+  with_na_script?: boolean;
+  with_storyboard_images?: boolean;
   created_at: string;
   updated_at: string;
   completed_at: string | null;
