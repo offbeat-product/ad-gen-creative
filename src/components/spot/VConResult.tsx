@@ -186,13 +186,20 @@ const VConResult = ({
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [narrationVolume, setNarrationVolume] = useState(1.0);
+  const [bgmVolume, setBgmVolume] = useState(0.3);
   const [narrationOptions, setNarrationOptions] = useState<NarrationOption[]>([]);
   const [selectedNarrationJobId, setSelectedNarrationJobId] = useState<string>('none');
+  const [bgmOptions, setBgmOptions] = useState<BgmOption[]>([]);
+  const [selectedBgmAssetId, setSelectedBgmAssetId] = useState<string>('none');
   const intervalRef = useRef<ReturnType<typeof setInterval>>();
   const narrationAudioRef = useRef<HTMLAudioElement>(null);
+  const bgmAudioRef = useRef<HTMLAudioElement>(null);
 
   const selectedNarration = narrationOptions.find((o) => o.job_id === selectedNarrationJobId);
   const narrationUrl = selectedNarration?.audio_url ?? null;
+
+  const selectedBgm = bgmOptions.find((o) => o.asset_id === selectedBgmAssetId);
+  const bgmUrl = selectedBgm?.audio_url ?? null;
 
   const currentCut =
     cuts.find((c) => currentTime >= c.time_start && currentTime < c.time_end) ?? null;
