@@ -9,6 +9,9 @@ import CompositionResult, {
   type SpotJob,
   type SpotAsset,
 } from '@/components/spot/CompositionResult';
+import BulkCompositionPanel from '@/components/spot/BulkCompositionPanel';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Rocket, Wand2 } from 'lucide-react';
 
 const N8N_WEBHOOK_URL = 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-spot-composition';
 const TOOL_TYPE = 'composition';
