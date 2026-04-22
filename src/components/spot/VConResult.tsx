@@ -216,14 +216,14 @@ const VConResult = ({
                           {cut.cut_number}
                         </TableCell>
                         <TableCell className="text-xs tabular-nums">
-                          {formatTimeRange(cut.start_seconds, cut.end_seconds)}
+                          {formatTimeRange(cut.time_start, cut.time_end)}
                         </TableCell>
                         <TableCell className="text-center text-xs tabular-nums">
-                          {fmt(cut.duration_seconds)}s
+                          {fmt(cut.duration)}s
                         </TableCell>
                         <TableCell className="text-xs">{cut.section ?? '-'}</TableCell>
-                        <TableCell className="text-xs font-medium">
-                          {cut.text_overlay || (
+                        <TableCell className="text-xs font-medium whitespace-pre-wrap">
+                          {cut.telop || (
                             <span className="text-muted-foreground/60">(なし)</span>
                           )}
                         </TableCell>
