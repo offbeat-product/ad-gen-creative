@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import VconDownloadButton from './VconDownloadButton';
 
 export interface VconCut {
   cut_number: number;
