@@ -107,7 +107,17 @@ const formatTime = (s: number) => {
 };
 
 /* ─── Vcon Player Screen ─── */
-const VconScreen = ({ cut, visible }: { cut: VconCut | null; visible: boolean }) => {
+const VconScreen = ({
+  cut,
+  visible,
+  isPlaying,
+  onToggle,
+}: {
+  cut: VconCut | null;
+  visible: boolean;
+  isPlaying: boolean;
+  onToggle: () => void;
+}) => {
   const fontSize =
     cut?.text_size === 'large'
       ? 'clamp(1.5rem, 5vw, 2.5rem)'
@@ -119,10 +129,20 @@ const VconScreen = ({ cut, visible }: { cut: VconCut | null; visible: boolean })
 
   return (
     <div
-      className="relative w-full rounded-xl overflow-hidden bg-black"
+      role="button"
+      tabIndex={0}
+      aria-label={isPlaying ? '一時停止' : '再生'}
+      onClick={onToggle}
+      onKeyDown={(e) => {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          onToggle();
+        }
+      }}
+      className="relative w-full rounded-xl overflow-hidden bg-black cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       style={{ aspectRatio: '16/9' }}
     >
-      {cut && visible ? (
+      {cut && visible && (
         <div
           key={cut.cut_number}
           className={cn(
@@ -141,7 +161,7 @@ const VconScreen = ({ cut, visible }: { cut: VconCut | null; visible: boolean })
             {cut.telop}
           </p>
           {cut.annotations && cut.annotations.length > 0 && (
-            <div className="absolute bottom-3 left-4 space-y-0.5">
+            <div className="absolute bottom-3 left-4 space-y-0.5 pointer-events-none">
               {cut.annotations.map((a, i) => (
                 <p key={i} className="text-[11px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
                   {a}
@@ -150,9 +170,12 @@ const VconScreen = ({ cut, visible }: { cut: VconCut | null; visible: boolean })
             </div>
           )}
         </div>
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Play className="h-12 w-12" style={{ color: 'rgba(255,255,255,0.25)' }} />
+      )}
+      {!isPlaying && (
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+            <Play className="h-8 w-8 text-white ml-1" />
+          </div>
         </div>
       )}
     </div>
