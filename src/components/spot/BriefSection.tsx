@@ -274,33 +274,27 @@ const BriefSection = ({
             animate={{ opacity: 1 }}
             className="space-y-6"
           >
-            {/* アクションボタン */}
-            <div className="flex flex-wrap gap-2 justify-end">
+            {/* AI自動生成ボタン */}
+            <div className="flex justify-end">
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => loadFromProject(false)}
-                disabled={loading}
-              >
-                {loading ? (
-                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                ) : (
-                  <Download className="h-3 w-3 mr-1" />
-                )}
-                保存済みブリーフを読み込み
-              </Button>
-              <Button
+                type="button"
                 variant="brand"
-                size="sm"
-                onClick={saveToProject}
-                disabled={saving}
+                size="lg"
+                onClick={handleAutoGenerateBrief}
+                disabled={isGeneratingBrief || !projectId}
+                title="プロジェクト情報・オリエンシート等からAIがブリーフを一括作成します"
               >
-                {saving ? (
-                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                {isGeneratingBrief ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    生成中...
+                  </>
                 ) : (
-                  <Save className="h-3 w-3 mr-1" />
+                  <>
+                    <Sparkles className="mr-2 h-5 w-5" />
+                    AIで自動生成
+                  </>
                 )}
-                ブリーフを案件に保存
               </Button>
             </div>
 
