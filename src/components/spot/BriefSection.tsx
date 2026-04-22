@@ -178,7 +178,7 @@ const BriefSection = ({
       // 履歴に新バージョンとして保存(source='ai_autogen')
       saveBriefAsNewVersion(
         projectId,
-        { ...nextBrief, hint: typeof brief.hint === 'string' ? brief.hint : undefined },
+        { ...nextBrief, hint: typeof brief.hint === 'string' ? brief.hint : undefined } as BriefData & { hint?: string },
         'ai_autogen',
         'AI自動生成による作成'
       ).catch((e) => console.error('[BriefAutogen] persist error:', e));
