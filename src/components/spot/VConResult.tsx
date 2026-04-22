@@ -779,7 +779,18 @@ const VConResult = ({
 
           {/* Hidden audio */}
           {narrationUrl && (
-            <audio ref={narrationAudioRef} src={narrationUrl} preload="auto" />
+            <audio
+              ref={narrationAudioRef}
+              src={narrationUrl}
+              preload="metadata"
+              onLoadedMetadata={() => {
+                const d = narrationAudioRef.current?.duration;
+                if (d && Number.isFinite(d) && d > 0) {
+                  console.log('[Narration] Real duration:', d);
+                  setNarrationDuration(d);
+                }
+              }}
+            />
           )}
           {bgmUrl && (
             <audio ref={bgmAudioRef} src={bgmUrl} preload="auto" loop playsInline />
