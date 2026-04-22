@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, KeyboardEvent } from 'react';
 import { motion } from 'framer-motion';
-import { Download, Save, Loader2, Target, X } from 'lucide-react';
+import { Loader2, Sparkles, Target, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
