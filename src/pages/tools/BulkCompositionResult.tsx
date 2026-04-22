@@ -388,10 +388,14 @@ const SummaryCard = ({
 // ====== Job card (accordion) ======
 const JobCard = ({
   job,
+  naScriptJob,
+  storyboardJob,
   index,
   creativeType,
 }: {
   job: BulkCompositionJob;
+  naScriptJob?: BulkCompositionJob;
+  storyboardJob?: BulkCompositionJob;
   index: number;
   creativeType: 'video' | 'banner';
 }) => {
@@ -416,11 +420,21 @@ const JobCard = ({
           {isFailed && <XCircle className="h-5 w-5 text-destructive" />}
         </div>
         <div className="flex-1 min-w-0 space-y-1">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-bold">#{index}</span>
             <Badge variant="secondary" className="text-[10px] h-5">
               {isCompleted ? '完了' : '失敗'}
             </Badge>
+            {naScriptJob && (
+              <Badge variant="outline" className="text-[10px] h-5">
+                NA{naScriptJob.status === 'completed' ? '✓' : '…'}
+              </Badge>
+            )}
+            {storyboardJob && (
+              <Badge variant="outline" className="text-[10px] h-5">
+                🎬{storyboardJob.status === 'completed' ? '✓' : '…'}
+              </Badge>
+            )}
           </div>
           <div className="text-xs text-muted-foreground line-clamp-1">
             {job.input_data.appeal_axis}
@@ -446,7 +460,7 @@ const JobCard = ({
       </button>
 
       {expanded && isCompleted && (
-        <div className="border-t p-4 bg-muted/20">
+        <div className="border-t p-4 bg-muted/20 space-y-4">
           {creativeType === 'video' ? (
             <VideoSceneList
               scenes={(output.scenes as BulkSceneOutput[]) ?? []}
@@ -458,8 +472,85 @@ const JobCard = ({
               }
             />
           )}
+
+          {/* Storyboard image gallery (video + storyboard generated) */}
+          {creativeType === 'video' && storyboardJob && (
+            <>
+              {storyboardJob.status === 'completed' ? (
+                <StoryboardGallery storyboardJobId={storyboardJob.id} />
+              ) : storyboardJob.status === 'failed' ? (
+                <p className="text-xs text-destructive">
+                  🎬 絵コンテ画像の生成に失敗しました
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  🎬 絵コンテ画像を生成中...
+                </p>
+              )}
+            </>
+          )}
         </div>
       )}
+    </div>
+  );
+};
+
+// ====== Storyboard image gallery ======
+const StoryboardGallery = ({ storyboardJobId }: { storyboardJobId: string }) => {
+  const [images, setImages] = useState<BulkCompositionAsset[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('gen_spot_assets')
+        .select('*')
+        .eq('job_id', storyboardJobId)
+        .eq('asset_type', 'storyboard_image')
+        .order('sort_order', { ascending: true });
+      if (!cancelled && data) {
+        setImages(data as unknown as BulkCompositionAsset[]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [storyboardJobId]);
+
+  if (images.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        🎬 絵コンテ画像が登録されていません
+      </p>
+    );
+  }
+
+  return (
+    <div className="pt-3 border-t">
+      <h4 className="text-xs font-bold mb-2 text-primary">
+        🎬 絵コンテ画像 ({images.length}カット)
+      </h4>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+        {images.map((img) => (
+          <div key={img.id} className="relative">
+            <img
+              src={img.file_url}
+              alt={`Cut ${img.metadata?.cut_number ?? ''}`}
+              loading="lazy"
+              className="w-full aspect-video object-cover rounded border bg-muted"
+            />
+            {img.metadata?.cut_number != null && (
+              <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[10px] px-1.5 py-0.5 rounded font-bold">
+                #{img.metadata.cut_number}
+              </div>
+            )}
+            {img.metadata?.time_range && (
+              <div className="absolute bottom-1 left-1 right-1 bg-black/60 text-white text-[10px] text-center py-0.5 rounded">
+                {img.metadata.time_range}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
