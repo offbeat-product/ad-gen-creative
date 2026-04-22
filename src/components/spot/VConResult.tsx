@@ -59,6 +59,7 @@ export interface SpotJob {
   status: string | null;
   error_message: string | null;
   output_data: Record<string, unknown> | null;
+  input_data?: Record<string, unknown> | null;
   created_at?: string | null;
   project_id?: string | null;
 }
