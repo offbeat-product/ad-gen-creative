@@ -289,7 +289,12 @@ const VConResult = ({
           };
         });
 
-      setNarrationOptions(opts);
+      // Preserve any synthesized preset entry (from output_data.narration_audio_url
+      // that doesn't match a fetched job) so auto-selection survives the fetch.
+      setNarrationOptions((prev) => {
+        const preset = prev.find((p) => p.job_id === '__preset__');
+        return preset ? [preset, ...opts.filter((o) => o.audio_url !== preset.audio_url)] : opts;
+      });
     })();
     return () => {
       cancelled = true;
@@ -308,7 +313,8 @@ const VConResult = ({
         .eq('project_id', projectId)
         .eq('tool_type', 'bgm_suggestion');
       if (!bgmJobs || bgmJobs.length === 0 || cancelled) {
-        setBgmOptions([]);
+        // Don't wipe a synthesized preset if user hasn't created bgm_suggestion jobs yet.
+        setBgmOptions((prev) => prev.filter((p) => p.asset_id === '__preset__'));
         return;
       }
       const bgmJobIds = bgmJobs.map((j) => j.id);
@@ -335,7 +341,11 @@ const VConResult = ({
             created_at: a.created_at as string,
           };
         });
-      setBgmOptions(opts);
+      // Preserve any synthesized preset entry from output_data.bgm_url
+      setBgmOptions((prev) => {
+        const preset = prev.find((p) => p.asset_id === '__preset__');
+        return preset ? [preset, ...opts.filter((o) => o.audio_url !== preset.audio_url)] : opts;
+      });
     })();
     return () => {
       cancelled = true;
@@ -351,6 +361,18 @@ const VConResult = ({
     ((job?.input_data as any)?.bgm_url as string | undefined);
   const narrationAutoApplied = useRef(false);
   const bgmAutoApplied = useRef(false);
+
+  // Debug log: confirm what URLs were loaded from the V-Con job
+  useEffect(() => {
+    if (!job) return;
+    console.log('[Vcon] Loaded:', {
+      jobId: job.id,
+      cutsCount: cuts.length,
+      totalDuration,
+      narrationUrl: presetNarrationUrl ?? null,
+      bgmUrl: presetBgmUrl ?? null,
+    });
+  }, [job, cuts.length, totalDuration, presetNarrationUrl, presetBgmUrl]);
 
   useEffect(() => {
     if (narrationAutoApplied.current) return;
