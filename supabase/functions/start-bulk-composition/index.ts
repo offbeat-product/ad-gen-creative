@@ -174,6 +174,9 @@ serve(async (req) => {
           copyright_text: copyright_text ?? null,
           rules,
           correction_patterns,
+          with_na_script: creative_type === "video" ? with_na_script : false,
+          with_storyboard_images:
+            creative_type === "video" ? with_storyboard_images : false,
         }),
       }).catch((e) => console.error("n8n webhook error:", e));
     });
