@@ -3103,36 +3103,21 @@ export type Database = {
         }
         Returns: number
       }
-      trigger_storyboard_image_generation:
-        | {
-            Args: {
-              p_appeal_axis?: string
-              p_client_name?: string
-              p_copy_text?: string
-              p_creative_style?: string
-              p_product_name?: string
-              p_project_id: string
-              p_project_name?: string
-              p_scenes: Json
-              p_spot_job_id: string
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              p_appeal_axis?: string
-              p_client_name?: string
-              p_copy_text?: string
-              p_creative_style?: string
-              p_delay_ms?: number
-              p_product_name?: string
-              p_project_id: string
-              p_project_name?: string
-              p_scenes: Json
-              p_spot_job_id: string
-            }
-            Returns: number
-          }
+      trigger_storyboard_image_generation: {
+        Args: {
+          p_appeal_axis?: string
+          p_client_name?: string
+          p_copy_text?: string
+          p_creative_style?: string
+          p_delay_ms?: number
+          p_product_name?: string
+          p_project_id: string
+          p_project_name?: string
+          p_scenes: Json
+          p_spot_job_id: string
+        }
+        Returns: number
+      }
       upload_file_as_creator: {
         Args: {
           p_file_data: string
