@@ -33,11 +33,30 @@ const StatusIcon = ({ status }: { status: string }) => {
 };
 
 const BulkCompositionProgress = ({ batch, jobs }: Props) => {
+  const compositionJobs = jobs.filter((j) => j.tool_type === 'composition');
+  const naScriptJobs = jobs.filter((j) => j.tool_type === 'narration_script');
+  const storyboardJobs = jobs.filter(
+    (j) =>
+      j.tool_type === 'image_generation' &&
+      (j.input_data as Record<string, unknown>)?.storyboard_kind === 'spot'
+  );
+
+  const compCompleted = compositionJobs.filter((j) => j.status === 'completed').length;
+  const naCompleted = naScriptJobs.filter((j) => j.status === 'completed').length;
+  const sbCompleted = storyboardJobs.filter((j) => j.status === 'completed').length;
+
+  const isWithNa = !!batch.with_na_script;
+  const isWithSb = !!batch.with_storyboard_images;
+  const total = batch.total_count;
+
+  // Pair completion = lowest count among enabled phases
+  let pairsCompleted = compCompleted;
+  if (isWithNa) pairsCompleted = Math.min(pairsCompleted, naCompleted);
+  if (isWithSb) pairsCompleted = Math.min(pairsCompleted, sbCompleted);
+
   const totalDone = batch.completed_count + batch.failed_count;
   const progress =
-    batch.total_count > 0
-      ? Math.round((totalDone / batch.total_count) * 100)
-      : 0;
+    total > 0 ? Math.round((pairsCompleted / total) * 100) : 0;
 
   return (
     <div className="space-y-4">
@@ -59,7 +78,7 @@ const BulkCompositionProgress = ({ batch, jobs }: Props) => {
             <h3 className="text-base font-semibold">構成案 一括生成</h3>
           </div>
           <div className="text-sm text-muted-foreground">
-            {totalDone} / {batch.total_count} 完了
+            {pairsCompleted} / {total} パターン完了
           </div>
         </div>
 
@@ -71,6 +90,35 @@ const BulkCompositionProgress = ({ batch, jobs }: Props) => {
             </span>
             <span>{progress}%</span>
           </div>
+        </div>
+
+        {/* Per-phase progress */}
+        <div className="space-y-1 text-xs text-muted-foreground border-t pt-3">
+          <div className="flex justify-between">
+            <span>📝 構成案</span>
+            <span className="font-mono">
+              {compCompleted}/{total}
+            </span>
+          </div>
+          {isWithNa && (
+            <div className="flex justify-between">
+              <span>🎙 NA原稿</span>
+              <span className="font-mono">
+                {naCompleted}/{total}
+              </span>
+            </div>
+          )}
+          {isWithSb && (
+            <div className="flex justify-between">
+              <span>
+                🎬 絵コンテ画像{' '}
+                <span className="text-warning">(時間がかかります)</span>
+              </span>
+              <span className="font-mono">
+                {sbCompleted}/{total}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
