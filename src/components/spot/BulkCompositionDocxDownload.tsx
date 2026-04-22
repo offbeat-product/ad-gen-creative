@@ -95,7 +95,7 @@ const BulkCompositionDocxDownload = ({ batch, jobs, projectMeta }: Props) => {
             {isBanner ? 'バナー' : '動画'}構成案の一括生成が完了しました
           </div>
           <div className="text-sm text-muted-foreground">
-            {jobs.length}パターンを1つの{isBanner ? 'pptx' : 'docx'}
+            {compositionJobs.length}パターンを1つのpptx
             ファイルにまとめてダウンロードできます
           </div>
         </div>
@@ -103,7 +103,7 @@ const BulkCompositionDocxDownload = ({ batch, jobs, projectMeta }: Props) => {
           variant="brand"
           size="lg"
           onClick={handleDownload}
-          disabled={generating || jobs.length === 0}
+          disabled={generating || compositionJobs.length === 0}
         >
           {generating ? (
             <>
@@ -112,7 +112,7 @@ const BulkCompositionDocxDownload = ({ batch, jobs, projectMeta }: Props) => {
           ) : (
             <>
               <Download className="h-4 w-4 mr-2" />
-              {isBanner ? 'pptx' : 'docx'}一括ダウンロード
+              pptx一括ダウンロード
             </>
           )}
         </Button>
