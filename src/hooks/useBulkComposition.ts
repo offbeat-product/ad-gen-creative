@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import type {
   BulkCompositionBatch,
@@ -23,6 +24,27 @@ export function useBulkComposition(projectId: string) {
   const [jobs, setJobs] = useState<BulkCompositionJob[]>([]);
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Auto-navigate to result page when batch reaches a terminal status
+  useEffect(() => {
+    if (!currentBatch) return;
+    const isTerminal =
+      currentBatch.status === 'completed' ||
+      currentBatch.status === 'partially_completed' ||
+      currentBatch.status === 'failed';
+    if (!isTerminal) return;
+    if (location.pathname.includes('/bulk-result')) return;
+
+    const timer = setTimeout(() => {
+      navigate(
+        `/tools/composition/bulk-result?project_id=${projectId}&batch_id=${currentBatch.id}`,
+        { replace: true }
+      );
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [currentBatch?.status, currentBatch?.id, projectId, navigate, location.pathname, currentBatch]);
 
   const startBulkGeneration = useCallback(
     async (appealAxesCopies: AppealAxisCopy[], options: StartOptions = {}) => {

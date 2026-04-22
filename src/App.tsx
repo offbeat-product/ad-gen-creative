@@ -20,6 +20,7 @@ import BannerImageTool from "@/pages/tools/BannerImageTool";
 import NarrationAudioTool from "@/pages/tools/NarrationAudioTool";
 import NarrationScriptTool from "@/pages/tools/NarrationScriptTool";
 import CompositionTool from "@/pages/tools/CompositionTool";
+import BulkCompositionResult from "@/pages/tools/BulkCompositionResult";
 import AppealAxisTool from "@/pages/tools/AppealAxisTool";
 import ImageGenerationTool from "@/pages/tools/ImageGenerationTool";
 import VConTool from "@/pages/tools/VConTool";
@@ -53,6 +54,7 @@ const App = () => (
                 <Route path="/result/:id" element={<GenerationResult />} />
                 <Route path="/tools/appeal-axis" element={<AppealAxisTool />} />
                 <Route path="/tools/composition" element={<CompositionTool />} />
+                <Route path="/tools/composition/bulk-result" element={<BulkCompositionResult />} />
                 <Route path="/tools/vcon" element={<VConTool />} />
                 <Route path="/tools/narration-script" element={<NarrationScriptTool />} />
                 <Route path="/tools/narration-audio" element={<NarrationAudioTool />} />

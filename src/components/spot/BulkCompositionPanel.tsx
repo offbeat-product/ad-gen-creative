@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { useBulkComposition } from '@/hooks/useBulkComposition';
 import BulkCompositionProgress from './BulkCompositionProgress';
-import BulkCompositionDocxDownload from './BulkCompositionDocxDownload';
+
 import type { useProjectContext } from '@/hooks/useProjectContext';
 import type { GeneratedCopy, AppealAxisCopy, BannerBrief } from '@/types/bulk-composition';
 
@@ -164,27 +164,18 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
     }
   };
 
-  // Batch view (running or finished)
+  // Batch view (running) - on completion the hook auto-navigates to the result page
   if (bulk.currentBatch) {
-    const completedJobs = bulk.jobs.filter((j) => j.status === 'completed');
     return (
       <div className="space-y-6">
         <h2 className="text-xl font-bold font-display tracking-tight">
           🚀 構成案 一括生成
         </h2>
         <BulkCompositionProgress batch={bulk.currentBatch} jobs={bulk.jobs} />
-        {bulk.isAllFinished && completedJobs.length > 0 && (
-          <BulkCompositionDocxDownload
-            batch={bulk.currentBatch}
-            jobs={completedJobs}
-            projectMeta={projectMeta}
-          />
-        )}
         {bulk.isAllFinished && (
-          <div className="text-center pt-2">
-            <Button variant="outline" size="sm" onClick={bulk.resetBatch}>
-              ← 新しい一括生成を始める
-            </Button>
+          <div className="rounded-lg border bg-success/5 border-success/40 p-4 text-center text-sm">
+            <Loader2 className="h-4 w-4 animate-spin inline-block mr-2 text-success" />
+            生成結果画面に移動しています...
           </div>
         )}
       </div>
