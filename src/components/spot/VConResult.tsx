@@ -471,6 +471,7 @@ const VConResult = ({
   useEffect(() => {
     stopPlayback();
     setCurrentTime(0);
+    setNarrationDuration(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedNarrationJobId, selectedBgmAssetId]);
 
