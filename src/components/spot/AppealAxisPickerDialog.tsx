@@ -44,7 +44,7 @@ const AppealAxisPickerDialog = ({ projectId, open, onOpenChange, onPick }: Props
       try {
         const { data: jobRows } = await supabase
           .from('gen_spot_jobs')
-          .select('id, created_at')
+          .select('id, created_at, output_data')
           .eq('project_id', projectId)
           .eq('tool_type', 'appeal_axis_copy')
           .eq('status', 'completed')
@@ -70,11 +70,16 @@ const AppealAxisPickerDialog = ({ projectId, open, onOpenChange, onPick }: Props
         });
         if (cancelled) return;
         setJobs(
-          jobRows.map((j) => ({
-            id: j.id,
-            created_at: j.created_at,
-            copies: copiesByJob.get(j.id) ?? [],
-          }))
+          jobRows.map((j) => {
+            const fromAssets = copiesByJob.get(j.id) ?? [];
+            const fromOutput = ((j.output_data as { copies?: CopyItem[] } | null)?.copies ??
+              []) as CopyItem[];
+            return {
+              id: j.id,
+              created_at: j.created_at,
+              copies: fromAssets.length > 0 ? fromAssets : fromOutput,
+            };
+          })
         );
       } finally {
         if (!cancelled) setLoading(false);
