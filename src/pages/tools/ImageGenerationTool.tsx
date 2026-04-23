@@ -75,6 +75,9 @@ const ImageGenerationTool = () => {
         });
       }
       if (seed.duration_seconds) setDuration(Number(seed.duration_seconds));
+      if (seed.visual_style) setVisualStyle(seed.visual_style as VisualStyleValue);
+      if (seed.tone_manner) setToneManner(String(seed.tone_manner));
+      if (seed.visual_style_notes) setVisualStyleNotes(String(seed.visual_style_notes));
       sessionStorage.removeItem('image_generation_seed');
       toast.info(`構成案 ${seed.scenes?.length ?? 0} シーンを引き継ぎました`);
     } catch (e) {
