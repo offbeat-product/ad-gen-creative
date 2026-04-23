@@ -219,6 +219,9 @@ const NarrationScriptTool = () => {
                 process_type: r.process_type,
               })),
               correction_patterns: context?.corrections ?? [],
+              visual_style: visualStyle,
+              tone_manner: toneManner,
+              visual_style_notes: visualStyleNotes,
             }),
           }).catch((e) => console.error('n8n webhook error:', e));
 
