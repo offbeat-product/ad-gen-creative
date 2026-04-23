@@ -109,7 +109,18 @@ const CompositionSettings = ({
 
       {/* 訴求軸 */}
       <div className="space-y-2">
-        <Label htmlFor="appeal-axis">訴求軸</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="appeal-axis">訴求軸</Label>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={() => setPickerOpen(true)}
+          >
+            <ListChecks className="h-3 w-3 mr-1" /> 訴求軸生成から選ぶ
+          </Button>
+        </div>
         <Input
           id="appeal-axis"
           value={appealAxis}
@@ -128,6 +139,18 @@ const CompositionSettings = ({
           placeholder="例: 毎月お得に新しい物語と出会える"
         />
       </div>
+
+      <AppealAxisPickerDialog
+        projectId={projectId}
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onPick={(axis, copy) => {
+          setAppealAxis(axis);
+          setCopyText(copy);
+          setPickerOpen(false);
+          toast.success('訴求軸・コピーを読み込みました');
+        }}
+      />
 
       {/* 動画尺 */}
       <div className="space-y-3">
