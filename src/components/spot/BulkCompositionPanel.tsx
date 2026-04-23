@@ -129,6 +129,11 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
       return;
     }
 
+    if (creativeType === 'video' && visualStyle === 'custom' && !visualStyleNotes.trim()) {
+      toast.error('「カスタム」選択時は映像スタイル補足の入力が必須です');
+      return;
+    }
+
     const estimatedMinutes = Math.max(1, Math.ceil((totalCount * 30) / 60));
     const ok = window.confirm(
       `${totalCount}件の${creativeType === 'banner' ? 'バナー' : ''}構成案を一括生成します。\n完了までおおよそ${estimatedMinutes}分かかります。\n続行しますか?`
