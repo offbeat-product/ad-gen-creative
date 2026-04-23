@@ -74,6 +74,9 @@ const NarrationScriptTool = () => {
         });
       }
       if (seed.duration_seconds) setDuration(Number(seed.duration_seconds));
+      if (seed.visual_style) setVisualStyle(String(seed.visual_style));
+      if (seed.tone_manner) setToneManner(String(seed.tone_manner));
+      if (seed.visual_style_notes) setVisualStyleNotes(String(seed.visual_style_notes));
       sessionStorage.removeItem('narration_script_seed');
       toast.info(`構成案 ${seed.scenes?.length ?? 0} シーンを引き継ぎました`);
     } catch (e) {
