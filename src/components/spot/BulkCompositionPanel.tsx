@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Loader2, Rocket, Film, Image as ImageIcon, Clock, AlertCircle, Sparkles } from 'lucide-react';
+import { Loader2, Rocket, Film, Image as ImageIcon, Clock, AlertCircle, Sparkles, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { useBulkComposition } from '@/hooks/useBulkComposition';
 import BulkCompositionProgress from './BulkCompositionProgress';
+import AppealAxisJobPickerDialog from './AppealAxisJobPickerDialog';
 
 import type { useProjectContext } from '@/hooks/useProjectContext';
 import type { GeneratedCopy, AppealAxisCopy, BannerBrief } from '@/types/bulk-composition';
