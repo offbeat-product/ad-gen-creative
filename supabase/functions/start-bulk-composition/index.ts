@@ -72,6 +72,9 @@ serve(async (req) => {
       correction_patterns = [],
       with_na_script = false,
       with_storyboard_images = false,
+      visual_style = null,
+      tone_manner = null,
+      visual_style_notes = null,
     } = body;
 
     if (!project_id || !Array.isArray(appeal_axes_copies) || appeal_axes_copies.length === 0) {
@@ -177,6 +180,9 @@ serve(async (req) => {
           with_na_script: creative_type === "video" ? with_na_script : false,
           with_storyboard_images:
             creative_type === "video" ? with_storyboard_images : false,
+          visual_style: creative_type === "video" ? visual_style : null,
+          tone_manner: creative_type === "video" ? tone_manner : null,
+          visual_style_notes: creative_type === "video" ? visual_style_notes : null,
         }),
       }).catch((e) => console.error("n8n webhook error:", e));
     });

@@ -31,6 +31,9 @@ const NarrationScriptTool = () => {
   const [composition, setComposition] = useState('');
   const [duration, setDuration] = useState<number>(30);
   const [seedInfo, setSeedInfo] = useState<NarrationScriptSeedInfo | null>(null);
+  const [visualStyle, setVisualStyle] = useState<string | null>(null);
+  const [toneManner, setToneManner] = useState<string | null>(null);
+  const [visualStyleNotes, setVisualStyleNotes] = useState<string | null>(null);
 
   // ジョブstate
   const [jobId, setJobId] = useState<string | null>(null);
@@ -71,6 +74,9 @@ const NarrationScriptTool = () => {
         });
       }
       if (seed.duration_seconds) setDuration(Number(seed.duration_seconds));
+      if (seed.visual_style) setVisualStyle(String(seed.visual_style));
+      if (seed.tone_manner) setToneManner(String(seed.tone_manner));
+      if (seed.visual_style_notes) setVisualStyleNotes(String(seed.visual_style_notes));
       sessionStorage.removeItem('narration_script_seed');
       toast.info(`構成案 ${seed.scenes?.length ?? 0} シーンを引き継ぎました`);
     } catch (e) {
@@ -213,6 +219,9 @@ const NarrationScriptTool = () => {
                 process_type: r.process_type,
               })),
               correction_patterns: context?.corrections ?? [],
+              visual_style: visualStyle,
+              tone_manner: toneManner,
+              visual_style_notes: visualStyleNotes,
             }),
           }).catch((e) => console.error('n8n webhook error:', e));
 
