@@ -93,6 +93,10 @@ const ImageGenerationTool = () => {
       if (inputData.duration_seconds) setDuration(Number(inputData.duration_seconds));
       if (inputData.creative_style) setCreativeStyle(String(inputData.creative_style));
       if (inputData.aspect_ratio) setAspectRatio(String(inputData.aspect_ratio));
+      if (inputData.visual_style) setVisualStyle(inputData.visual_style as VisualStyleValue);
+      if (inputData.tone_manner) setToneManner(String(inputData.tone_manner));
+      if (inputData.visual_style_notes)
+        setVisualStyleNotes(String(inputData.visual_style_notes));
     },
     []
   );
