@@ -19,6 +19,9 @@ interface StartOptions {
   correction_patterns?: unknown[];
   with_na_script?: boolean;
   with_storyboard_images?: boolean;
+  visual_style?: string;
+  tone_manner?: string | null;
+  visual_style_notes?: string | null;
 }
 
 export function useBulkComposition(projectId: string) {
