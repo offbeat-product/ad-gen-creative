@@ -51,6 +51,7 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
   const [visualStyle, setVisualStyle] = useState<VisualStyleValue>(DEFAULT_VISUAL_STYLE);
   const [toneManner, setToneManner] = useState('');
   const [visualStyleNotes, setVisualStyleNotes] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   // Load latest appeal_axis_copy job
   useEffect(() => {
