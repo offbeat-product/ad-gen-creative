@@ -86,18 +86,29 @@ const NarrationAudioSettings = ({
 
       {/* NA原稿 */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <Label>NA原稿</Label>
-          <label className="inline-flex items-center gap-1 text-xs text-secondary hover:underline cursor-pointer">
-            <Upload className="h-3 w-3" />
-            ファイルから読込(.txt / .docx)
-            <input
-              type="file"
-              accept=".txt,.docx"
-              className="hidden"
-              onChange={onFileUpload}
-            />
-          </label>
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => setPickerOpen(true)}
+            >
+              <ListChecks className="h-3 w-3 mr-1" /> NA原稿生成から選ぶ
+            </Button>
+            <label className="inline-flex items-center gap-1 text-xs text-secondary hover:underline cursor-pointer">
+              <Upload className="h-3 w-3" />
+              ファイルから読込(.txt / .docx)
+              <input
+                type="file"
+                accept=".txt,.docx"
+                className="hidden"
+                onChange={onFileUpload}
+              />
+            </label>
+          </div>
         </div>
         <Textarea
           value={script}
@@ -110,6 +121,17 @@ const NarrationAudioSettings = ({
           ※ 1行 = 1ボイス分割単位(無音でポーズ)
         </p>
       </div>
+
+      <NarrationScriptPickerDialog
+        projectId={projectId}
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onPick={(s) => {
+          setScript(s);
+          setPickerOpen(false);
+          toast.success('NA原稿を読み込みました');
+        }}
+      />
 
       {/* ボイス選択 */}
       <div className="space-y-2">

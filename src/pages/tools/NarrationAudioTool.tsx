@@ -201,6 +201,7 @@ const NarrationAudioTool = () => {
         return (
           <NarrationAudioSettings
             context={context}
+            projectId={state.projectId}
             script={script}
             setScript={setScript}
             selectedVoice={selectedVoice}
