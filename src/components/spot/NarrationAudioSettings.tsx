@@ -16,6 +16,7 @@ export interface NarrationAudioSeedInfo {
 
 interface Props {
   context: ReturnType<typeof useProjectContext>['context'];
+  projectId: string | null;
   script: string;
   setScript: (v: string) => void;
   selectedVoice: string;
@@ -30,6 +31,7 @@ interface Props {
 
 const NarrationAudioSettings = ({
   context,
+  projectId,
   script,
   setScript,
   selectedVoice,
@@ -41,6 +43,7 @@ const NarrationAudioSettings = ({
   isRunning,
   onFileUpload,
 }: Props) => {
+  const [pickerOpen, setPickerOpen] = useState(false);
   const narrationRulesCount =
     context?.rules.filter((r) =>
       ['narration', 'na_script', 'script'].includes(r.process_type)

@@ -33,6 +33,7 @@ export interface NarrationScriptSeedInfo {
 
 interface Props {
   context: ReturnType<typeof useProjectContext>['context'];
+  projectId: string | null;
   composition: string;
   setComposition: (v: string) => void;
   duration: number;
@@ -45,6 +46,7 @@ interface Props {
 
 const NarrationScriptSettings = ({
   context,
+  projectId,
   composition,
   setComposition,
   duration,
@@ -54,6 +56,7 @@ const NarrationScriptSettings = ({
   isRunning,
   onFileUpload,
 }: Props) => {
+  const [pickerOpen, setPickerOpen] = useState(false);
   const scriptRules =
     context?.rules.filter((r) =>
       ['script', 'na_script', 'narration'].includes(r.process_type)
