@@ -23,6 +23,7 @@ export interface SeedInfo {
 
 interface Props {
   context: ReturnType<typeof useProjectContext>['context'];
+  projectId: string | null;
   appealAxis: string;
   setAppealAxis: (v: string) => void;
   copyText: string;
@@ -38,6 +39,7 @@ interface Props {
 
 const CompositionSettings = ({
   context,
+  projectId,
   appealAxis,
   setAppealAxis,
   copyText,
