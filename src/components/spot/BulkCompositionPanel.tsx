@@ -582,6 +582,17 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
           </Button>
         </>
       )}
+
+      <AppealAxisJobPickerDialog
+        projectId={projectId}
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onPick={(copies) => {
+          setAllCopies(copies);
+          setPickerOpen(false);
+          toast.success(`${copies.length}件のコピーを読み込みました`);
+        }}
+      />
     </div>
   );
 };
