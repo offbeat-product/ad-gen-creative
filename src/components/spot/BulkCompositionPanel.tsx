@@ -175,6 +175,11 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
         with_na_script: creativeType === 'video' ? withNaScript : false,
         with_storyboard_images:
           creativeType === 'video' ? withStoryboardImages : false,
+        ...(creativeType === 'video' && {
+          visual_style: visualStyle,
+          tone_manner: toneManner.trim() || null,
+          visual_style_notes: visualStyleNotes.trim() || null,
+        }),
       });
       toast.success(`${totalCount}件の構成案を生成開始しました`);
     } catch (err) {
