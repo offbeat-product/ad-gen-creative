@@ -11,6 +11,7 @@ import ImageGenerationResult, {
   type SpotJob,
   type SceneAsset,
 } from '@/components/spot/ImageGenerationResult';
+import { DEFAULT_VISUAL_STYLE, type VisualStyleValue } from '@/constants/visualStyles';
 
 const N8N_WEBHOOK_URL = 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-spot-image-generation';
 const TOOL_TYPE = 'image_generation';
