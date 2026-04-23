@@ -208,6 +208,9 @@ const ImageGenerationTool = () => {
                 process_type: r.process_type,
               })),
               correction_patterns: context?.corrections ?? [],
+              visual_style: visualStyle,
+              tone_manner: toneManner || null,
+              visual_style_notes: visualStyleNotes || null,
             }),
           }).catch((e) => console.error('n8n webhook error:', e));
 
