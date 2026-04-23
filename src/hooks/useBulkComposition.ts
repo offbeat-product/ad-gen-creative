@@ -19,6 +19,9 @@ interface StartOptions {
   correction_patterns?: unknown[];
   with_na_script?: boolean;
   with_storyboard_images?: boolean;
+  visual_style?: string;
+  tone_manner?: string | null;
+  visual_style_notes?: string | null;
 }
 
 export function useBulkComposition(projectId: string) {
@@ -76,6 +79,13 @@ export function useBulkComposition(projectId: string) {
               correction_patterns: options.correction_patterns ?? [],
               with_na_script: options.with_na_script ?? false,
               with_storyboard_images: options.with_storyboard_images ?? false,
+              ...(options.creative_type === 'video' && options.visual_style
+                ? {
+                    visual_style: options.visual_style,
+                    tone_manner: options.tone_manner ?? null,
+                    visual_style_notes: options.visual_style_notes ?? null,
+                  }
+                : {}),
             },
           }
         );

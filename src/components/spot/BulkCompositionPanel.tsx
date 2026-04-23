@@ -14,6 +14,11 @@ import BulkCompositionProgress from './BulkCompositionProgress';
 
 import type { useProjectContext } from '@/hooks/useProjectContext';
 import type { GeneratedCopy, AppealAxisCopy, BannerBrief } from '@/types/bulk-composition';
+import {
+  VISUAL_STYLE_PRESETS,
+  DEFAULT_VISUAL_STYLE,
+  type VisualStyleValue,
+} from '@/constants/visualStyles';
 
 interface Props {
   projectId: string;
@@ -42,6 +47,9 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
   const [withStoryboardImages, setWithStoryboardImages] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   const [bannerBrief, setBannerBrief] = useState<BannerBrief>(emptyBrief);
+  const [visualStyle, setVisualStyle] = useState<VisualStyleValue>(DEFAULT_VISUAL_STYLE);
+  const [toneManner, setToneManner] = useState('');
+  const [visualStyleNotes, setVisualStyleNotes] = useState('');
 
   // Load latest appeal_axis_copy job
   useEffect(() => {
@@ -121,6 +129,11 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
       return;
     }
 
+    if (creativeType === 'video' && visualStyle === 'custom' && !visualStyleNotes.trim()) {
+      toast.error('「カスタム」選択時は映像スタイル補足の入力が必須です');
+      return;
+    }
+
     const estimatedMinutes = Math.max(1, Math.ceil((totalCount * 30) / 60));
     const ok = window.confirm(
       `${totalCount}件の${creativeType === 'banner' ? 'バナー' : ''}構成案を一括生成します。\n完了までおおよそ${estimatedMinutes}分かかります。\n続行しますか?`
@@ -162,6 +175,11 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
         with_na_script: creativeType === 'video' ? withNaScript : false,
         with_storyboard_images:
           creativeType === 'video' ? withStoryboardImages : false,
+        ...(creativeType === 'video' && {
+          visual_style: visualStyle,
+          tone_manner: toneManner.trim() || null,
+          visual_style_notes: visualStyleNotes.trim() || null,
+        }),
       });
       toast.success(`${totalCount}件の構成案を生成開始しました`);
     } catch (err) {
@@ -324,6 +342,90 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
                     <span className="font-semibold">{sec}秒</span>
                   </button>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {/* Visual style (video only) */}
+          {creativeType === 'video' && (
+            <div className="space-y-4 rounded-xl border bg-card p-5">
+              <div className="space-y-1">
+                <h3 className="font-bold text-sm flex items-center gap-2">
+                  🎬 映像スタイル
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  各パターンの映像指示(visual)がこのスタイルに沿って生成されます
+                </p>
+              </div>
+
+              {/* Visual style radio */}
+              <div className="space-y-2">
+                <Label className="text-xs">
+                  映像スタイル <span className="text-destructive">*</span>
+                </Label>
+                <div className="grid gap-2">
+                  {VISUAL_STYLE_PRESETS.map((preset) => {
+                    const active = visualStyle === preset.value;
+                    return (
+                      <label
+                        key={preset.value}
+                        className={cn(
+                          'flex items-start gap-3 cursor-pointer rounded-lg border p-3 transition-all hover:border-secondary/50',
+                          active && 'border-secondary ring-2 ring-secondary/30 bg-secondary/5'
+                        )}
+                      >
+                        <input
+                          type="radio"
+                          name="visual_style"
+                          value={preset.value}
+                          checked={active}
+                          onChange={(e) =>
+                            setVisualStyle(e.target.value as VisualStyleValue)
+                          }
+                          className="mt-1 accent-[hsl(var(--secondary))]"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold">
+                            {preset.emoji} {preset.label}
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {preset.description}
+                          </div>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Tone & manner */}
+              <div className="space-y-1">
+                <Label className="text-xs">トーン&マナー (任意)</Label>
+                <Input
+                  value={toneManner}
+                  onChange={(e) => setToneManner(e.target.value)}
+                  placeholder="例: 明るく親しみやすく / 真面目で信頼感のある"
+                  className="text-sm"
+                />
+              </div>
+
+              {/* Visual style notes */}
+              <div className="space-y-1">
+                <Label className="text-xs">
+                  映像スタイル補足
+                  {visualStyle === 'custom' ? (
+                    <span className="text-destructive ml-1">* (カスタム選択時は必須)</span>
+                  ) : (
+                    <span className="text-muted-foreground ml-1">(任意)</span>
+                  )}
+                </Label>
+                <Textarea
+                  value={visualStyleNotes}
+                  onChange={(e) => setVisualStyleNotes(e.target.value)}
+                  placeholder="例: 自撮り・手ブレ感・生活感重視 / カメラは縦型スマホ固定"
+                  rows={2}
+                  className="text-sm resize-none"
+                />
               </div>
             </div>
           )}
