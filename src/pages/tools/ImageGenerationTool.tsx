@@ -11,6 +11,7 @@ import ImageGenerationResult, {
   type SpotJob,
   type SceneAsset,
 } from '@/components/spot/ImageGenerationResult';
+import { DEFAULT_VISUAL_STYLE, type VisualStyleValue } from '@/constants/visualStyles';
 
 const N8N_WEBHOOK_URL = 'https://offbeat-inc.app.n8n.cloud/webhook/adgen-spot-image-generation';
 const TOOL_TYPE = 'image_generation';
@@ -31,6 +32,9 @@ const ImageGenerationTool = () => {
   const [duration, setDuration] = useState<number>(30);
   const [creativeStyle, setCreativeStyle] = useState<string>('photographic');
   const [aspectRatio, setAspectRatio] = useState<string>('landscape_16_9');
+  const [visualStyle, setVisualStyle] = useState<VisualStyleValue>(DEFAULT_VISUAL_STYLE);
+  const [toneManner, setToneManner] = useState<string>('');
+  const [visualStyleNotes, setVisualStyleNotes] = useState<string>('');
   const [seedInfo, setSeedInfo] = useState<ImageGenSeedInfo | null>(null);
 
   const [jobId, setJobId] = useState<string | null>(null);
@@ -71,6 +75,9 @@ const ImageGenerationTool = () => {
         });
       }
       if (seed.duration_seconds) setDuration(Number(seed.duration_seconds));
+      if (seed.visual_style) setVisualStyle(seed.visual_style as VisualStyleValue);
+      if (seed.tone_manner) setToneManner(String(seed.tone_manner));
+      if (seed.visual_style_notes) setVisualStyleNotes(String(seed.visual_style_notes));
       sessionStorage.removeItem('image_generation_seed');
       toast.info(`構成案 ${seed.scenes?.length ?? 0} シーンを引き継ぎました`);
     } catch (e) {
@@ -86,6 +93,10 @@ const ImageGenerationTool = () => {
       if (inputData.duration_seconds) setDuration(Number(inputData.duration_seconds));
       if (inputData.creative_style) setCreativeStyle(String(inputData.creative_style));
       if (inputData.aspect_ratio) setAspectRatio(String(inputData.aspect_ratio));
+      if (inputData.visual_style) setVisualStyle(inputData.visual_style as VisualStyleValue);
+      if (inputData.tone_manner) setToneManner(String(inputData.tone_manner));
+      if (inputData.visual_style_notes)
+        setVisualStyleNotes(String(inputData.visual_style_notes));
     },
     []
   );
@@ -157,6 +168,9 @@ const ImageGenerationTool = () => {
                 duration_seconds: duration,
                 creative_style: creativeStyle,
                 aspect_ratio: aspectRatio,
+                visual_style: visualStyle,
+                tone_manner: toneManner || null,
+                visual_style_notes: visualStyleNotes || null,
               },
               status: 'pending',
               created_by: user.id,
@@ -194,6 +208,9 @@ const ImageGenerationTool = () => {
                 process_type: r.process_type,
               })),
               correction_patterns: context?.corrections ?? [],
+              visual_style: visualStyle,
+              tone_manner: toneManner || null,
+              visual_style_notes: visualStyleNotes || null,
             }),
           }).catch((e) => console.error('n8n webhook error:', e));
 
