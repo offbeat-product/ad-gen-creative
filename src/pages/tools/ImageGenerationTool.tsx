@@ -32,6 +32,9 @@ const ImageGenerationTool = () => {
   const [duration, setDuration] = useState<number>(30);
   const [creativeStyle, setCreativeStyle] = useState<string>('photographic');
   const [aspectRatio, setAspectRatio] = useState<string>('landscape_16_9');
+  const [visualStyle, setVisualStyle] = useState<VisualStyleValue>(DEFAULT_VISUAL_STYLE);
+  const [toneManner, setToneManner] = useState<string>('');
+  const [visualStyleNotes, setVisualStyleNotes] = useState<string>('');
   const [seedInfo, setSeedInfo] = useState<ImageGenSeedInfo | null>(null);
 
   const [jobId, setJobId] = useState<string | null>(null);
