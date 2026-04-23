@@ -72,6 +72,9 @@ serve(async (req) => {
       correction_patterns = [],
       with_na_script = false,
       with_storyboard_images = false,
+      visual_style = null,
+      tone_manner = null,
+      visual_style_notes = null,
     } = body;
 
     if (!project_id || !Array.isArray(appeal_axes_copies) || appeal_axes_copies.length === 0) {
