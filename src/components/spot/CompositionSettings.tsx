@@ -1,10 +1,13 @@
-import { Loader2, Film, Clock } from 'lucide-react';
+import { useState } from 'react';
+import { Loader2, Film, Clock, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import type { useProjectContext } from '@/hooks/useProjectContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import AppealAxisPickerDialog from '@/components/spot/AppealAxisPickerDialog';
 
 const DURATION_OPTIONS = [15, 30, 60] as const;
 const CREATIVE_TYPES = [
