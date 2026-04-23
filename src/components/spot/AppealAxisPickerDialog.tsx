@@ -46,7 +46,7 @@ const AppealAxisPickerDialog = ({ projectId, open, onOpenChange, onPick }: Props
           .from('gen_spot_jobs')
           .select('id, created_at')
           .eq('project_id', projectId)
-          .eq('tool_type', 'appeal_axis')
+          .eq('tool_type', 'appeal_axis_copy')
           .eq('status', 'completed')
           .order('created_at', { ascending: false })
           .limit(20);
