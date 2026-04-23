@@ -31,6 +31,9 @@ const NarrationScriptTool = () => {
   const [composition, setComposition] = useState('');
   const [duration, setDuration] = useState<number>(30);
   const [seedInfo, setSeedInfo] = useState<NarrationScriptSeedInfo | null>(null);
+  const [visualStyle, setVisualStyle] = useState<string | null>(null);
+  const [toneManner, setToneManner] = useState<string | null>(null);
+  const [visualStyleNotes, setVisualStyleNotes] = useState<string | null>(null);
 
   // ジョブstate
   const [jobId, setJobId] = useState<string | null>(null);
