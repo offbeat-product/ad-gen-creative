@@ -52,6 +52,7 @@ const CompositionSettings = ({
   onGenerate,
   isRunning,
 }: Props) => {
+  const [pickerOpen, setPickerOpen] = useState(false);
   const compositionRules =
     context?.rules.filter((r) =>
       ['storyboard', 'script', 'video_horizontal', 'video_vertical'].includes(r.process_type)
