@@ -1,10 +1,13 @@
-import { Loader2, Mic, Upload } from 'lucide-react';
+import { useState } from 'react';
+import { Loader2, Mic, Upload, ListChecks } from 'lucide-react';
+import { toast } from 'sonner';
 import type { useProjectContext } from '@/hooks/useProjectContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import SpotVoiceSelector from '@/components/spot/SpotVoiceSelector';
+import NarrationScriptPickerDialog from '@/components/spot/NarrationScriptPickerDialog';
 
 export interface NarrationAudioSeedInfo {
   from_tool?: string;

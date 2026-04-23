@@ -1,10 +1,27 @@
-import { Loader2, FileText, Upload, Clock } from 'lucide-react';
+import { useState } from 'react';
+import { Loader2, FileText, Upload, Clock, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import type { useProjectContext } from '@/hooks/useProjectContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import CompositionPickerDialog, {
+  type CompositionScene,
+} from '@/components/spot/CompositionPickerDialog';
+
+const formatScenesAsText = (scenes: CompositionScene[]): string =>
+  scenes
+    .map((s) => {
+      const head = `${s.part}${s.time_range ? ` (${s.time_range})` : ''}:`;
+      const lines = [head];
+      if (s.telop) lines.push(`  テロップ: ${s.telop}`);
+      if (s.visual) lines.push(`  映像: ${s.visual}`);
+      if (s.narration) lines.push(`  ナレーション: ${s.narration}`);
+      return lines.join('\n');
+    })
+    .join('\n\n');
 
 const DURATION_OPTIONS = [15, 30, 60] as const;
 
