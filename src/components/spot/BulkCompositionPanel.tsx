@@ -14,6 +14,11 @@ import BulkCompositionProgress from './BulkCompositionProgress';
 
 import type { useProjectContext } from '@/hooks/useProjectContext';
 import type { GeneratedCopy, AppealAxisCopy, BannerBrief } from '@/types/bulk-composition';
+import {
+  VISUAL_STYLE_PRESETS,
+  DEFAULT_VISUAL_STYLE,
+  type VisualStyleValue,
+} from '@/constants/visualStyles';
 
 interface Props {
   projectId: string;
