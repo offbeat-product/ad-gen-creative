@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Loader2, Rocket, Film, Image as ImageIcon, Clock, AlertCircle, Sparkles } from 'lucide-react';
+import { Loader2, Rocket, Film, Image as ImageIcon, Clock, AlertCircle, Sparkles, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { useBulkComposition } from '@/hooks/useBulkComposition';
 import BulkCompositionProgress from './BulkCompositionProgress';
+import AppealAxisJobPickerDialog from './AppealAxisJobPickerDialog';
 
 import type { useProjectContext } from '@/hooks/useProjectContext';
 import type { GeneratedCopy, AppealAxisCopy, BannerBrief } from '@/types/bulk-composition';
@@ -50,6 +51,7 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
   const [visualStyle, setVisualStyle] = useState<VisualStyleValue>(DEFAULT_VISUAL_STYLE);
   const [toneManner, setToneManner] = useState('');
   const [visualStyleNotes, setVisualStyleNotes] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   // Load latest appeal_axis_copy job
   useEffect(() => {
@@ -239,6 +241,15 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
               <h3 className="font-semibold text-sm">
                 訴求軸・コピー生成ツールから引き継ぎ
               </h3>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => setPickerOpen(true)}
+              >
+                <ListChecks className="h-3 w-3 mr-1" /> 別の生成結果から選ぶ
+              </Button>
               <Badge variant="secondary" className="ml-auto">
                 全{totalCount}パターンを一括生成
               </Badge>
@@ -571,6 +582,17 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
           </Button>
         </>
       )}
+
+      <AppealAxisJobPickerDialog
+        projectId={projectId}
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onPick={(copies) => {
+          setAllCopies(copies);
+          setPickerOpen(false);
+          toast.success(`${copies.length}件のコピーを読み込みました`);
+        }}
+      />
     </div>
   );
 };

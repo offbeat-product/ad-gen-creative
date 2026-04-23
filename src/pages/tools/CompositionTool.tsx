@@ -226,6 +226,7 @@ const CompositionTool = () => {
         return (
           <CompositionSettings
             context={context}
+            projectId={state.projectId}
             appealAxis={appealAxis}
             setAppealAxis={setAppealAxis}
             copyText={copyText}

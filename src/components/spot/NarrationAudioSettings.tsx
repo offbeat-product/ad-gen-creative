@@ -1,10 +1,13 @@
-import { Loader2, Mic, Upload } from 'lucide-react';
+import { useState } from 'react';
+import { Loader2, Mic, Upload, ListChecks } from 'lucide-react';
+import { toast } from 'sonner';
 import type { useProjectContext } from '@/hooks/useProjectContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import SpotVoiceSelector from '@/components/spot/SpotVoiceSelector';
+import NarrationScriptPickerDialog from '@/components/spot/NarrationScriptPickerDialog';
 
 export interface NarrationAudioSeedInfo {
   from_tool?: string;
@@ -13,6 +16,7 @@ export interface NarrationAudioSeedInfo {
 
 interface Props {
   context: ReturnType<typeof useProjectContext>['context'];
+  projectId: string | null;
   script: string;
   setScript: (v: string) => void;
   selectedVoice: string;
@@ -27,6 +31,7 @@ interface Props {
 
 const NarrationAudioSettings = ({
   context,
+  projectId,
   script,
   setScript,
   selectedVoice,
@@ -38,6 +43,7 @@ const NarrationAudioSettings = ({
   isRunning,
   onFileUpload,
 }: Props) => {
+  const [pickerOpen, setPickerOpen] = useState(false);
   const narrationRulesCount =
     context?.rules.filter((r) =>
       ['narration', 'na_script', 'script'].includes(r.process_type)
@@ -80,18 +86,29 @@ const NarrationAudioSettings = ({
 
       {/* NA原稿 */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <Label>NA原稿</Label>
-          <label className="inline-flex items-center gap-1 text-xs text-secondary hover:underline cursor-pointer">
-            <Upload className="h-3 w-3" />
-            ファイルから読込(.txt / .docx)
-            <input
-              type="file"
-              accept=".txt,.docx"
-              className="hidden"
-              onChange={onFileUpload}
-            />
-          </label>
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => setPickerOpen(true)}
+            >
+              <ListChecks className="h-3 w-3 mr-1" /> NA原稿生成から選ぶ
+            </Button>
+            <label className="inline-flex items-center gap-1 text-xs text-secondary hover:underline cursor-pointer">
+              <Upload className="h-3 w-3" />
+              ファイルから読込(.txt / .docx)
+              <input
+                type="file"
+                accept=".txt,.docx"
+                className="hidden"
+                onChange={onFileUpload}
+              />
+            </label>
+          </div>
         </div>
         <Textarea
           value={script}
@@ -104,6 +121,17 @@ const NarrationAudioSettings = ({
           ※ 1行 = 1ボイス分割単位(無音でポーズ)
         </p>
       </div>
+
+      <NarrationScriptPickerDialog
+        projectId={projectId}
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onPick={(s) => {
+          setScript(s);
+          setPickerOpen(false);
+          toast.success('NA原稿を読み込みました');
+        }}
+      />
 
       {/* ボイス選択 */}
       <div className="space-y-2">

@@ -1,10 +1,27 @@
-import { Loader2, FileText, Upload, Clock } from 'lucide-react';
+import { useState } from 'react';
+import { Loader2, FileText, Upload, Clock, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import type { useProjectContext } from '@/hooks/useProjectContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import CompositionPickerDialog, {
+  type CompositionScene,
+} from '@/components/spot/CompositionPickerDialog';
+
+const formatScenesAsText = (scenes: CompositionScene[]): string =>
+  scenes
+    .map((s) => {
+      const head = `${s.part}${s.time_range ? ` (${s.time_range})` : ''}:`;
+      const lines = [head];
+      if (s.telop) lines.push(`  テロップ: ${s.telop}`);
+      if (s.visual) lines.push(`  映像: ${s.visual}`);
+      if (s.narration) lines.push(`  ナレーション: ${s.narration}`);
+      return lines.join('\n');
+    })
+    .join('\n\n');
 
 const DURATION_OPTIONS = [15, 30, 60] as const;
 
@@ -16,6 +33,7 @@ export interface NarrationScriptSeedInfo {
 
 interface Props {
   context: ReturnType<typeof useProjectContext>['context'];
+  projectId: string | null;
   composition: string;
   setComposition: (v: string) => void;
   duration: number;
@@ -28,6 +46,7 @@ interface Props {
 
 const NarrationScriptSettings = ({
   context,
+  projectId,
   composition,
   setComposition,
   duration,
@@ -37,6 +56,7 @@ const NarrationScriptSettings = ({
   isRunning,
   onFileUpload,
 }: Props) => {
+  const [pickerOpen, setPickerOpen] = useState(false);
   const scriptRules =
     context?.rules.filter((r) =>
       ['script', 'na_script', 'narration'].includes(r.process_type)
@@ -88,18 +108,29 @@ const NarrationScriptSettings = ({
 
       {/* 構成案 */}
       <div className="space-y-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <Label>構成案・字コンテ</Label>
-          <label className="inline-flex items-center gap-1 text-xs text-secondary hover:underline cursor-pointer">
-            <Upload className="h-3 w-3" />
-            ファイルから読込(.txt / .docx)
-            <input
-              type="file"
-              accept=".txt,.docx"
-              className="hidden"
-              onChange={onFileUpload}
-            />
-          </label>
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => setPickerOpen(true)}
+            >
+              <ListChecks className="h-3 w-3 mr-1" /> 構成案生成から選ぶ
+            </Button>
+            <label className="inline-flex items-center gap-1 text-xs text-secondary hover:underline cursor-pointer">
+              <Upload className="h-3 w-3" />
+              ファイルから読込(.txt / .docx)
+              <input
+                type="file"
+                accept=".txt,.docx"
+                className="hidden"
+                onChange={onFileUpload}
+              />
+            </label>
+          </div>
         </div>
         <Textarea
           value={composition}
@@ -112,6 +143,17 @@ const NarrationScriptSettings = ({
           ※ パート(冒頭/前半/後半/締め)と時間レンジ、テロップ・映像の情報を含めてください
         </p>
       </div>
+
+      <CompositionPickerDialog
+        projectId={projectId}
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onPick={(scenes) => {
+          setComposition(formatScenesAsText(scenes));
+          setPickerOpen(false);
+          toast.success('構成案を読み込みました');
+        }}
+      />
 
       {/* 動画尺 */}
       <div className="space-y-3">

@@ -1,10 +1,13 @@
-import { Loader2, Film, Clock } from 'lucide-react';
+import { useState } from 'react';
+import { Loader2, Film, Clock, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import type { useProjectContext } from '@/hooks/useProjectContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import AppealAxisPickerDialog from '@/components/spot/AppealAxisPickerDialog';
 
 const DURATION_OPTIONS = [15, 30, 60] as const;
 const CREATIVE_TYPES = [
@@ -20,6 +23,7 @@ export interface SeedInfo {
 
 interface Props {
   context: ReturnType<typeof useProjectContext>['context'];
+  projectId: string | null;
   appealAxis: string;
   setAppealAxis: (v: string) => void;
   copyText: string;
@@ -35,6 +39,7 @@ interface Props {
 
 const CompositionSettings = ({
   context,
+  projectId,
   appealAxis,
   setAppealAxis,
   copyText,
@@ -47,6 +52,7 @@ const CompositionSettings = ({
   onGenerate,
   isRunning,
 }: Props) => {
+  const [pickerOpen, setPickerOpen] = useState(false);
   const compositionRules =
     context?.rules.filter((r) =>
       ['storyboard', 'script', 'video_horizontal', 'video_vertical'].includes(r.process_type)
@@ -103,7 +109,18 @@ const CompositionSettings = ({
 
       {/* 訴求軸 */}
       <div className="space-y-2">
-        <Label htmlFor="appeal-axis">訴求軸</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="appeal-axis">訴求軸</Label>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={() => setPickerOpen(true)}
+          >
+            <ListChecks className="h-3 w-3 mr-1" /> 訴求軸生成から選ぶ
+          </Button>
+        </div>
         <Input
           id="appeal-axis"
           value={appealAxis}
@@ -122,6 +139,18 @@ const CompositionSettings = ({
           placeholder="例: 毎月お得に新しい物語と出会える"
         />
       </div>
+
+      <AppealAxisPickerDialog
+        projectId={projectId}
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onPick={(axis, copy) => {
+          setAppealAxis(axis);
+          setCopyText(copy);
+          setPickerOpen(false);
+          toast.success('訴求軸・コピーを読み込みました');
+        }}
+      />
 
       {/* 動画尺 */}
       <div className="space-y-3">

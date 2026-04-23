@@ -231,6 +231,7 @@ const NarrationScriptTool = () => {
         return (
           <NarrationScriptSettings
             context={context}
+            projectId={state.projectId}
             composition={composition}
             setComposition={setComposition}
             duration={duration}
