@@ -241,6 +241,15 @@ const BulkCompositionPanel = ({ projectId, context }: Props) => {
               <h3 className="font-semibold text-sm">
                 訴求軸・コピー生成ツールから引き継ぎ
               </h3>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => setPickerOpen(true)}
+              >
+                <ListChecks className="h-3 w-3 mr-1" /> 別の生成結果から選ぶ
+              </Button>
               <Badge variant="secondary" className="ml-auto">
                 全{totalCount}パターンを一括生成
               </Badge>
