@@ -80,6 +80,9 @@ const BgmSuggestionTool = () => {
         from_job_id: seed.from_job_id,
         has_audio: !!seed.narration_audio_url,
       });
+      if (seed.narration_audio_url) setNarrationAudioUrl(String(seed.narration_audio_url));
+      if (seed.narration_audio_job_id)
+        setNarrationAudioJobId(String(seed.narration_audio_job_id));
       sessionStorage.removeItem('bgm_suggestion_seed');
       toast.info('NA原稿を引き継ぎました');
     } catch (e) {
