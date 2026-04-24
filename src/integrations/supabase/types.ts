@@ -1132,6 +1132,7 @@ export type Database = {
         Row: {
           asset_type: string
           created_at: string | null
+          edit_instruction: string | null
           file_name: string | null
           file_size_bytes: number | null
           file_url: string
@@ -1139,11 +1140,14 @@ export type Database = {
           is_selected: boolean | null
           job_id: string
           metadata: Json | null
+          parent_asset_id: string | null
           sort_order: number | null
+          version: number | null
         }
         Insert: {
           asset_type: string
           created_at?: string | null
+          edit_instruction?: string | null
           file_name?: string | null
           file_size_bytes?: number | null
           file_url: string
@@ -1151,11 +1155,14 @@ export type Database = {
           is_selected?: boolean | null
           job_id: string
           metadata?: Json | null
+          parent_asset_id?: string | null
           sort_order?: number | null
+          version?: number | null
         }
         Update: {
           asset_type?: string
           created_at?: string | null
+          edit_instruction?: string | null
           file_name?: string | null
           file_size_bytes?: number | null
           file_url?: string
@@ -1163,7 +1170,9 @@ export type Database = {
           is_selected?: boolean | null
           job_id?: string
           metadata?: Json | null
+          parent_asset_id?: string | null
           sort_order?: number | null
+          version?: number | null
         }
         Relationships: [
           {
@@ -1171,6 +1180,13 @@ export type Database = {
             columns: ["job_id"]
             isOneToOne: false
             referencedRelation: "gen_spot_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gen_spot_assets_parent_asset_id_fkey"
+            columns: ["parent_asset_id"]
+            isOneToOne: false
+            referencedRelation: "gen_spot_assets"
             referencedColumns: ["id"]
           },
         ]
