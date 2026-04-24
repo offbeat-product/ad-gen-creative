@@ -25,6 +25,8 @@ interface Props {
   setSelectedVoice: (v: string) => void;
   speed: number;
   setSpeed: (v: number) => void;
+  targetDuration: number;
+  setTargetDuration: (v: number) => void;
   seedInfo: NarrationAudioSeedInfo | null;
   onGenerate: () => void;
   isRunning: boolean;
