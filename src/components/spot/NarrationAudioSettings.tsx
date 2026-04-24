@@ -42,6 +42,8 @@ const NarrationAudioSettings = ({
   setSelectedVoice,
   speed,
   setSpeed,
+  targetDuration,
+  setTargetDuration,
   seedInfo,
   onGenerate,
   isRunning,
