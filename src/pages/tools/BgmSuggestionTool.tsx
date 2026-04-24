@@ -292,6 +292,8 @@ const BgmSuggestionTool = () => {
           narrationScript={narrationScript}
           durationSeconds={durationSeconds}
           creativeType={creativeType}
+          narrationAudioUrl={narrationAudioUrl}
+          narrationAudioJobId={narrationAudioJobId}
           onStartNew={() => {
             setJobId(null);
             setJob(null);
