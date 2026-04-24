@@ -43,6 +43,8 @@ const BgmSuggestionTool = () => {
   const [creativeType, setCreativeType] = useState<'video' | 'banner'>('video');
   const [numSuggestions, setNumSuggestions] = useState(3);
   const [seedInfo, setSeedInfo] = useState<BgmSeedInfo | null>(null);
+  const [narrationAudioUrl, setNarrationAudioUrl] = useState<string | null>(null);
+  const [narrationAudioJobId, setNarrationAudioJobId] = useState<string | null>(null);
 
   const [jobId, setJobId] = useState<string | null>(null);
   const [job, setJob] = useState<SpotJob | null>(null);
