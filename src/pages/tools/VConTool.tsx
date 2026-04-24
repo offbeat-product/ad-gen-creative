@@ -192,6 +192,7 @@ const VConTool = () => {
             composition_job_id: compositionJobId,
             composition: compositionJobId ? null : composition,
             narration_audio_url: narrationAudioUrl,
+            narration_audio_job_id: narrationAudioJobId,
             bgm_url: bgmUrl,
             duration_seconds: durationSeconds,
 
