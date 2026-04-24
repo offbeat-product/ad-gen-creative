@@ -104,112 +104,6 @@ const BgmSuggestionTool = () => {
     []
   );
 
-  const buildHandleGenerate = (
-    context: ReturnType<typeof import('@/hooks/useProjectContext')['useProjectContext']>['context']
-  ) => async () => {
-    if (!state.projectId || !user) return;
-    const hasInput =
-      appealAxis.trim().length > 0 ||
-      copyText.trim().length > 0 ||
-      composition.trim().length > 0 ||
-      narrationScript.trim().length > 0;
-    if (!hasInput) return;
-
-    const { data: ctxData } = await supabase
-      .from('projects')
-      .select('id, name, copyright_text, product:products(name, client:clients(name))')
-      .eq('id', state.projectId)
-      .single();
-    const proj = ctxData as any;
-
-    const { data: rules } = await supabase
-      .from('check_rules')
-      .select('rule_id, title, description, severity, category, process_type')
-      .eq('product_id', state.productId ?? '')
-      .eq('is_active', true);
-    const relevantRules =
-      (rules ?? []).filter((r: any) => r.process_type?.includes('bgm')) ?? [];
-
-    const payload = {
-      project_id: state.projectId,
-      tool_type: 'bgm_suggestion',
-      input_data: {
-        appeal_axis: appealAxis || null,
-        copy_text: copyText || null,
-        composition: composition || null,
-        narration_script: narrationScript || null,
-        duration_seconds: durationSeconds,
-        creative_type: creativeType,
-        num_suggestions: numSuggestions,
-      },
-      status: 'pending',
-      created_by: user.id,
-    } as any;
-
-    const { data: newJob, error } = await supabase
-      .from('gen_spot_jobs')
-      .insert(payload)
-      .select()
-      .single();
-
-    if (error || !newJob) {
-      toast.error(`生成開始に失敗: ${error?.message ?? 'unknown'}`);
-      return;
-    }
-
-    setJobId(newJob.id);
-    setJob(newJob as SpotJob);
-    setAssets([]);
-
-    fetch(N8N_WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        spot_job_id: newJob.id,
-        project_id: state.projectId,
-        appeal_axis: appealAxis || null,
-        copy_text: copyText || null,
-        composition: composition || null,
-        narration_script: narrationScript || null,
-        duration_seconds: durationSeconds,
-        creative_type: creativeType,
-        num_suggestions: numSuggestions,
-        client_name: proj?.product?.client?.name ?? null,
-        product_name: proj?.product?.name ?? null,
-        project_name: proj?.name ?? null,
-        copyright_text: proj?.copyright_text ?? null,
-        rules: relevantRules.map((r: any) => ({
-          rule_id: r.rule_id,
-          title: r.title,
-          description: r.description,
-          severity: r.severity,
-          category: r.category,
-        })),
-
-        // 🆕 Ad Brain Context(階層統合: クライアント/商材/案件)
-        ad_brain_rules: (context?.rules ?? []).map((r) => ({
-          id: r.id,
-          title: r.title,
-          description: r.description,
-          category: r.category,
-          severity: r.severity,
-          process_type: r.process_type,
-        })),
-        ad_brain_materials: (context?.materials ?? [])
-          .filter((m) => m.content_text && m.content_text.length > 0)
-          .map((m) => ({
-            id: m.id,
-            title: m.title,
-            material_type: m.material_type,
-            scope_type: m.scope_type,
-            content_text: m.content_text,
-          })),
-      }),
-    }).catch((e) => console.error('n8n webhook error:', e));
-
-    toast.success('BGM提案の生成を開始しました');
-  };
-
   // Realtime
   useEffect(() => {
     if (!jobId) return;
@@ -264,29 +158,122 @@ const BgmSuggestionTool = () => {
       updateState={updateState}
       jobId={jobId}
       onRestoreJob={handleRestoreJob}
-      renderSettings={({ context }) => (
-        <BgmSuggestionSettings
-          context={context}
-          projectId={state.projectId}
-          appealAxis={appealAxis}
-          setAppealAxis={setAppealAxis}
-          copyText={copyText}
-          setCopyText={setCopyText}
-          composition={composition}
-          setComposition={setComposition}
-          narrationScript={narrationScript}
-          setNarrationScript={setNarrationScript}
-          durationSeconds={durationSeconds}
-          setDurationSeconds={setDurationSeconds}
-          creativeType={creativeType}
-          setCreativeType={setCreativeType}
-          numSuggestions={numSuggestions}
-          setNumSuggestions={setNumSuggestions}
-          seedInfo={seedInfo}
-          onGenerate={buildHandleGenerate(context)}
-          isRunning={isRunning}
-        />
-      )}
+      renderSettings={({ context }) => {
+        const handleGenerate = async () => {
+          if (!state.projectId || !user) return;
+          const hasInput =
+            appealAxis.trim().length > 0 ||
+            copyText.trim().length > 0 ||
+            composition.trim().length > 0 ||
+            narrationScript.trim().length > 0;
+          if (!hasInput) return;
+
+          const relevantRules =
+            context?.rules.filter((r) => r.process_type?.includes('bgm')) ?? [];
+
+          const { data: newJob, error } = await supabase
+            .from('gen_spot_jobs')
+            .insert({
+              project_id: state.projectId,
+              tool_type: 'bgm_suggestion',
+              input_data: {
+                appeal_axis: appealAxis || null,
+                copy_text: copyText || null,
+                composition: composition || null,
+                narration_script: narrationScript || null,
+                duration_seconds: durationSeconds,
+                creative_type: creativeType,
+                num_suggestions: numSuggestions,
+              },
+              status: 'pending',
+              created_by: user.id,
+            })
+            .select()
+            .single();
+
+          if (error || !newJob) {
+            toast.error(`生成開始に失敗: ${error?.message ?? 'unknown'}`);
+            return;
+          }
+
+          setJobId(newJob.id);
+          setJob(newJob as SpotJob);
+          setAssets([]);
+
+          fetch(N8N_WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              spot_job_id: newJob.id,
+              project_id: state.projectId,
+              appeal_axis: appealAxis || null,
+              copy_text: copyText || null,
+              composition: composition || null,
+              narration_script: narrationScript || null,
+              duration_seconds: durationSeconds,
+              creative_type: creativeType,
+              num_suggestions: numSuggestions,
+              client_name: context?.project?.product?.client?.name ?? null,
+              product_name: context?.project?.product?.name ?? null,
+              project_name: context?.project?.name ?? null,
+              copyright_text: context?.project?.copyright_text ?? null,
+              rules: relevantRules.map((r) => ({
+                id: r.id,
+                title: r.title,
+                description: r.description,
+                severity: r.severity,
+                category: r.category,
+                process_type: r.process_type,
+              })),
+
+              // 🆕 Ad Brain Context(階層統合: クライアント/商材/案件)
+              ad_brain_rules: (context?.rules ?? []).map((r) => ({
+                id: r.id,
+                title: r.title,
+                description: r.description,
+                category: r.category,
+                severity: r.severity,
+                process_type: r.process_type,
+              })),
+              ad_brain_materials: (context?.materials ?? [])
+                .filter((m) => m.content_text && m.content_text.length > 0)
+                .map((m) => ({
+                  id: m.id,
+                  title: m.title,
+                  material_type: m.material_type,
+                  scope_type: m.scope_type,
+                  content_text: m.content_text,
+                })),
+            }),
+          }).catch((e) => console.error('n8n webhook error:', e));
+
+          toast.success('BGM提案の生成を開始しました');
+        };
+
+        return (
+          <BgmSuggestionSettings
+            context={context}
+            projectId={state.projectId}
+            appealAxis={appealAxis}
+            setAppealAxis={setAppealAxis}
+            copyText={copyText}
+            setCopyText={setCopyText}
+            composition={composition}
+            setComposition={setComposition}
+            narrationScript={narrationScript}
+            setNarrationScript={setNarrationScript}
+            durationSeconds={durationSeconds}
+            setDurationSeconds={setDurationSeconds}
+            creativeType={creativeType}
+            setCreativeType={setCreativeType}
+            numSuggestions={numSuggestions}
+            setNumSuggestions={setNumSuggestions}
+            seedInfo={seedInfo}
+            onGenerate={handleGenerate}
+            isRunning={isRunning}
+          />
+        );
+      }}
       renderResult={({ context }) => (
         <BgmSuggestionResult
           job={job}
