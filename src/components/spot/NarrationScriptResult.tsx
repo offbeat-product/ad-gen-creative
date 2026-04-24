@@ -224,8 +224,8 @@ const NarrationScriptResult = ({
               <Button variant="outline" size="sm" onClick={handleDownloadTxt}>
                 <FileText className="h-3 w-3 mr-1" /> .txt
               </Button>
-              <Button variant="outline" size="sm" onClick={handleDownloadDocx}>
-                <FileDown className="h-3 w-3 mr-1" /> .docx
+              <Button variant="outline" size="sm" onClick={handleDownloadPptx}>
+                <Presentation className="h-3 w-3 mr-1" /> .pptx
               </Button>
               <Button variant="brand" size="sm" onClick={handleGoToNarrationAudio}>
                 <ArrowRight className="h-3 w-3 mr-1" /> 音声生成へ
