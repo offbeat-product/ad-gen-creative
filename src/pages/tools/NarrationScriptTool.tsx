@@ -184,7 +184,11 @@ const NarrationScriptTool = () => {
             .insert({
               project_id: state.projectId,
               tool_type: TOOL_TYPE,
-              input_data: { composition, duration_seconds: duration },
+              input_data: {
+                composition,
+                duration_seconds: duration,
+                parent_composition_job_id: seedInfo?.from_job_id ?? null,
+              },
               status: 'pending',
               created_by: user.id,
             })
