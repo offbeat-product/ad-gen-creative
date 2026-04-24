@@ -110,60 +110,48 @@ const NarrationScriptResult = ({
     toast.success('TXTをダウンロードしました');
   };
 
-  const handleDownloadDocx = async () => {
+  const handleDownloadPptx = async () => {
+    if (!jobId) return;
     const projectName = context?.project.name ?? 'project';
     const clientName = context?.project.product.client.name ?? '';
     const productName = context?.project.product.name ?? '';
     const generatedAt = new Date().toISOString().slice(0, 10);
 
-    const validParts = ['冒頭', '前半', '後半', '締め'] as const;
-    type Part = (typeof validParts)[number];
-    const normalizePart = (p: string): Part =>
-      (validParts as readonly string[]).includes(p) ? (p as Part) : '冒頭';
-
-    // メタから取得できなければ、尺ベースで安全/厳格上限を概算 (約6.5字/秒, 約7.5字/秒)
-    const meta = (firstAsset?.metadata ?? {}) as Record<string, unknown>;
-    const targetDuration =
-      (meta.target_duration_seconds as number | undefined) ?? assetDuration;
-    const charLimitSafe =
-      (meta.char_limit_safe as number | undefined) ??
-      Math.floor(targetDuration * 6.5);
-    const charLimitStrict =
-      (meta.char_limit_strict as number | undefined) ??
-      Math.floor(targetDuration * 7.5);
-    const warningMessage =
-      (meta.warning_message as string | null | undefined) ?? null;
-    const appealAxis = (meta.appeal_axis as string | undefined) ?? '';
-    const copyText = (meta.copy_text as string | undefined) ?? '';
-
-    const data = {
-      meta: {
-        client_name: clientName,
-        product_name: productName,
-        project_name: projectName,
-        generated_at: generatedAt,
-        target_duration_seconds: targetDuration,
-        char_count: charCount,
-        char_limit_safe: charLimitSafe,
-        char_limit_strict: charLimitStrict,
-        warning_message: warningMessage,
-        appeal_axis: appealAxis,
-        copy_text: copyText,
-      },
-      sections: sections.map((s) => ({
-        part: normalizePart(s.part),
-        time_range: s.time_range ?? '',
-        text: s.text,
-      })),
-    };
+    // job.input_data から parent_composition_job_id を取得 (seed 経由 or bulk 経由)
+    const jobInput = ((job as unknown as { input_data?: Record<string, unknown> })
+      ?.input_data ?? {}) as Record<string, unknown>;
+    const parentCompositionJobId =
+      (jobInput.parent_composition_job_id as string | undefined) ??
+      (jobInput.from_job_id as string | undefined) ??
+      null;
 
     try {
-      const blob = await generateNAScriptDocx(data);
-      downloadDocx(blob, `NA原稿_${projectName}_${generatedAt}.docx`);
-      toast.success('Wordドキュメントをダウンロードしました');
+      const blob = await generateSingleNaScriptPptx(
+        {
+          jobId,
+          duration: assetDuration,
+          parentCompositionJobId,
+          sections: sections.map((s) => ({
+            part: s.part,
+            time_range: s.time_range ?? '',
+            text: s.text,
+          })),
+          fullScript,
+        },
+        {
+          client_name: clientName,
+          product_name: productName,
+          project_name: projectName,
+        }
+      );
+      downloadBlob(
+        blob,
+        `NA原稿_${sanitizeFileName(projectName)}_${generatedAt}.pptx`
+      );
+      toast.success('PowerPointファイルをダウンロードしました');
     } catch (e) {
-      console.error('[NA Script Docx]', e);
-      toast.error('Wordダウンロードに失敗しました');
+      console.error('[NA Script Pptx]', e);
+      toast.error('pptxダウンロードに失敗しました');
     }
   };
 
