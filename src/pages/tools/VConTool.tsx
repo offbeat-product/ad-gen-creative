@@ -62,6 +62,7 @@ const VConTool = () => {
         setDurationSeconds(seed.duration_seconds);
       }
       if (seed.narration_audio_url) setNarrationAudioUrl(seed.narration_audio_url);
+      if (seed.narration_audio_job_id) setNarrationAudioJobId(seed.narration_audio_job_id);
       if (seed.bgm_url) setBgmUrl(seed.bgm_url);
       sessionStorage.removeItem('vcon_seed');
       toast.info('上流ツールから入力を引き継ぎました');
