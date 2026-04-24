@@ -137,46 +137,44 @@ const CompositionResult = ({
     toast.success('TXTをダウンロードしました');
   };
 
-  const handleDownloadDocx = async (scenes: Scene[], assetDuration: number) => {
+  const handleDownloadPptx = async (scenes: Scene[], assetDuration: number) => {
+    if (!jobId) return;
     const projectName = context?.project.name ?? 'project';
     const clientName = context?.project.product.client.name ?? '';
     const productName = context?.project.product.name ?? '';
     const generatedAt = new Date().toISOString().slice(0, 10);
 
-    const validParts = ['冒頭', '前半', '後半', '締め'] as const;
-    type Part = (typeof validParts)[number];
-    const normalizePart = (p: string): Part =>
-      (validParts as readonly string[]).includes(p) ? (p as Part) : '冒頭';
-
-    const data = {
-      meta: {
-        client_name: clientName,
-        product_name: productName,
-        project_name: projectName,
-        generated_at: generatedAt,
-        creative_type: (creativeType === 'static' ? 'static' : 'video') as
-          | 'video'
-          | 'static',
-        duration_seconds: assetDuration,
-        appeal_axis: appealAxis,
-        copy_text: copyText,
-      },
-      scenes: scenes.map((s) => ({
-        part: normalizePart(s.part),
-        time_range: s.time_range ?? '',
-        telop: s.telop ?? '',
-        visual: s.visual ?? '',
-        narration: s.narration,
-      })),
-    };
-
     try {
-      const blob = await generateCompositionDocx(data);
-      downloadDocx(blob, `構成案字コンテ_${projectName}_${generatedAt}.docx`);
-      toast.success('Wordドキュメントをダウンロードしました');
+      const blob = await generateSingleCompositionPptx(
+        {
+          jobId,
+          appealAxis,
+          copyText,
+          duration: assetDuration,
+          creativeType: creativeType === 'banner' ? 'banner' : 'video',
+          scenes: scenes.map((s) => ({
+            part: s.part,
+            time_range: s.time_range,
+            telop: s.telop,
+            visual: s.visual,
+            narration: s.narration,
+          })),
+        },
+        {
+          client_name: clientName,
+          product_name: productName,
+          project_name: projectName,
+        }
+      );
+      const labelPart = creativeType === 'banner' ? 'バナー構成案' : '動画構成案';
+      downloadBlob(
+        blob,
+        `${labelPart}_${sanitizeFileName(projectName)}_${generatedAt}.pptx`
+      );
+      toast.success('PowerPointファイルをダウンロードしました');
     } catch (e) {
-      console.error('[Composition Docx]', e);
-      toast.error('Wordダウンロードに失敗しました');
+      console.error('[Composition Pptx]', e);
+      toast.error('pptxダウンロードに失敗しました');
     }
   };
 
