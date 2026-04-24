@@ -5,16 +5,17 @@ import {
   AlertCircle,
   ArrowRight,
   FileText,
-  FileDown,
+  Presentation,
   RotateCcw,
   Loader2,
   Clock,
   Sparkles,
 } from 'lucide-react';
 import {
-  generateNAScriptDocx,
-  downloadDocx,
-} from '@/lib/generate-na-script-docx';
+  generateSingleNaScriptPptx,
+  downloadBlob,
+  sanitizeFileName,
+} from '@/lib/pptx/single-pptx-helpers';
 import { saveAs } from 'file-saver';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
