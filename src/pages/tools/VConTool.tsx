@@ -237,6 +237,8 @@ const VConTool = () => {
             setDurationSeconds={setDurationSeconds}
             narrationAudioUrl={narrationAudioUrl}
             setNarrationAudioUrl={setNarrationAudioUrl}
+            narrationAudioJobId={narrationAudioJobId}
+            setNarrationAudioJobId={setNarrationAudioJobId}
             bgmUrl={bgmUrl}
             setBgmUrl={setBgmUrl}
             onGenerate={handleGenerate}
