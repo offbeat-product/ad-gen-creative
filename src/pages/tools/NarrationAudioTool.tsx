@@ -209,6 +209,8 @@ const NarrationAudioTool = () => {
             setSelectedVoice={setSelectedVoice}
             speed={speed}
             setSpeed={setSpeed}
+            targetDuration={targetDuration}
+            setTargetDuration={setTargetDuration}
             seedInfo={seedInfo}
             onGenerate={handleGenerate}
             isRunning={isRunning}
