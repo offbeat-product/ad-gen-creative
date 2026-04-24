@@ -109,6 +109,8 @@ const BgmSuggestionResult = ({
   narrationScript,
   durationSeconds,
   creativeType,
+  narrationAudioUrl,
+  narrationAudioJobId,
   onStartNew,
   onAssetsChanged,
 }: Props) => {
