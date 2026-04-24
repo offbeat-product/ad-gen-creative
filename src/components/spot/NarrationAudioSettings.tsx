@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import SpotVoiceSelector from '@/components/spot/SpotVoiceSelector';
 import NarrationScriptPickerDialog from '@/components/spot/NarrationScriptPickerDialog';
+import DurationPredictionBadge from '@/components/spot/DurationPredictionBadge';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 export interface NarrationAudioSeedInfo {
   from_tool?: string;
