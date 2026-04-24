@@ -95,6 +95,8 @@ const VConSettings = ({
   setDurationSeconds,
   narrationAudioUrl,
   setNarrationAudioUrl,
+  narrationAudioJobId: _narrationAudioJobId,
+  setNarrationAudioJobId,
   bgmUrl,
   setBgmUrl,
   onGenerate,
