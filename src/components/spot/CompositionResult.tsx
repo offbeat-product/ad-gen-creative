@@ -273,9 +273,9 @@ const CompositionResult = ({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => handleDownloadDocx(scenes, assetDuration)}
+                onClick={() => handleDownloadPptx(scenes, assetDuration)}
               >
-                <FileDown className="h-3 w-3 mr-1" /> .docx
+                <Presentation className="h-3 w-3 mr-1" /> .pptx
               </Button>
               <Button
                 variant="outline"
