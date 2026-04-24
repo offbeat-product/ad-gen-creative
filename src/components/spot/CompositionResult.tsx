@@ -6,7 +6,7 @@ import {
   ArrowRight,
   Image as ImageIcon,
   FileText,
-  FileDown,
+  Presentation,
   RotateCcw,
   Loader2,
   Film,
@@ -15,9 +15,10 @@ import {
 } from 'lucide-react';
 import { saveAs } from 'file-saver';
 import {
-  generateCompositionDocx,
-  downloadDocx,
-} from '@/lib/generate-composition-docx';
+  generateSingleCompositionPptx,
+  downloadBlob,
+  sanitizeFileName,
+} from '@/lib/pptx/single-pptx-helpers';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
