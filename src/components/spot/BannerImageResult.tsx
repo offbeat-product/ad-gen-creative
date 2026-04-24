@@ -3,17 +3,22 @@ import {
   CheckCircle2,
   AlertCircle,
   Download,
-  RefreshCw,
   Pencil,
   X,
   Loader2,
+  Wand2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import type { useProjectContext } from '@/hooks/useProjectContext';
 import type { SpotWizardState } from '@/hooks/useSpotWizard';
+import BannerEditModal, {
+  type BannerEditCompletePayload,
+  type BannerEditTargetAsset,
+} from './BannerEditModal';
 
 export interface SpotJob {
   id: string;
@@ -27,6 +32,9 @@ export interface BannerAsset {
   file_url: string;
   file_name: string | null;
   sort_order: number | null;
+  version?: number | null;
+  parent_asset_id?: string | null;
+  edit_instruction?: string | null;
   metadata: {
     width?: number;
     height?: number;
@@ -46,19 +54,36 @@ interface Props {
   onStartNew: () => void;
 }
 
-const BannerImageResult = ({ job, assets, jobId, onStartNew }: Props) => {
+const BannerImageResult = ({ job, assets, jobId, state, onStartNew }: Props) => {
   const [zoomedAsset, setZoomedAsset] = useState<BannerAsset | null>(null);
+  const [editingAsset, setEditingAsset] = useState<BannerAsset | null>(null);
 
   const isRunning = job?.status === 'pending' || job?.status === 'running';
 
-  const assetsBySize = assets.reduce<Record<string, BannerAsset[]>>((acc, a) => {
-    const w = a.metadata?.width;
-    const h = a.metadata?.height;
-    const key = w && h ? `${w}x${h}` : a.metadata?.size_label ?? 'unknown';
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(a);
-    return acc;
-  }, {});
+  // 編集系列の最新版だけを表示する: parent_asset_id を持つアセットがある場合、
+  // 親アセットは隠して、最新バージョンのみ表示する。
+  const editedParentIds = new Set(
+    assets.map((a) => a.parent_asset_id).filter((id): id is string => !!id)
+  );
+  const visibleAssets = assets.filter((a) => !editedParentIds.has(a.id));
+
+  const assetsBySize = visibleAssets.reduce<Record<string, BannerAsset[]>>(
+    (acc, a) => {
+      const w = a.metadata?.width;
+      const h = a.metadata?.height;
+      const key = w && h ? `${w}x${h}` : a.metadata?.size_label ?? 'unknown';
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(a);
+      return acc;
+    },
+    {}
+  );
+
+  const handleEditComplete = (_payload: BannerEditCompletePayload) => {
+    // Realtime 購読により親側で assets が再取得されるため、ここでは特に何もしない。
+    // モーダルは BannerEditModal 側で閉じる。
+    setEditingAsset(null);
+  };
 
   if (!jobId || !job) {
     return (
@@ -81,14 +106,14 @@ const BannerImageResult = ({ job, assets, jobId, onStartNew }: Props) => {
         <div className="flex items-center justify-between">
           <div className="space-y-0.5">
             <h3 className="font-semibold text-sm">ステータス</h3>
-            {assets.length > 0 && (
+            {visibleAssets.length > 0 && (
               <div className="text-xs text-muted-foreground">
-                合計 {assets.length} 枚生成完了
+                合計 {visibleAssets.length} 枚生成完了
               </div>
             )}
           </div>
           <div className="flex items-center gap-2">
-            {assets.length > 0 && (
+            {visibleAssets.length > 0 && (
               <Button
                 type="button"
                 variant="outline"
@@ -152,27 +177,60 @@ const BannerImageResult = ({ job, assets, jobId, onStartNew }: Props) => {
                       const meta = asset.metadata ?? {};
                       const pngUrl = meta.png_url ?? asset.file_url;
                       const psdUrl = meta.psd_url;
+                      const version = asset.version ?? 1;
                       return (
                         <div
                           key={asset.id}
                           className="rounded-lg border bg-background overflow-hidden flex flex-col"
                         >
-                          <button
-                            type="button"
-                            onClick={() => setZoomedAsset(asset)}
+                          <div
                             className="block w-full bg-muted relative group"
                             style={{ aspectRatio: w && h ? `${w} / ${h}` : '1 / 1' }}
                           >
-                            <img
-                              src={pngUrl}
-                              alt={`バナー${idx + 1}`}
-                              className="w-full h-full object-contain transition-transform group-hover:scale-[1.02]"
-                              loading="lazy"
-                            />
-                            <div className="absolute top-1 left-1 bg-foreground/70 text-background text-[10px] px-1.5 py-0.5 rounded">
+                            <button
+                              type="button"
+                              onClick={() => setZoomedAsset(asset)}
+                              className="absolute inset-0"
+                              aria-label="バナーを拡大"
+                            >
+                              <img
+                                src={pngUrl}
+                                alt={`バナー${idx + 1}`}
+                                className="w-full h-full object-contain transition-transform group-hover:scale-[1.02]"
+                                loading="lazy"
+                              />
+                            </button>
+
+                            <div className="absolute top-1 left-1 bg-foreground/70 text-background text-[10px] px-1.5 py-0.5 rounded pointer-events-none">
                               バリ{idx + 1}
                             </div>
-                          </button>
+
+                            {version > 1 && (
+                              <Badge
+                                className="absolute top-1 right-1 h-5 px-1.5 text-[10px] bg-primary text-primary-foreground pointer-events-none"
+                                title={asset.edit_instruction ?? undefined}
+                              >
+                                v{version}
+                              </Badge>
+                            )}
+
+                            {/* ホバー時 AI編集 オーバーレイ */}
+                            <div className="absolute inset-x-0 bottom-0 p-1.5 bg-gradient-to-t from-foreground/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                className="h-7 w-full text-[11px] pointer-events-auto"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingAsset(asset);
+                                }}
+                              >
+                                <Wand2 className="h-3 w-3 mr-1" />
+                                AI編集
+                              </Button>
+                            </div>
+                          </div>
                           <div className="p-2 flex items-center gap-1 border-t">
                             <a
                               href={pngUrl}
@@ -206,18 +264,8 @@ const BannerImageResult = ({ job, assets, jobId, onStartNew }: Props) => {
                               variant="outline"
                               size="sm"
                               className="h-7 w-7 p-0"
-                              onClick={() =>
-                                console.log('[regenerate] banner asset:', asset.id)
-                              }
-                            >
-                              <RefreshCw className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="h-7 w-7 p-0"
-                              onClick={() => console.log('[edit] banner asset:', asset.id)}
+                              onClick={() => setEditingAsset(asset)}
+                              title="AIで修正"
                             >
                               <Pencil className="h-3 w-3" />
                             </Button>
@@ -251,20 +299,64 @@ const BannerImageResult = ({ job, assets, jobId, onStartNew }: Props) => {
                 className="w-full max-h-[75vh] object-contain bg-muted"
               />
               <div className="p-4 space-y-1.5 text-sm border-t">
-                <div className="font-semibold">
-                  {zoomedAsset.metadata?.size_label ??
-                    `${zoomedAsset.metadata?.width}×${zoomedAsset.metadata?.height}`}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold">
+                    {zoomedAsset.metadata?.size_label ??
+                      `${zoomedAsset.metadata?.width}×${zoomedAsset.metadata?.height}`}
+                  </span>
+                  {(zoomedAsset.version ?? 1) > 1 && (
+                    <Badge className="bg-primary text-primary-foreground">
+                      v{zoomedAsset.version}
+                    </Badge>
+                  )}
                 </div>
                 {zoomedAsset.metadata?.variation_index != null && (
                   <div className="text-xs text-muted-foreground">
                     バリエーション {zoomedAsset.metadata.variation_index + 1}
                   </div>
                 )}
+                {zoomedAsset.edit_instruction && (
+                  <div className="text-xs text-muted-foreground italic">
+                    最新の修正指示: {zoomedAsset.edit_instruction}
+                  </div>
+                )}
+                <div className="pt-2">
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setEditingAsset(zoomedAsset);
+                      setZoomedAsset(null);
+                    }}
+                  >
+                    <Wand2 className="h-3.5 w-3.5 mr-1.5" />
+                    この画像をAIで修正
+                  </Button>
+                </div>
               </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+      {/* AI編集モーダル */}
+      {editingAsset && state.projectId && jobId && (
+        <BannerEditModal
+          isOpen={!!editingAsset}
+          onClose={() => setEditingAsset(null)}
+          asset={
+            {
+              id: editingAsset.id,
+              job_id: jobId,
+              file_url:
+                editingAsset.metadata?.png_url ?? editingAsset.file_url,
+              version: editingAsset.version ?? 1,
+              metadata: editingAsset.metadata ?? undefined,
+            } satisfies BannerEditTargetAsset
+          }
+          projectId={state.projectId}
+          onEditComplete={handleEditComplete}
+        />
+      )}
     </div>
   );
 };
