@@ -283,7 +283,7 @@ const BgmSuggestionTool = () => {
           numSuggestions={numSuggestions}
           setNumSuggestions={setNumSuggestions}
           seedInfo={seedInfo}
-          onGenerate={handleGenerate}
+          onGenerate={buildHandleGenerate(context)}
           isRunning={isRunning}
         />
       )}
