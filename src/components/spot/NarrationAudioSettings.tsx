@@ -8,6 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import SpotVoiceSelector from '@/components/spot/SpotVoiceSelector';
 import NarrationScriptPickerDialog from '@/components/spot/NarrationScriptPickerDialog';
+import DurationPredictionBadge from '@/components/spot/DurationPredictionBadge';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 export interface NarrationAudioSeedInfo {
   from_tool?: string;
@@ -23,6 +25,8 @@ interface Props {
   setSelectedVoice: (v: string) => void;
   speed: number;
   setSpeed: (v: number) => void;
+  targetDuration: number;
+  setTargetDuration: (v: number) => void;
   seedInfo: NarrationAudioSeedInfo | null;
   onGenerate: () => void;
   isRunning: boolean;
@@ -38,6 +42,8 @@ const NarrationAudioSettings = ({
   setSelectedVoice,
   speed,
   setSpeed,
+  targetDuration,
+  setTargetDuration,
   seedInfo,
   onGenerate,
   isRunning,
@@ -117,6 +123,25 @@ const NarrationAudioSettings = ({
           className="font-mono text-sm"
           placeholder="ここにNA原稿を入力してください..."
         />
+
+        {/* 目標尺セレクター */}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <Label className="text-xs text-muted-foreground">目標尺</Label>
+          <ToggleGroup
+            type="single"
+            value={String(targetDuration)}
+            onValueChange={(v) => v && setTargetDuration(Number(v))}
+            size="sm"
+          >
+            <ToggleGroupItem value="15" className="text-xs h-7 px-3">15秒</ToggleGroupItem>
+            <ToggleGroupItem value="30" className="text-xs h-7 px-3">30秒</ToggleGroupItem>
+            <ToggleGroupItem value="60" className="text-xs h-7 px-3">60秒</ToggleGroupItem>
+          </ToggleGroup>
+        </div>
+
+        {/* リアルタイム秒数予測バッジ */}
+        <DurationPredictionBadge script={script} targetDuration={targetDuration} />
+
         <p className="text-xs text-muted-foreground">
           ※ 1行 = 1ボイス分割単位(無音でポーズ)
         </p>

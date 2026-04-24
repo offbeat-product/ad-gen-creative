@@ -24,6 +24,7 @@ const NarrationAudioTool = () => {
   const [script, setScript] = useState('');
   const [selectedVoice, setSelectedVoice] = useState(DEFAULT_VOICE_ID);
   const [speed, setSpeed] = useState(1.0);
+  const [targetDuration, setTargetDuration] = useState(30);
   const [seedInfo, setSeedInfo] = useState<NarrationAudioSeedInfo | null>(null);
 
   // ジョブstate
@@ -208,6 +209,8 @@ const NarrationAudioTool = () => {
             setSelectedVoice={setSelectedVoice}
             speed={speed}
             setSpeed={setSpeed}
+            targetDuration={targetDuration}
+            setTargetDuration={setTargetDuration}
             seedInfo={seedInfo}
             onGenerate={handleGenerate}
             isRunning={isRunning}
