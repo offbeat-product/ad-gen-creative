@@ -65,6 +65,8 @@ interface Props {
   narrationScript: string;
   durationSeconds: 15 | 30 | 60;
   creativeType: 'video' | 'banner';
+  narrationAudioUrl?: string | null;
+  narrationAudioJobId?: string | null;
   onStartNew: () => void;
   onAssetsChanged?: () => void;
 }
