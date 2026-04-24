@@ -76,6 +76,8 @@ interface Props {
   setDurationSeconds: (v: DurationSec) => void;
   narrationAudioUrl: string | null;
   setNarrationAudioUrl: (v: string | null) => void;
+  narrationAudioJobId: string | null;
+  setNarrationAudioJobId: (v: string | null) => void;
   bgmUrl: string | null;
   setBgmUrl: (v: string | null) => void;
   onGenerate: () => void;
