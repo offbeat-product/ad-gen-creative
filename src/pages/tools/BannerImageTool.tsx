@@ -85,7 +85,7 @@ const BannerImageTool = () => {
           .from('gen_spot_assets')
           .select('*')
           .eq('job_id', jobId)
-          .eq('asset_type', 'banner')
+          .eq('asset_type', 'banner_image')
           .order('sort_order'),
       ]);
       if (jobRes.data) setJob(jobRes.data as SpotJob);
