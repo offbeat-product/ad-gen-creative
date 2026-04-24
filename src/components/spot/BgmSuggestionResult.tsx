@@ -165,6 +165,7 @@ const BgmSuggestionResult = ({
   };
 
   const handleGoToVCon = () => {
+    const uploadedBgmUrl = uploadedBgms[0]?.file_url ?? null;
     sessionStorage.setItem(
       'vcon_seed',
       JSON.stringify({
@@ -177,6 +178,9 @@ const BgmSuggestionResult = ({
         duration_seconds: durationSeconds,
         creative_type: creativeType,
         bgm_suggestions: suggestions,
+        bgm_url: uploadedBgmUrl,
+        narration_audio_url: narrationAudioUrl ?? null,
+        narration_audio_job_id: narrationAudioJobId ?? null,
         project_id: state.projectId,
         client_id: state.clientId,
         product_id: state.productId,
