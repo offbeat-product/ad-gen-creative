@@ -82,6 +82,8 @@ const VConTool = () => {
         setDurationSeconds(Number(inputData.duration_seconds) as DurationSec);
       if (inputData.narration_audio_url)
         setNarrationAudioUrl(String(inputData.narration_audio_url));
+      if (inputData.narration_audio_job_id)
+        setNarrationAudioJobId(String(inputData.narration_audio_job_id));
       if (inputData.bgm_url) setBgmUrl(String(inputData.bgm_url));
     },
     []
