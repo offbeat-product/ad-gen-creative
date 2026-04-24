@@ -30,6 +30,7 @@ const VConTool = () => {
   const [compositionJobId, setCompositionJobId] = useState<string | null>(null);
   const [durationSeconds, setDurationSeconds] = useState<DurationSec>(30);
   const [narrationAudioUrl, setNarrationAudioUrl] = useState<string | null>(null);
+  const [narrationAudioJobId, setNarrationAudioJobId] = useState<string | null>(null);
   const [bgmUrl, setBgmUrl] = useState<string | null>(null);
 
   const [jobId, setJobId] = useState<string | null>(null);
