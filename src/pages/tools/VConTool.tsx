@@ -18,6 +18,7 @@ interface VConSeed {
   composition_job_id?: string;
   duration_seconds?: number;
   narration_audio_url?: string | null;
+  narration_audio_job_id?: string | null;
   bgm_url?: string | null;
 }
 
