@@ -143,7 +143,7 @@ const VConTool = () => {
       updateState={updateState}
       jobId={jobId}
       onRestoreJob={handleRestoreJob}
-      renderSettings={() => {
+      renderSettings={({ context }) => {
         const handleGenerate = async () => {
           if (!state.projectId || !user) return;
           if (!composition.trim()) {
@@ -188,6 +188,25 @@ const VConTool = () => {
             narration_audio_url: narrationAudioUrl,
             bgm_url: bgmUrl,
             duration_seconds: durationSeconds,
+
+            // 🆕 Ad Brain Context(階層統合: クライアント/商材/案件)
+            ad_brain_rules: (context?.rules ?? []).map((r) => ({
+              id: r.id,
+              title: r.title,
+              description: r.description,
+              category: r.category,
+              severity: r.severity,
+              process_type: r.process_type,
+            })),
+            ad_brain_materials: (context?.materials ?? [])
+              .filter((m) => m.content_text && m.content_text.length > 0)
+              .map((m) => ({
+                id: m.id,
+                title: m.title,
+                material_type: m.material_type,
+                scope_type: m.scope_type,
+                content_text: m.content_text,
+              })),
           };
 
           fetch(N8N_WEBHOOK_URL, {
@@ -201,7 +220,7 @@ const VConTool = () => {
 
         return (
           <VConSettings
-            context={undefined}
+            context={context}
             projectId={state.projectId}
             composition={composition}
             setComposition={setComposition}
