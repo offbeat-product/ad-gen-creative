@@ -76,6 +76,8 @@ interface Props {
   setDurationSeconds: (v: DurationSec) => void;
   narrationAudioUrl: string | null;
   setNarrationAudioUrl: (v: string | null) => void;
+  narrationAudioJobId: string | null;
+  setNarrationAudioJobId: (v: string | null) => void;
   bgmUrl: string | null;
   setBgmUrl: (v: string | null) => void;
   onGenerate: () => void;
@@ -93,6 +95,8 @@ const VConSettings = ({
   setDurationSeconds,
   narrationAudioUrl,
   setNarrationAudioUrl,
+  narrationAudioJobId: _narrationAudioJobId,
+  setNarrationAudioJobId,
   bgmUrl,
   setBgmUrl,
   onGenerate,
@@ -219,13 +223,16 @@ const VConSettings = ({
   useEffect(() => {
     if (narrationMode === 'none') {
       setNarrationAudioUrl(null);
+      setNarrationAudioJobId(null);
     } else if (narrationMode === 'existing') {
       const sel = narrationOptions.find((o) => o.job_id === selectedNarrationJobId);
       setNarrationAudioUrl(sel?.audio_url ?? null);
+      setNarrationAudioJobId(sel?.job_id ?? null);
     } else if (narrationMode === 'upload') {
       setNarrationAudioUrl(uploadedNarration?.url ?? null);
+      setNarrationAudioJobId(null);
     }
-  }, [narrationMode, selectedNarrationJobId, uploadedNarration, narrationOptions, setNarrationAudioUrl]);
+  }, [narrationMode, selectedNarrationJobId, uploadedNarration, narrationOptions, setNarrationAudioUrl, setNarrationAudioJobId]);
 
   useEffect(() => {
     if (bgmMode === 'none') {

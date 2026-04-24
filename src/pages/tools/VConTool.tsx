@@ -18,6 +18,7 @@ interface VConSeed {
   composition_job_id?: string;
   duration_seconds?: number;
   narration_audio_url?: string | null;
+  narration_audio_job_id?: string | null;
   bgm_url?: string | null;
 }
 
@@ -29,6 +30,7 @@ const VConTool = () => {
   const [compositionJobId, setCompositionJobId] = useState<string | null>(null);
   const [durationSeconds, setDurationSeconds] = useState<DurationSec>(30);
   const [narrationAudioUrl, setNarrationAudioUrl] = useState<string | null>(null);
+  const [narrationAudioJobId, setNarrationAudioJobId] = useState<string | null>(null);
   const [bgmUrl, setBgmUrl] = useState<string | null>(null);
 
   const [jobId, setJobId] = useState<string | null>(null);
@@ -60,6 +62,7 @@ const VConTool = () => {
         setDurationSeconds(seed.duration_seconds);
       }
       if (seed.narration_audio_url) setNarrationAudioUrl(seed.narration_audio_url);
+      if (seed.narration_audio_job_id) setNarrationAudioJobId(seed.narration_audio_job_id);
       if (seed.bgm_url) setBgmUrl(seed.bgm_url);
       sessionStorage.removeItem('vcon_seed');
       toast.info('上流ツールから入力を引き継ぎました');
@@ -79,6 +82,8 @@ const VConTool = () => {
         setDurationSeconds(Number(inputData.duration_seconds) as DurationSec);
       if (inputData.narration_audio_url)
         setNarrationAudioUrl(String(inputData.narration_audio_url));
+      if (inputData.narration_audio_job_id)
+        setNarrationAudioJobId(String(inputData.narration_audio_job_id));
       if (inputData.bgm_url) setBgmUrl(String(inputData.bgm_url));
     },
     []
@@ -156,6 +161,7 @@ const VConTool = () => {
             composition_job_id: compositionJobId,
             duration_seconds: durationSeconds,
             narration_audio_url: narrationAudioUrl,
+            narration_audio_job_id: narrationAudioJobId,
             bgm_url: bgmUrl,
           };
 
@@ -186,6 +192,7 @@ const VConTool = () => {
             composition_job_id: compositionJobId,
             composition: compositionJobId ? null : composition,
             narration_audio_url: narrationAudioUrl,
+            narration_audio_job_id: narrationAudioJobId,
             bgm_url: bgmUrl,
             duration_seconds: durationSeconds,
 
@@ -230,6 +237,8 @@ const VConTool = () => {
             setDurationSeconds={setDurationSeconds}
             narrationAudioUrl={narrationAudioUrl}
             setNarrationAudioUrl={setNarrationAudioUrl}
+            narrationAudioJobId={narrationAudioJobId}
+            setNarrationAudioJobId={setNarrationAudioJobId}
             bgmUrl={bgmUrl}
             setBgmUrl={setBgmUrl}
             onGenerate={handleGenerate}
