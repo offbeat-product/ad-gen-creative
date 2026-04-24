@@ -43,6 +43,8 @@ const BgmSuggestionTool = () => {
   const [creativeType, setCreativeType] = useState<'video' | 'banner'>('video');
   const [numSuggestions, setNumSuggestions] = useState(3);
   const [seedInfo, setSeedInfo] = useState<BgmSeedInfo | null>(null);
+  const [narrationAudioUrl, setNarrationAudioUrl] = useState<string | null>(null);
+  const [narrationAudioJobId, setNarrationAudioJobId] = useState<string | null>(null);
 
   const [jobId, setJobId] = useState<string | null>(null);
   const [job, setJob] = useState<SpotJob | null>(null);
@@ -78,6 +80,9 @@ const BgmSuggestionTool = () => {
         from_job_id: seed.from_job_id,
         has_audio: !!seed.narration_audio_url,
       });
+      if (seed.narration_audio_url) setNarrationAudioUrl(String(seed.narration_audio_url));
+      if (seed.narration_audio_job_id)
+        setNarrationAudioJobId(String(seed.narration_audio_job_id));
       sessionStorage.removeItem('bgm_suggestion_seed');
       toast.info('NA原稿を引き継ぎました');
     } catch (e) {
@@ -287,6 +292,8 @@ const BgmSuggestionTool = () => {
           narrationScript={narrationScript}
           durationSeconds={durationSeconds}
           creativeType={creativeType}
+          narrationAudioUrl={narrationAudioUrl}
+          narrationAudioJobId={narrationAudioJobId}
           onStartNew={() => {
             setJobId(null);
             setJob(null);

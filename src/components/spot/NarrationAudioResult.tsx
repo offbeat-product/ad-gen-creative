@@ -175,6 +175,7 @@ const NarrationAudioResult = ({
         from_tool: 'narration_audio',
         from_job_id: jobId,
         narration_audio_url: assets[0]?.file_url ?? null,
+        narration_audio_job_id: jobId,
         script,
         project_id: state.projectId,
         client_id: state.clientId,
