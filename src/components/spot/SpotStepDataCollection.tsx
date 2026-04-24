@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
+
 import { SpotWizardState } from '@/hooks/useSpotWizard';
 import { useProjectContext } from '@/hooks/useProjectContext';
 import { Badge } from '@/components/ui/badge';
