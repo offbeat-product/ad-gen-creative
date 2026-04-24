@@ -18,6 +18,8 @@ import {
   Maximize2,
   CalendarIcon,
   AlertCircle,
+  Layers,
+  ExternalLink,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -57,7 +59,18 @@ const TOOL_LABELS: Record<string, { label: string; icon: typeof Target; path: st
   video_resize: { label: '動画リサイズ', icon: Maximize2, path: '/tools/video-resize' },
 };
 
+interface ProjectRel {
+  id: string;
+  name: string | null;
+  product: {
+    id: string;
+    name: string | null;
+    client: { id: string; name: string | null } | null;
+  } | null;
+}
+
 interface SpotJobRow {
+  kind: 'job';
   id: string;
   tool_type: string;
   status: string | null;
@@ -66,16 +79,25 @@ interface SpotJobRow {
   created_at: string | null;
   started_at: string | null;
   completed_at: string | null;
-  project: {
-    id: string;
-    name: string | null;
-    product: {
-      id: string;
-      name: string | null;
-      client: { id: string; name: string | null } | null;
-    } | null;
-  } | null;
+  bulk_batch_id: string | null;
+  project_id: string | null;
+  project: ProjectRel | null;
 }
+
+interface BulkBatchRow {
+  kind: 'batch';
+  id: string;
+  status: string | null;
+  total_count: number;
+  completed_count: number;
+  failed_count: number;
+  created_at: string | null;
+  completed_at: string | null;
+  project_id: string;
+  project: ProjectRel | null;
+}
+
+type HistoryRow = SpotJobRow | BulkBatchRow;
 
 interface ClientOption { id: string; name: string }
 interface ProductOption { id: string; name: string; client_id: string | null }
@@ -95,15 +117,24 @@ function formatDuration(ms: number | null) {
   return s === 0 ? `${m}分` : `${m}分${s}秒`;
 }
 
+function batchDurationMs(batch: BulkBatchRow): number | null {
+  if (!batch.created_at || !batch.completed_at) return null;
+  return new Date(batch.completed_at).getTime() - new Date(batch.created_at).getTime();
+}
+
 function StatusBadge({ status }: { status: string | null }) {
   switch (status) {
     case 'completed':
       return <Badge variant="outline" className="text-success border-success/30 bg-success/5">完了</Badge>;
+    case 'partially_completed':
+      return <Badge variant="outline" className="text-warning border-warning/30 bg-warning/5">一部完了</Badge>;
     case 'running':
     case 'pending':
       return <Badge variant="outline" className="text-warning border-warning/30 bg-warning/5">生成中</Badge>;
     case 'failed':
       return <Badge variant="outline" className="text-destructive border-destructive/30 bg-destructive/5">失敗</Badge>;
+    case 'cancelled':
+      return <Badge variant="outline" className="text-muted-foreground">キャンセル</Badge>;
     default:
       return <Badge variant="outline">{status ?? '-'}</Badge>;
   }
@@ -147,7 +178,7 @@ const History = () => {
   const [dateTo, setDateTo] = useState<Date | undefined>();
 
   // Data
-  const [rows, setRows] = useState<SpotJobRow[]>([]);
+  const [rows, setRows] = useState<HistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
   const [page, setPage] = useState(0);
@@ -182,52 +213,119 @@ const History = () => {
     [projects, productId],
   );
 
-  // Load jobs
+  // Load jobs + bulk batches, then merge by created_at
   const loadJobs = async (reset: boolean) => {
     setLoading(true);
     const from = reset ? 0 : page * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
 
-    let query = supabase
+    // ---- Spot jobs query
+    let jobsQuery = supabase
       .from('gen_spot_jobs')
       .select(
-        `id, tool_type, status, error_message, duration_ms, created_at, started_at, completed_at,
+        `id, tool_type, status, error_message, duration_ms, created_at, started_at, completed_at, project_id, input_data,
          project:projects(id, name, product:products(id, name, client:clients(id, name)))`,
       )
       .order('created_at', { ascending: false })
       .range(from, to);
 
-    if (toolType !== 'all') query = query.eq('tool_type', toolType);
-    if (status !== 'all') query = query.eq('status', status);
-    if (projectId !== 'all') {
-      query = query.eq('project_id', projectId);
-    }
-    if (dateFrom) query = query.gte('created_at', dateFrom.toISOString());
+    if (toolType !== 'all') jobsQuery = jobsQuery.eq('tool_type', toolType);
+    if (status !== 'all') jobsQuery = jobsQuery.eq('status', status);
+    if (projectId !== 'all') jobsQuery = jobsQuery.eq('project_id', projectId);
+    if (dateFrom) jobsQuery = jobsQuery.gte('created_at', dateFrom.toISOString());
     if (dateTo) {
       const toEnd = new Date(dateTo);
       toEnd.setHours(23, 59, 59, 999);
-      query = query.lte('created_at', toEnd.toISOString());
+      jobsQuery = jobsQuery.lte('created_at', toEnd.toISOString());
     }
 
-    const { data, error } = await query;
-    if (error) {
-      console.error('History load error:', error);
+    // ---- Bulk batches query (only fetch when tool filter allows: 'all' or 'composition')
+    const includeBatches = toolType === 'all' || toolType === 'composition';
+    let batchesPromise:
+      | Promise<{ data: unknown[] | null; error: unknown }>
+      | null = null;
+
+    if (includeBatches) {
+      let batchQuery = supabase
+        .from('bulk_composition_batches')
+        .select(
+          `id, status, total_count, completed_count, failed_count, created_at, completed_at, project_id,
+           project:projects(id, name, product:products(id, name, client:clients(id, name)))`,
+        )
+        .order('created_at', { ascending: false })
+        .range(0, from + PAGE_SIZE - 1); // Get all batches up to this point for proper merge
+
+      // Map batch status filter
+      if (status === 'completed') {
+        batchQuery = batchQuery.in('status', ['completed', 'partially_completed']);
+      } else if (status === 'running' || status === 'pending') {
+        batchQuery = batchQuery.eq('status', 'running');
+      } else if (status === 'failed') {
+        batchQuery = batchQuery.eq('status', 'failed');
+      }
+      if (projectId !== 'all') batchQuery = batchQuery.eq('project_id', projectId);
+      if (dateFrom) batchQuery = batchQuery.gte('created_at', dateFrom.toISOString());
+      if (dateTo) {
+        const toEnd = new Date(dateTo);
+        toEnd.setHours(23, 59, 59, 999);
+        batchQuery = batchQuery.lte('created_at', toEnd.toISOString());
+      }
+      batchesPromise = batchQuery as unknown as Promise<{ data: unknown[] | null; error: unknown }>;
+    }
+
+    const [jobsRes, batchesRes] = await Promise.all([
+      jobsQuery,
+      batchesPromise ?? Promise.resolve({ data: [], error: null }),
+    ]);
+
+    if (jobsRes.error) {
+      console.error('History load error (jobs):', jobsRes.error);
       setLoading(false);
       return;
     }
 
-    let result = (data ?? []) as unknown as SpotJobRow[];
+    type JobRaw = Omit<SpotJobRow, 'kind' | 'bulk_batch_id'> & {
+      input_data: { bulk_batch_id?: string } | null;
+    };
+    const jobsRaw = (jobsRes.data ?? []) as unknown as JobRaw[];
+    let jobRows: SpotJobRow[] = jobsRaw.map((j) => ({
+      kind: 'job',
+      id: j.id,
+      tool_type: j.tool_type,
+      status: j.status,
+      error_message: j.error_message,
+      duration_ms: j.duration_ms,
+      created_at: j.created_at,
+      started_at: j.started_at,
+      completed_at: j.completed_at,
+      project_id: j.project_id,
+      bulk_batch_id: j.input_data?.bulk_batch_id ?? null,
+      project: j.project,
+    }));
 
-    // Client/Product filtering happens in-memory because we filter on nested relations
+    let batchRows: BulkBatchRow[] = (
+      (batchesRes.data ?? []) as unknown as Array<Omit<BulkBatchRow, 'kind'>>
+    ).map((b) => ({ kind: 'batch', ...b }));
+
+    // Client/Product filter (in-memory because of nested relations)
     if (clientId !== 'all') {
-      result = result.filter((r) => r.project?.product?.client?.id === clientId);
+      jobRows = jobRows.filter((r) => r.project?.product?.client?.id === clientId);
+      batchRows = batchRows.filter((r) => r.project?.product?.client?.id === clientId);
     }
     if (productId !== 'all') {
-      result = result.filter((r) => r.project?.product?.id === productId);
+      jobRows = jobRows.filter((r) => r.project?.product?.id === productId);
+      batchRows = batchRows.filter((r) => r.project?.product?.id === productId);
     }
 
-    setHasMore((data ?? []).length === PAGE_SIZE);
-    setRows(reset ? result : [...rows, ...result]);
+    // Merge & sort by created_at desc
+    const merged: HistoryRow[] = [...jobRows, ...batchRows].sort((a, b) => {
+      const ta = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const tb = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return tb - ta;
+    });
+
+    setHasMore((jobsRes.data ?? []).length === PAGE_SIZE);
+    setRows(reset ? merged : [...rows, ...merged]);
     setLoading(false);
   };
 
@@ -247,13 +345,21 @@ const History = () => {
   const summary = useMemo(() => {
     return {
       total: rows.length,
-      completed: rows.filter((r) => r.status === 'completed').length,
+      completed: rows.filter((r) =>
+        r.status === 'completed' || r.status === 'partially_completed',
+      ).length,
       running: rows.filter((r) => r.status === 'running' || r.status === 'pending').length,
       failed: rows.filter((r) => r.status === 'failed').length,
     };
   }, [rows]);
 
-  const handleRowClick = (row: SpotJobRow) => {
+  const handleRowClick = (row: HistoryRow) => {
+    if (row.kind === 'batch') {
+      navigate(
+        `/tools/composition/bulk-result?project_id=${row.project_id}&batch_id=${row.id}`,
+      );
+      return;
+    }
     if (row.status === 'failed') {
       setErrorDialog({ open: true, message: row.error_message ?? 'エラーの詳細はありません' });
       return;
@@ -261,6 +367,17 @@ const History = () => {
     const tool = TOOL_LABELS[row.tool_type];
     if (!tool) return;
     navigate(`${tool.path}?job_id=${row.id}`);
+  };
+
+  const handleViewBulkResult = (
+    e: React.MouseEvent,
+    row: SpotJobRow,
+  ) => {
+    e.stopPropagation();
+    if (!row.bulk_batch_id || !row.project_id) return;
+    navigate(
+      `/tools/composition/bulk-result?project_id=${row.project_id}&batch_id=${row.bulk_batch_id}`,
+    );
   };
 
   const resetFilters = () => {
@@ -283,7 +400,9 @@ const History = () => {
       {/* Header */}
       <div className="space-y-1">
         <h1 className="text-2xl font-bold font-display">生成履歴</h1>
-        <p className="text-sm text-muted-foreground">全ツールの生成履歴を確認できます</p>
+        <p className="text-sm text-muted-foreground">
+          全ツールの生成履歴と一括生成バッチを確認できます
+        </p>
       </div>
 
       {/* Summary cards */}
@@ -406,11 +525,47 @@ const History = () => {
                 </TableRow>
               ) : (
                 rows.map((row) => {
+                  if (row.kind === 'batch') {
+                    return (
+                      <TableRow
+                        key={`batch-${row.id}`}
+                        className="cursor-pointer hover:bg-accent/40 bg-primary/5"
+                        onClick={() => handleRowClick(row)}
+                      >
+                        <TableCell className="text-muted-foreground whitespace-nowrap">
+                          {formatDateTime(row.created_at)}
+                        </TableCell>
+                        <TableCell className="max-w-[160px] truncate">
+                          {row.project?.product?.client?.name ?? '-'}
+                        </TableCell>
+                        <TableCell className="max-w-[160px] truncate">
+                          {row.project?.product?.name ?? '-'}
+                        </TableCell>
+                        <TableCell className="max-w-[200px] truncate">
+                          {row.project?.name ?? '-'}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2 whitespace-nowrap">
+                            <Layers className="h-4 w-4 text-primary shrink-0" />
+                            <span className="text-sm font-medium">構成案 一括生成</span>
+                            <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary text-[10px] py-0 px-1.5 h-4">
+                              {row.completed_count}/{row.total_count}
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell><StatusBadge status={row.status} /></TableCell>
+                        <TableCell className="text-muted-foreground whitespace-nowrap tabular-nums">
+                          {formatDuration(batchDurationMs(row))}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
+
                   const tool = TOOL_LABELS[row.tool_type];
                   const Icon = tool?.icon ?? Sparkles;
                   return (
                     <TableRow
-                      key={row.id}
+                      key={`job-${row.id}`}
                       className="cursor-pointer hover:bg-accent/40"
                       onClick={() => handleRowClick(row)}
                     >
@@ -422,6 +577,18 @@ const History = () => {
                         <div className="flex items-center gap-2 whitespace-nowrap">
                           <Icon className="h-4 w-4 text-secondary shrink-0" />
                           <span className="text-sm">{tool?.label ?? row.tool_type}</span>
+                          {row.bulk_batch_id && (
+                            <button
+                              type="button"
+                              onClick={(e) => handleViewBulkResult(e, row)}
+                              className="inline-flex items-center gap-1 rounded-md border border-primary/30 bg-primary/5 px-1.5 py-0.5 text-[10px] font-medium text-primary hover:bg-primary/10 transition-colors"
+                              title="この一括バッチの結果を見る"
+                            >
+                              <Layers className="h-2.5 w-2.5" />
+                              一括
+                              <ExternalLink className="h-2.5 w-2.5" />
+                            </button>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell><StatusBadge status={row.status} /></TableCell>
