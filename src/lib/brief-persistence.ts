@@ -75,16 +75,15 @@ export async function saveBriefAsNewVersion(
     }
 
     // projects テーブルにも最新内容を反映(既存UI互換)
+    // ※ target_insight / tone_preset / differentiation / lp_scraped_content は
+    //   Ad Brain 側で削除済みのため projects には書き戻さない(履歴 project_briefs 側に保持)
     await supabase
       .from('projects')
       .update({
         ad_objective: brief.ad_objective || null,
         target_audience: brief.target_audience || null,
-        target_insight: brief.target_insight || null,
         lp_url: brief.lp_url || null,
         lp_summary: brief.lp_summary || null,
-        tone_preset: brief.tone_preset || null,
-        differentiation: brief.differentiation || null,
         ng_words:
           brief.ng_words && brief.ng_words.length > 0 ? brief.ng_words : null,
         reference_creatives: brief.reference_creatives || null,
