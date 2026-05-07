@@ -146,10 +146,11 @@ export async function loadCurrentBrief(
     }
 
     // フォールバック: projects テーブル
+    // ※ target_insight / tone_preset / differentiation は Ad Brain 側で削除済みのため取得しない
     const { data: projectData } = await supabase
       .from('projects')
       .select(
-        'ad_objective, target_audience, target_insight, lp_url, lp_summary, tone_preset, differentiation, ng_words, reference_creatives'
+        'ad_objective, target_audience, lp_url, lp_summary, ng_words, reference_creatives'
       )
       .eq('id', projectId)
       .maybeSingle();
@@ -159,11 +160,11 @@ export async function loadCurrentBrief(
     return {
       ad_objective: (p.ad_objective as string) ?? '',
       target_audience: (p.target_audience as string) ?? '',
-      target_insight: (p.target_insight as string) ?? '',
+      target_insight: '',
       lp_url: (p.lp_url as string) ?? '',
       lp_summary: (p.lp_summary as string) ?? '',
-      tone_preset: (p.tone_preset as string) ?? '',
-      differentiation: (p.differentiation as string) ?? '',
+      tone_preset: '',
+      differentiation: '',
       ng_words: (p.ng_words as string[]) ?? [],
       reference_creatives: (p.reference_creatives as string) ?? '',
     };
