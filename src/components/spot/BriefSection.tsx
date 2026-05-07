@@ -89,12 +89,6 @@ const BriefSection = ({
       // 履歴対応: project_briefs(is_current=true)を最優先、無ければprojectsからフォールバック
       const loaded = await loadCurrentBrief(projectId);
 
-      // lp_scraped_content だけは projects テーブル固有なので別途取得
-      const { data: extra } = await supabase
-        .from('projects')
-        .select('lp_scraped_content')
-        .eq('id', projectId)
-        .maybeSingle();
       setLoading(false);
 
       if (loaded) {
@@ -109,9 +103,8 @@ const BriefSection = ({
           toast.success('✓ ブリーフを読み込みました');
         }
       }
-      onLpScrapedContentLoaded?.(
-        (extra as { lp_scraped_content?: string | null } | null)?.lp_scraped_content ?? null
-      );
+      // ※ lp_scraped_content カラムは Ad Brain 側で削除済みのため取得しない
+      onLpScrapedContentLoaded?.(null);
     },
     [projectId, onChange, onLpScrapedContentLoaded]
   );

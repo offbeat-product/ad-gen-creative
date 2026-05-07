@@ -13,9 +13,12 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import BriefSection, { type BriefData } from '@/components/spot/BriefSection';
 import BriefHistoryPanel from '@/components/spot/BriefHistoryPanel';
+import AdBrainReferenceCard from '@/components/spot/AdBrainReferenceCard';
 import { loadCurrentBrief } from '@/lib/brief-persistence';
+import { useAdBrainContext } from '@/hooks/useAdBrainContext';
+import { buildPrefillFromAdBrain } from '@/lib/ad-brain-prefill';
 import type { useProjectContext } from '@/hooks/useProjectContext';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -64,6 +67,31 @@ const AppealAxisSettings = ({
   const [isGeneratingBrief, setIsGeneratingBrief] = useState(false);
   const [showOverwriteDialog, setShowOverwriteDialog] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+
+  // AD BRAIN context (Edge Function v11 / schema 2.5)
+  const { data: adBrain, loading: adBrainLoading } = useAdBrainContext(projectId);
+
+  // Step3 への遷移時に 1 回だけプリフィル
+  const prefilledRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!projectId || !adBrain) return;
+    if (prefilledRef.current === projectId) return;
+    prefilledRef.current = projectId;
+    (async () => {
+      try {
+        const { brief, hint: nextHint } = await buildPrefillFromAdBrain(
+          adBrain,
+          briefData,
+          hint
+        );
+        setBriefData(brief);
+        if (nextHint && nextHint !== hint) setHint(nextHint);
+      } catch (e) {
+        console.error('[AppealAxis] prefill error:', e);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, adBrain]);
 
   const handleAutoGenerateBrief = async () => {
     if (!projectId) {
@@ -143,27 +171,9 @@ const AppealAxisSettings = ({
         訴求軸・コピー数を設定
       </h2>
 
-      {context && (
-        <div className="rounded-xl bg-secondary-wash/40 border border-secondary/20 p-4 space-y-2">
-          <div className="text-xs font-semibold text-secondary uppercase tracking-wide">
-            Ad Brain 参照
-          </div>
-          <div className="flex flex-wrap gap-3 text-xs">
-            <span className="text-foreground">
-              📋 関連ルール {relevantRules.length}件
-            </span>
-            {context.corrections && context.corrections.length > 0 && (
-              <span className="text-foreground">
-                🔁 修正パターン {context.corrections.length}件
-              </span>
-            )}
-            {context.project.copyright_text && (
-              <span className="text-muted-foreground">
-                © {context.project.copyright_text}
-              </span>
-            )}
-          </div>
-        </div>
+      <AdBrainReferenceCard data={adBrain} loading={adBrainLoading} />
+      {context?.project.copyright_text && (
+        <div className="text-xs text-muted-foreground">© {context.project.copyright_text}</div>
       )}
 
       {projectId && (
