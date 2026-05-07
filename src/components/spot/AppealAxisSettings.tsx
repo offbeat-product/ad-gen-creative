@@ -68,6 +68,31 @@ const AppealAxisSettings = ({
   const [showOverwriteDialog, setShowOverwriteDialog] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
+  // AD BRAIN context (Edge Function v11 / schema 2.5)
+  const { data: adBrain, loading: adBrainLoading } = useAdBrainContext(projectId);
+
+  // Step3 への遷移時に 1 回だけプリフィル
+  const prefilledRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!projectId || !adBrain) return;
+    if (prefilledRef.current === projectId) return;
+    prefilledRef.current = projectId;
+    (async () => {
+      try {
+        const { brief, hint: nextHint } = await buildPrefillFromAdBrain(
+          adBrain,
+          briefData,
+          hint
+        );
+        setBriefData(brief);
+        if (nextHint && nextHint !== hint) setHint(nextHint);
+      } catch (e) {
+        console.error('[AppealAxis] prefill error:', e);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, adBrain]);
+
   const handleAutoGenerateBrief = async () => {
     if (!projectId) {
       toast.error('プロジェクトが選択されていません');
