@@ -171,27 +171,9 @@ const AppealAxisSettings = ({
         訴求軸・コピー数を設定
       </h2>
 
-      {context && (
-        <div className="rounded-xl bg-secondary-wash/40 border border-secondary/20 p-4 space-y-2">
-          <div className="text-xs font-semibold text-secondary uppercase tracking-wide">
-            Ad Brain 参照
-          </div>
-          <div className="flex flex-wrap gap-3 text-xs">
-            <span className="text-foreground">
-              📋 関連ルール {relevantRules.length}件
-            </span>
-            {context.corrections && context.corrections.length > 0 && (
-              <span className="text-foreground">
-                🔁 修正パターン {context.corrections.length}件
-              </span>
-            )}
-            {context.project.copyright_text && (
-              <span className="text-muted-foreground">
-                © {context.project.copyright_text}
-              </span>
-            )}
-          </div>
-        </div>
+      <AdBrainReferenceCard data={adBrain} loading={adBrainLoading} />
+      {context?.project.copyright_text && (
+        <div className="text-xs text-muted-foreground">© {context.project.copyright_text}</div>
       )}
 
       {projectId && (
