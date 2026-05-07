@@ -13,9 +13,12 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import BriefSection, { type BriefData } from '@/components/spot/BriefSection';
 import BriefHistoryPanel from '@/components/spot/BriefHistoryPanel';
+import AdBrainReferenceCard from '@/components/spot/AdBrainReferenceCard';
 import { loadCurrentBrief } from '@/lib/brief-persistence';
+import { useAdBrainContext } from '@/hooks/useAdBrainContext';
+import { buildPrefillFromAdBrain } from '@/lib/ad-brain-prefill';
 import type { useProjectContext } from '@/hooks/useProjectContext';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
