@@ -62,6 +62,103 @@ export type Database = {
         }
         Relationships: []
       }
+      brief_share_link_access_logs: {
+        Row: {
+          id: string
+          ip_address: string | null
+          password_attempted: boolean
+          password_correct: boolean | null
+          share_link_id: string
+          user_agent: string | null
+          viewed_at: string
+        }
+        Insert: {
+          id?: string
+          ip_address?: string | null
+          password_attempted?: boolean
+          password_correct?: boolean | null
+          share_link_id: string
+          user_agent?: string | null
+          viewed_at?: string
+        }
+        Update: {
+          id?: string
+          ip_address?: string | null
+          password_attempted?: boolean
+          password_correct?: boolean | null
+          share_link_id?: string
+          user_agent?: string | null
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brief_share_link_access_logs_share_link_id_fkey"
+            columns: ["share_link_id"]
+            isOneToOne: false
+            referencedRelation: "brief_share_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brief_share_links: {
+        Row: {
+          allow_download: boolean
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          is_active: boolean
+          last_viewed_at: string | null
+          note: string | null
+          password_hash: string | null
+          project_id: string
+          requires_password: boolean | null
+          title: string | null
+          token: string
+          view_count: number
+        }
+        Insert: {
+          allow_download?: boolean
+          created_at?: string
+          created_by?: string | null
+          expires_at: string
+          id?: string
+          is_active?: boolean
+          last_viewed_at?: string | null
+          note?: string | null
+          password_hash?: string | null
+          project_id: string
+          requires_password?: boolean | null
+          title?: string | null
+          token?: string
+          view_count?: number
+        }
+        Update: {
+          allow_download?: boolean
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          is_active?: boolean
+          last_viewed_at?: string | null
+          note?: string | null
+          password_hash?: string | null
+          project_id?: string
+          requires_password?: boolean | null
+          title?: string | null
+          token?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brief_share_links_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bulk_composition_batches: {
         Row: {
           appeal_axes_snapshot: Json | null
@@ -316,22 +413,30 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           description: string
+          embedding: string | null
+          embedding_generated_at: string | null
+          embedding_model: string | null
+          embedding_source_text: string | null
           false_positive_count: number | null
           id: string
           improved_description: string | null
           is_active: boolean | null
           is_auto_generated: boolean | null
           is_quality_ok: boolean
+          last_used_at: string | null
           process_type: string
           product_id: string
           project_id: string | null
           quality_checked_at: string | null
           quality_issues: Json
           quality_reason: string | null
+          quality_score: number | null
+          quality_score_at: string | null
           quality_status: string | null
           rule_id: string
           scope: string
           severity: string
+          severity_sort: number | null
           sort_order: number | null
           source_correction_count: number | null
           source_correction_id: string | null
@@ -350,22 +455,30 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           description: string
+          embedding?: string | null
+          embedding_generated_at?: string | null
+          embedding_model?: string | null
+          embedding_source_text?: string | null
           false_positive_count?: number | null
           id?: string
           improved_description?: string | null
           is_active?: boolean | null
           is_auto_generated?: boolean | null
           is_quality_ok?: boolean
+          last_used_at?: string | null
           process_type: string
           product_id: string
           project_id?: string | null
           quality_checked_at?: string | null
           quality_issues?: Json
           quality_reason?: string | null
+          quality_score?: number | null
+          quality_score_at?: string | null
           quality_status?: string | null
           rule_id: string
           scope?: string
           severity?: string
+          severity_sort?: number | null
           sort_order?: number | null
           source_correction_count?: number | null
           source_correction_id?: string | null
@@ -384,22 +497,30 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           description?: string
+          embedding?: string | null
+          embedding_generated_at?: string | null
+          embedding_model?: string | null
+          embedding_source_text?: string | null
           false_positive_count?: number | null
           id?: string
           improved_description?: string | null
           is_active?: boolean | null
           is_auto_generated?: boolean | null
           is_quality_ok?: boolean
+          last_used_at?: string | null
           process_type?: string
           product_id?: string
           project_id?: string | null
           quality_checked_at?: string | null
           quality_issues?: Json
           quality_reason?: string | null
+          quality_score?: number | null
+          quality_score_at?: string | null
           quality_status?: string | null
           rule_id?: string
           scope?: string
           severity?: string
+          severity_sort?: number | null
           sort_order?: number | null
           source_correction_count?: number | null
           source_correction_id?: string | null
@@ -449,44 +570,522 @@ export type Database = {
           },
         ]
       }
-      clients: {
+      client_assets: {
         Row: {
-          contact_email: string | null
-          contact_person: string | null
-          created_at: string | null
+          asset_type: string
+          client_id: string
+          content_text: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          description: string | null
+          file_path: string | null
+          file_size: number | null
+          file_url: string | null
           id: string
-          industry: string | null
+          metadata: Json
+          mime_type: string | null
           name: string
-          notes: string | null
-          payment_terms: string | null
-          sort_order: number | null
+          source_url: string | null
+          tags: string[]
+          updated_at: string
+        }
+        Insert: {
+          asset_type?: string
+          client_id: string
+          content_text?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          id?: string
+          metadata?: Json
+          mime_type?: string | null
+          name: string
+          source_url?: string | null
+          tags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          asset_type?: string
+          client_id?: string
+          content_text?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          id?: string
+          metadata?: Json
+          mime_type?: string | null
+          name?: string
+          source_url?: string | null
+          tags?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_assets_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_contracts: {
+        Row: {
+          ai_extracted_at: string | null
+          ai_extracted_count: number | null
+          ai_extraction_meta: Json | null
+          client_id: string
+          contract_kind: string
+          contracted_at: string | null
+          created_at: string | null
+          effective_until: string | null
+          file_name: string
+          file_path: string | null
+          file_size_bytes: number | null
+          id: string
+          is_active: boolean | null
+          mime_type: string | null
           updated_at: string | null
         }
         Insert: {
-          contact_email?: string | null
-          contact_person?: string | null
+          ai_extracted_at?: string | null
+          ai_extracted_count?: number | null
+          ai_extraction_meta?: Json | null
+          client_id: string
+          contract_kind?: string
+          contracted_at?: string | null
           created_at?: string | null
+          effective_until?: string | null
+          file_name: string
+          file_path?: string | null
+          file_size_bytes?: number | null
           id?: string
-          industry?: string | null
-          name: string
-          notes?: string | null
-          payment_terms?: string | null
-          sort_order?: number | null
+          is_active?: boolean | null
+          mime_type?: string | null
           updated_at?: string | null
         }
         Update: {
-          contact_email?: string | null
-          contact_person?: string | null
+          ai_extracted_at?: string | null
+          ai_extracted_count?: number | null
+          ai_extraction_meta?: Json | null
+          client_id?: string
+          contract_kind?: string
+          contracted_at?: string | null
           created_at?: string | null
+          effective_until?: string | null
+          file_name?: string
+          file_path?: string | null
+          file_size_bytes?: number | null
           id?: string
-          industry?: string | null
-          name?: string
-          notes?: string | null
-          payment_terms?: string | null
-          sort_order?: number | null
+          is_active?: boolean | null
+          mime_type?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "client_contracts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_persons: {
+        Row: {
+          client_id: string
+          created_at: string | null
+          department: string | null
+          email: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          name_kana: string | null
+          phone: string | null
+          role: string
+          role_memo: string | null
+          sort_order: number | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_id: string
+          created_at?: string | null
+          department?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          name_kana?: string | null
+          phone?: string | null
+          role?: string
+          role_memo?: string | null
+          sort_order?: number | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_id?: string
+          created_at?: string | null
+          department?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          name_kana?: string | null
+          phone?: string | null
+          role?: string
+          role_memo?: string | null
+          sort_order?: number | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_persons_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_terms: {
+        Row: {
+          a1_publication: string | null
+          a2_portfolio_display: string | null
+          a3_credit_required: string | null
+          a3_credit_text: string | null
+          a4_sns_post: string | null
+          a5_award_apply: string | null
+          a6_publication_timing: string | null
+          b1_copyright_owner: string | null
+          b2_moral_rights: string | null
+          b3_secondary_use: string | null
+          b4_generic_assets: string | null
+          b5_third_party_assets: string | null
+          b6_ip_warranty: string | null
+          c1_nda_status: string | null
+          c2_client_name_disclosure: string | null
+          c3_data_retention: string | null
+          c4_personal_info: string | null
+          client_id: string
+          created_at: string | null
+          d1_billing_timing: string | null
+          d2_payment_term: string | null
+          d3_inspection_days: number | null
+          d4_inspection_implicit: string | null
+          d5_revision_limit: string | null
+          d6_late_fee: string | null
+          e1_media_operation: string | null
+          e2_legal_check: string | null
+          e3_emergency_response: string | null
+          e4_subcontract: string | null
+          e5_warranty_period: string | null
+          f1_contract_form: string | null
+          f2_contract_renewal: string | null
+          f3_termination_clause: string | null
+          f3_termination_notice_months: number | null
+          f4_anti_social: string | null
+          f5_liability_cap: string | null
+          g1_competitor_detail: string | null
+          g1_competitor_exclusion: string | null
+          g2_applicable_laws: Json | null
+          g3_stealth_marketing: string | null
+          g4_jurisdiction: string | null
+          h1_special_terms: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          a1_publication?: string | null
+          a2_portfolio_display?: string | null
+          a3_credit_required?: string | null
+          a3_credit_text?: string | null
+          a4_sns_post?: string | null
+          a5_award_apply?: string | null
+          a6_publication_timing?: string | null
+          b1_copyright_owner?: string | null
+          b2_moral_rights?: string | null
+          b3_secondary_use?: string | null
+          b4_generic_assets?: string | null
+          b5_third_party_assets?: string | null
+          b6_ip_warranty?: string | null
+          c1_nda_status?: string | null
+          c2_client_name_disclosure?: string | null
+          c3_data_retention?: string | null
+          c4_personal_info?: string | null
+          client_id: string
+          created_at?: string | null
+          d1_billing_timing?: string | null
+          d2_payment_term?: string | null
+          d3_inspection_days?: number | null
+          d4_inspection_implicit?: string | null
+          d5_revision_limit?: string | null
+          d6_late_fee?: string | null
+          e1_media_operation?: string | null
+          e2_legal_check?: string | null
+          e3_emergency_response?: string | null
+          e4_subcontract?: string | null
+          e5_warranty_period?: string | null
+          f1_contract_form?: string | null
+          f2_contract_renewal?: string | null
+          f3_termination_clause?: string | null
+          f3_termination_notice_months?: number | null
+          f4_anti_social?: string | null
+          f5_liability_cap?: string | null
+          g1_competitor_detail?: string | null
+          g1_competitor_exclusion?: string | null
+          g2_applicable_laws?: Json | null
+          g3_stealth_marketing?: string | null
+          g4_jurisdiction?: string | null
+          h1_special_terms?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          a1_publication?: string | null
+          a2_portfolio_display?: string | null
+          a3_credit_required?: string | null
+          a3_credit_text?: string | null
+          a4_sns_post?: string | null
+          a5_award_apply?: string | null
+          a6_publication_timing?: string | null
+          b1_copyright_owner?: string | null
+          b2_moral_rights?: string | null
+          b3_secondary_use?: string | null
+          b4_generic_assets?: string | null
+          b5_third_party_assets?: string | null
+          b6_ip_warranty?: string | null
+          c1_nda_status?: string | null
+          c2_client_name_disclosure?: string | null
+          c3_data_retention?: string | null
+          c4_personal_info?: string | null
+          client_id?: string
+          created_at?: string | null
+          d1_billing_timing?: string | null
+          d2_payment_term?: string | null
+          d3_inspection_days?: number | null
+          d4_inspection_implicit?: string | null
+          d5_revision_limit?: string | null
+          d6_late_fee?: string | null
+          e1_media_operation?: string | null
+          e2_legal_check?: string | null
+          e3_emergency_response?: string | null
+          e4_subcontract?: string | null
+          e5_warranty_period?: string | null
+          f1_contract_form?: string | null
+          f2_contract_renewal?: string | null
+          f3_termination_clause?: string | null
+          f3_termination_notice_months?: number | null
+          f4_anti_social?: string | null
+          f5_liability_cap?: string | null
+          g1_competitor_detail?: string | null
+          g1_competitor_exclusion?: string | null
+          g2_applicable_laws?: Json | null
+          g3_stealth_marketing?: string | null
+          g4_jurisdiction?: string | null
+          h1_special_terms?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_terms_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: true
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clients: {
+        Row: {
+          ai_scan_metadata: Json | null
+          ai_scanned_at: string | null
+          am_profile_id: string | null
+          am_user_id: string | null
+          business_description: string | null
+          business_segments: Json | null
+          business_subcategory: string | null
+          business_summary: string | null
+          capital_yen: number | null
+          company_size: string | null
+          competitors: Json | null
+          contact_email: string | null
+          contact_person: string | null
+          corporate_form: string | null
+          corporate_number: string | null
+          created_at: string | null
+          decision_maker_dept: string | null
+          decision_maker_email: string | null
+          decision_maker_name: string | null
+          decision_maker_role: string | null
+          employees_count: number | null
+          executives: Json | null
+          founded_at: string | null
+          group_companies: Json | null
+          hq_address: string | null
+          hq_phone: string | null
+          hq_postal_code: string | null
+          id: string
+          industry: string | null
+          industry_middle: string | null
+          legal_name: string | null
+          licenses: Json | null
+          listing_code: string | null
+          listing_status: string | null
+          logo_url: string | null
+          name: string
+          name_en: string | null
+          name_kana: string | null
+          name_short: string | null
+          notes: string | null
+          offices: Json | null
+          official_url: string | null
+          parent_company: string | null
+          payment_terms: string | null
+          press_release_summary: string | null
+          representative_name: string | null
+          representative_title: string | null
+          revenue_recent_label: string | null
+          revenue_recent_yen: number | null
+          short_name: string | null
+          social_media: Json | null
+          sort_order: number | null
+          updated_at: string | null
+          website_url: string | null
+        }
+        Insert: {
+          ai_scan_metadata?: Json | null
+          ai_scanned_at?: string | null
+          am_profile_id?: string | null
+          am_user_id?: string | null
+          business_description?: string | null
+          business_segments?: Json | null
+          business_subcategory?: string | null
+          business_summary?: string | null
+          capital_yen?: number | null
+          company_size?: string | null
+          competitors?: Json | null
+          contact_email?: string | null
+          contact_person?: string | null
+          corporate_form?: string | null
+          corporate_number?: string | null
+          created_at?: string | null
+          decision_maker_dept?: string | null
+          decision_maker_email?: string | null
+          decision_maker_name?: string | null
+          decision_maker_role?: string | null
+          employees_count?: number | null
+          executives?: Json | null
+          founded_at?: string | null
+          group_companies?: Json | null
+          hq_address?: string | null
+          hq_phone?: string | null
+          hq_postal_code?: string | null
+          id?: string
+          industry?: string | null
+          industry_middle?: string | null
+          legal_name?: string | null
+          licenses?: Json | null
+          listing_code?: string | null
+          listing_status?: string | null
+          logo_url?: string | null
+          name: string
+          name_en?: string | null
+          name_kana?: string | null
+          name_short?: string | null
+          notes?: string | null
+          offices?: Json | null
+          official_url?: string | null
+          parent_company?: string | null
+          payment_terms?: string | null
+          press_release_summary?: string | null
+          representative_name?: string | null
+          representative_title?: string | null
+          revenue_recent_label?: string | null
+          revenue_recent_yen?: number | null
+          short_name?: string | null
+          social_media?: Json | null
+          sort_order?: number | null
+          updated_at?: string | null
+          website_url?: string | null
+        }
+        Update: {
+          ai_scan_metadata?: Json | null
+          ai_scanned_at?: string | null
+          am_profile_id?: string | null
+          am_user_id?: string | null
+          business_description?: string | null
+          business_segments?: Json | null
+          business_subcategory?: string | null
+          business_summary?: string | null
+          capital_yen?: number | null
+          company_size?: string | null
+          competitors?: Json | null
+          contact_email?: string | null
+          contact_person?: string | null
+          corporate_form?: string | null
+          corporate_number?: string | null
+          created_at?: string | null
+          decision_maker_dept?: string | null
+          decision_maker_email?: string | null
+          decision_maker_name?: string | null
+          decision_maker_role?: string | null
+          employees_count?: number | null
+          executives?: Json | null
+          founded_at?: string | null
+          group_companies?: Json | null
+          hq_address?: string | null
+          hq_phone?: string | null
+          hq_postal_code?: string | null
+          id?: string
+          industry?: string | null
+          industry_middle?: string | null
+          legal_name?: string | null
+          licenses?: Json | null
+          listing_code?: string | null
+          listing_status?: string | null
+          logo_url?: string | null
+          name?: string
+          name_en?: string | null
+          name_kana?: string | null
+          name_short?: string | null
+          notes?: string | null
+          offices?: Json | null
+          official_url?: string | null
+          parent_company?: string | null
+          payment_terms?: string | null
+          press_release_summary?: string | null
+          representative_name?: string | null
+          representative_title?: string | null
+          revenue_recent_label?: string | null
+          revenue_recent_yen?: number | null
+          short_name?: string | null
+          social_media?: Json | null
+          sort_order?: number | null
+          updated_at?: string | null
+          website_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clients_am_profile_id_fkey"
+            columns: ["am_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       comments: {
         Row: {
@@ -717,6 +1316,62 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products_with_check_settings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      creator_orient_documents: {
+        Row: {
+          created_at: string | null
+          generated_at: string | null
+          generated_by: string | null
+          generated_content: Json
+          id: string
+          is_current: boolean | null
+          last_sent_at: string | null
+          notion_url: string | null
+          pdf_url: string | null
+          project_id: string
+          sent_to_creators: string[] | null
+          updated_at: string | null
+          version: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          generated_at?: string | null
+          generated_by?: string | null
+          generated_content?: Json
+          id?: string
+          is_current?: boolean | null
+          last_sent_at?: string | null
+          notion_url?: string | null
+          pdf_url?: string | null
+          project_id: string
+          sent_to_creators?: string[] | null
+          updated_at?: string | null
+          version?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          generated_at?: string | null
+          generated_by?: string | null
+          generated_content?: Json
+          id?: string
+          is_current?: boolean | null
+          last_sent_at?: string | null
+          notion_url?: string | null
+          pdf_url?: string | null
+          project_id?: string
+          sent_to_creators?: string[] | null
+          updated_at?: string | null
+          version?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "creator_orient_documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -1339,6 +1994,129 @@ export type Database = {
         }
         Relationships: []
       }
+      knowledge_items: {
+        Row: {
+          ai_extracted_count: number
+          ai_model: string | null
+          client_id: string
+          content_text: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          description: string | null
+          id: string
+          is_ai_rule_enabled: boolean
+          knowledge_type: string
+          legacy_asset_id: string | null
+          legacy_contract_id: string | null
+          legacy_reference_id: string | null
+          product_id: string | null
+          project_id: string | null
+          scope: string
+          sort_order: number
+          source_file_id: string | null
+          status: string
+          structured_at: string | null
+          structured_data: Json | null
+          structured_version: number
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          ai_extracted_count?: number
+          ai_model?: string | null
+          client_id: string
+          content_text?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          is_ai_rule_enabled?: boolean
+          knowledge_type: string
+          legacy_asset_id?: string | null
+          legacy_contract_id?: string | null
+          legacy_reference_id?: string | null
+          product_id?: string | null
+          project_id?: string | null
+          scope: string
+          sort_order?: number
+          source_file_id?: string | null
+          status?: string
+          structured_at?: string | null
+          structured_data?: Json | null
+          structured_version?: number
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          ai_extracted_count?: number
+          ai_model?: string | null
+          client_id?: string
+          content_text?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          is_ai_rule_enabled?: boolean
+          knowledge_type?: string
+          legacy_asset_id?: string | null
+          legacy_contract_id?: string | null
+          legacy_reference_id?: string | null
+          product_id?: string | null
+          project_id?: string | null
+          scope?: string
+          sort_order?: number
+          source_file_id?: string | null
+          status?: string
+          structured_at?: string | null
+          structured_data?: Json | null
+          structured_version?: number
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "knowledge_items_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_with_check_settings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "knowledge_items_source_file_id_fkey"
+            columns: ["source_file_id"]
+            isOneToOne: false
+            referencedRelation: "storage_files"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       kpi_targets: {
         Row: {
           id: string
@@ -1398,6 +2176,59 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      ops_integrations: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          integration_type: string
+          project_id: string
+          result_data: Json | null
+          result_url: string | null
+          status: string
+          triggered_at: string | null
+          triggered_by: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          integration_type: string
+          project_id: string
+          result_data?: Json | null
+          result_url?: string | null
+          status?: string
+          triggered_at?: string | null
+          triggered_by?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          integration_type?: string
+          project_id?: string
+          result_data?: Json | null
+          result_url?: string | null
+          status?: string
+          triggered_at?: string | null
+          triggered_by?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ops_integrations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       patterns: {
         Row: {
@@ -1479,6 +2310,123 @@ export type Database = {
         }
         Relationships: []
       }
+      product_approval_flows: {
+        Row: {
+          common_revisions: string | null
+          created_at: string
+          flow_data: Json
+          id: string
+          product_id: string
+          updated_at: string
+        }
+        Insert: {
+          common_revisions?: string | null
+          created_at?: string
+          flow_data?: Json
+          id?: string
+          product_id: string
+          updated_at?: string
+        }
+        Update: {
+          common_revisions?: string | null
+          created_at?: string
+          flow_data?: Json
+          id?: string
+          product_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_approval_flows_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_approval_flows_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products_with_check_settings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_assets: {
+        Row: {
+          asset_type: string
+          content_text: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          description: string | null
+          file_path: string | null
+          file_size: number | null
+          file_url: string | null
+          id: string
+          metadata: Json
+          mime_type: string | null
+          name: string
+          product_id: string
+          source_url: string | null
+          tags: string[]
+          updated_at: string
+        }
+        Insert: {
+          asset_type?: string
+          content_text?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          id?: string
+          metadata?: Json
+          mime_type?: string | null
+          name: string
+          product_id: string
+          source_url?: string | null
+          tags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          asset_type?: string
+          content_text?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          id?: string
+          metadata?: Json
+          mime_type?: string | null
+          name?: string
+          product_id?: string
+          source_url?: string | null
+          tags?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_assets_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_assets_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_with_check_settings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_check_settings: {
         Row: {
           created_at: string | null
@@ -1534,6 +2482,153 @@ export type Database = {
             foreignKeyName: "product_check_settings_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: true
+            referencedRelation: "products_with_check_settings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_creatives: {
+        Row: {
+          ai_analysis: Json | null
+          completion_rate: number | null
+          cpa: number | null
+          created_at: string | null
+          created_by: string | null
+          creative_type: string | null
+          ctr: number | null
+          cvr: number | null
+          file_name: string | null
+          file_size_bytes: number | null
+          file_url: string | null
+          id: string
+          is_active: boolean | null
+          memo: string | null
+          mime_type: string | null
+          name: string
+          period: string | null
+          product_id: string
+          rating: string
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          ai_analysis?: Json | null
+          completion_rate?: number | null
+          cpa?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          creative_type?: string | null
+          ctr?: number | null
+          cvr?: number | null
+          file_name?: string | null
+          file_size_bytes?: number | null
+          file_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          memo?: string | null
+          mime_type?: string | null
+          name: string
+          period?: string | null
+          product_id: string
+          rating: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          ai_analysis?: Json | null
+          completion_rate?: number | null
+          cpa?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          creative_type?: string | null
+          ctr?: number | null
+          cvr?: number | null
+          file_name?: string | null
+          file_size_bytes?: number | null
+          file_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          memo?: string | null
+          mime_type?: string | null
+          name?: string
+          period?: string | null
+          product_id?: string
+          rating?: string
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_creatives_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_creatives_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_with_check_settings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_ng_instructions: {
+        Row: {
+          category: string
+          created_at: string | null
+          created_by: string | null
+          frequency: string
+          id: string
+          instruction: string
+          is_active: boolean | null
+          product_id: string
+          sort_order: number | null
+          source_meta: Json | null
+          source_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          created_by?: string | null
+          frequency: string
+          id?: string
+          instruction: string
+          is_active?: boolean | null
+          product_id: string
+          sort_order?: number | null
+          source_meta?: Json | null
+          source_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          created_by?: string | null
+          frequency?: string
+          id?: string
+          instruction?: string
+          is_active?: boolean | null
+          product_id?: string
+          sort_order?: number | null
+          source_meta?: Json | null
+          source_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_ng_instructions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_ng_instructions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
             referencedRelation: "products_with_check_settings"
             referencedColumns: ["id"]
           },
@@ -1596,60 +2691,132 @@ export type Database = {
       products: {
         Row: {
           abbreviation: string | null
+          actual_advertiser_name: string | null
+          ai_scan_metadata: Json | null
+          ai_scanned_at: string | null
+          applicable_laws: Json | null
+          approval_common_revisions: string | null
+          approval_flow: Json | null
+          assigned_person_ids: Json | null
+          business_subcategory: string | null
           client_id: string | null
           code: string
           color: string | null
+          competitors: Json | null
           created_at: string | null
           default_bg_color: string | null
           default_display_sec: number | null
           default_switch_sec: number | null
           default_transition: string | null
+          description: string | null
           external_product_id: string | null
           frame_image_url: string | null
+          genre: string | null
           id: string
+          industry_category: string | null
+          kpi: string | null
           label: string
           logo_image_url: string | null
+          lp_url: string | null
           name: string
+          ng_words: string[] | null
+          price: string | null
+          price_range: string | null
+          product_status: string | null
+          short_name: string | null
           sort_order: number | null
+          target: string | null
+          target_audience: string | null
+          transaction_form: string | null
+          transaction_started_at: string | null
           updated_at: string | null
+          usp: string | null
         }
         Insert: {
           abbreviation?: string | null
+          actual_advertiser_name?: string | null
+          ai_scan_metadata?: Json | null
+          ai_scanned_at?: string | null
+          applicable_laws?: Json | null
+          approval_common_revisions?: string | null
+          approval_flow?: Json | null
+          assigned_person_ids?: Json | null
+          business_subcategory?: string | null
           client_id?: string | null
           code: string
           color?: string | null
+          competitors?: Json | null
           created_at?: string | null
           default_bg_color?: string | null
           default_display_sec?: number | null
           default_switch_sec?: number | null
           default_transition?: string | null
+          description?: string | null
           external_product_id?: string | null
           frame_image_url?: string | null
+          genre?: string | null
           id?: string
+          industry_category?: string | null
+          kpi?: string | null
           label: string
           logo_image_url?: string | null
+          lp_url?: string | null
           name: string
+          ng_words?: string[] | null
+          price?: string | null
+          price_range?: string | null
+          product_status?: string | null
+          short_name?: string | null
           sort_order?: number | null
+          target?: string | null
+          target_audience?: string | null
+          transaction_form?: string | null
+          transaction_started_at?: string | null
           updated_at?: string | null
+          usp?: string | null
         }
         Update: {
           abbreviation?: string | null
+          actual_advertiser_name?: string | null
+          ai_scan_metadata?: Json | null
+          ai_scanned_at?: string | null
+          applicable_laws?: Json | null
+          approval_common_revisions?: string | null
+          approval_flow?: Json | null
+          assigned_person_ids?: Json | null
+          business_subcategory?: string | null
           client_id?: string | null
           code?: string
           color?: string | null
+          competitors?: Json | null
           created_at?: string | null
           default_bg_color?: string | null
           default_display_sec?: number | null
           default_switch_sec?: number | null
           default_transition?: string | null
+          description?: string | null
           external_product_id?: string | null
           frame_image_url?: string | null
+          genre?: string | null
           id?: string
+          industry_category?: string | null
+          kpi?: string | null
           label?: string
           logo_image_url?: string | null
+          lp_url?: string | null
           name?: string
+          ng_words?: string[] | null
+          price?: string | null
+          price_range?: string | null
+          product_status?: string | null
+          short_name?: string | null
           sort_order?: number | null
+          target?: string | null
+          target_audience?: string | null
+          transaction_form?: string | null
+          transaction_started_at?: string | null
           updated_at?: string | null
+          usp?: string | null
         }
         Relationships: [
           {
@@ -1711,6 +2878,74 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      project_assets: {
+        Row: {
+          asset_type: string
+          content_text: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          description: string | null
+          file_path: string | null
+          file_size: number | null
+          file_url: string | null
+          id: string
+          metadata: Json
+          mime_type: string | null
+          name: string
+          project_id: string
+          source_url: string | null
+          tags: string[]
+          updated_at: string
+        }
+        Insert: {
+          asset_type?: string
+          content_text?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          id?: string
+          metadata?: Json
+          mime_type?: string | null
+          name: string
+          project_id: string
+          source_url?: string | null
+          tags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          asset_type?: string
+          content_text?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          file_url?: string | null
+          id?: string
+          metadata?: Json
+          mime_type?: string | null
+          name?: string
+          project_id?: string
+          source_url?: string | null
+          tags?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_assets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       project_audit_log: {
         Row: {
@@ -1881,6 +3116,66 @@ export type Database = {
           },
         ]
       }
+      project_distribution_media: {
+        Row: {
+          applied_to_adcheck: boolean | null
+          applied_to_adgen: boolean | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          media_category: string | null
+          media_name: string
+          media_regulation_id: string | null
+          project_id: string
+          regulation_snapshot: Json | null
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          applied_to_adcheck?: boolean | null
+          applied_to_adgen?: boolean | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          media_category?: string | null
+          media_name: string
+          media_regulation_id?: string | null
+          project_id: string
+          regulation_snapshot?: Json | null
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          applied_to_adcheck?: boolean | null
+          applied_to_adgen?: boolean | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          media_category?: string | null
+          media_name?: string
+          media_regulation_id?: string | null
+          project_id?: string
+          regulation_snapshot?: Json | null
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_distribution_media_media_regulation_id_fkey"
+            columns: ["media_regulation_id"]
+            isOneToOne: false
+            referencedRelation: "reference_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_distribution_media_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_files: {
         Row: {
           check_result_id: string | null
@@ -1977,6 +3272,145 @@ export type Database = {
             columns: ["uploaded_by_creator_id"]
             isOneToOne: false
             referencedRelation: "creators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_knowledge_context: {
+        Row: {
+          client_layer: Json | null
+          created_at: string | null
+          effective_rules: Json | null
+          generated_at: string | null
+          id: string
+          knowledge_version: number | null
+          last_updated_source: string | null
+          media_regulations: Json | null
+          product_layer: Json | null
+          project_id: string
+          project_layer: Json | null
+          stats: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          client_layer?: Json | null
+          created_at?: string | null
+          effective_rules?: Json | null
+          generated_at?: string | null
+          id?: string
+          knowledge_version?: number | null
+          last_updated_source?: string | null
+          media_regulations?: Json | null
+          product_layer?: Json | null
+          project_id: string
+          project_layer?: Json | null
+          stats?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          client_layer?: Json | null
+          created_at?: string | null
+          effective_rules?: Json | null
+          generated_at?: string | null
+          id?: string
+          knowledge_version?: number | null
+          last_updated_source?: string | null
+          media_regulations?: Json | null
+          product_layer?: Json | null
+          project_id?: string
+          project_layer?: Json | null
+          stats?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_knowledge_context_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_materials: {
+        Row: {
+          ai_extracted_at: string | null
+          ai_extracted_data: Json | null
+          ai_extraction_status: string | null
+          available_for_creator: boolean | null
+          category: string
+          created_at: string | null
+          description: string | null
+          external_source_type: string | null
+          external_url: string | null
+          file_name: string | null
+          file_size_bytes: number | null
+          file_type: string | null
+          file_url: string | null
+          id: string
+          is_active: boolean | null
+          material_type: string | null
+          project_id: string
+          scope_type: string
+          sort_order: number | null
+          title: string | null
+          updated_at: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          ai_extracted_at?: string | null
+          ai_extracted_data?: Json | null
+          ai_extraction_status?: string | null
+          available_for_creator?: boolean | null
+          category: string
+          created_at?: string | null
+          description?: string | null
+          external_source_type?: string | null
+          external_url?: string | null
+          file_name?: string | null
+          file_size_bytes?: number | null
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          material_type?: string | null
+          project_id: string
+          scope_type?: string
+          sort_order?: number | null
+          title?: string | null
+          updated_at?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          ai_extracted_at?: string | null
+          ai_extracted_data?: Json | null
+          ai_extraction_status?: string | null
+          available_for_creator?: boolean | null
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          external_source_type?: string | null
+          external_url?: string | null
+          file_name?: string | null
+          file_size_bytes?: number | null
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          is_active?: boolean | null
+          material_type?: string | null
+          project_id?: string
+          scope_type?: string
+          sort_order?: number | null
+          title?: string | null
+          updated_at?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_materials_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -2090,36 +3524,70 @@ export type Database = {
       projects: {
         Row: {
           ad_objective: string | null
+          ad_purpose_note: string | null
+          ad_purposes: string[] | null
+          appeal_requests: Json | null
+          author: string | null
+          available_assets: string | null
+          banner_designs_count: number | null
+          banner_sizes: Json | null
+          bgm_settings: Json | null
+          business_days: number | null
+          catchcopy_required: boolean | null
           client_contact: string | null
+          client_person_id: string | null
+          compositions_count: number | null
           copyright_text: string | null
           created_at: string | null
           created_by: string | null
           creative_type: string | null
           deadline: string | null
+          delivery_date: string | null
+          delivery_start_date: string | null
           description: string | null
-          differentiation: string | null
+          distribution_start_date: string | null
+          duration_seconds: number | null
+          endcard_spec: Json | null
+          frame_count: number | null
+          frame_texts: Json | null
+          gen_ai_policy: string | null
+          genai_policy: Json | null
+          google_drive_url: string | null
           id: string
-          lp_scraped_at: string | null
-          lp_scraped_content: string | null
+          lp_info: Json | null
+          lp_message: string | null
           lp_summary: string | null
           lp_url: string | null
+          manga_settings: Json | null
           name: string
+          narration_config: Json | null
+          narration_enabled: boolean | null
+          narration_required: boolean | null
           ng_words: string[] | null
           ob_am: string | null
           ob_pm: string | null
           ob_qm: string | null
           overall_deadline: string | null
           product_id: string | null
+          production_drive_url: string | null
           production_pattern: string | null
           project_code: string | null
+          publisher: string | null
           reference_banner_urls: string[] | null
+          reference_banners: Json | null
           reference_creatives: string | null
+          reference_videos: Json | null
+          registration_mode: string | null
+          resize_sizes: Json | null
           schedule_business_days: number | null
+          scope: string | null
+          scope_type: string | null
           sort_order: number | null
           status: string | null
           target_audience: string | null
-          target_insight: string | null
-          tone_preset: string | null
+          tone_manner_requests: Json | null
+          tone_manners_count: number | null
+          total_banner_count: number | null
           total_video_count: number | null
           updated_at: string | null
           video_duration_seconds: number | null
@@ -2127,36 +3595,70 @@ export type Database = {
         }
         Insert: {
           ad_objective?: string | null
+          ad_purpose_note?: string | null
+          ad_purposes?: string[] | null
+          appeal_requests?: Json | null
+          author?: string | null
+          available_assets?: string | null
+          banner_designs_count?: number | null
+          banner_sizes?: Json | null
+          bgm_settings?: Json | null
+          business_days?: number | null
+          catchcopy_required?: boolean | null
           client_contact?: string | null
+          client_person_id?: string | null
+          compositions_count?: number | null
           copyright_text?: string | null
           created_at?: string | null
           created_by?: string | null
           creative_type?: string | null
           deadline?: string | null
+          delivery_date?: string | null
+          delivery_start_date?: string | null
           description?: string | null
-          differentiation?: string | null
+          distribution_start_date?: string | null
+          duration_seconds?: number | null
+          endcard_spec?: Json | null
+          frame_count?: number | null
+          frame_texts?: Json | null
+          gen_ai_policy?: string | null
+          genai_policy?: Json | null
+          google_drive_url?: string | null
           id?: string
-          lp_scraped_at?: string | null
-          lp_scraped_content?: string | null
+          lp_info?: Json | null
+          lp_message?: string | null
           lp_summary?: string | null
           lp_url?: string | null
+          manga_settings?: Json | null
           name: string
+          narration_config?: Json | null
+          narration_enabled?: boolean | null
+          narration_required?: boolean | null
           ng_words?: string[] | null
           ob_am?: string | null
           ob_pm?: string | null
           ob_qm?: string | null
           overall_deadline?: string | null
           product_id?: string | null
+          production_drive_url?: string | null
           production_pattern?: string | null
           project_code?: string | null
+          publisher?: string | null
           reference_banner_urls?: string[] | null
+          reference_banners?: Json | null
           reference_creatives?: string | null
+          reference_videos?: Json | null
+          registration_mode?: string | null
+          resize_sizes?: Json | null
           schedule_business_days?: number | null
+          scope?: string | null
+          scope_type?: string | null
           sort_order?: number | null
           status?: string | null
           target_audience?: string | null
-          target_insight?: string | null
-          tone_preset?: string | null
+          tone_manner_requests?: Json | null
+          tone_manners_count?: number | null
+          total_banner_count?: number | null
           total_video_count?: number | null
           updated_at?: string | null
           video_duration_seconds?: number | null
@@ -2164,42 +3666,83 @@ export type Database = {
         }
         Update: {
           ad_objective?: string | null
+          ad_purpose_note?: string | null
+          ad_purposes?: string[] | null
+          appeal_requests?: Json | null
+          author?: string | null
+          available_assets?: string | null
+          banner_designs_count?: number | null
+          banner_sizes?: Json | null
+          bgm_settings?: Json | null
+          business_days?: number | null
+          catchcopy_required?: boolean | null
           client_contact?: string | null
+          client_person_id?: string | null
+          compositions_count?: number | null
           copyright_text?: string | null
           created_at?: string | null
           created_by?: string | null
           creative_type?: string | null
           deadline?: string | null
+          delivery_date?: string | null
+          delivery_start_date?: string | null
           description?: string | null
-          differentiation?: string | null
+          distribution_start_date?: string | null
+          duration_seconds?: number | null
+          endcard_spec?: Json | null
+          frame_count?: number | null
+          frame_texts?: Json | null
+          gen_ai_policy?: string | null
+          genai_policy?: Json | null
+          google_drive_url?: string | null
           id?: string
-          lp_scraped_at?: string | null
-          lp_scraped_content?: string | null
+          lp_info?: Json | null
+          lp_message?: string | null
           lp_summary?: string | null
           lp_url?: string | null
+          manga_settings?: Json | null
           name?: string
+          narration_config?: Json | null
+          narration_enabled?: boolean | null
+          narration_required?: boolean | null
           ng_words?: string[] | null
           ob_am?: string | null
           ob_pm?: string | null
           ob_qm?: string | null
           overall_deadline?: string | null
           product_id?: string | null
+          production_drive_url?: string | null
           production_pattern?: string | null
           project_code?: string | null
+          publisher?: string | null
           reference_banner_urls?: string[] | null
+          reference_banners?: Json | null
           reference_creatives?: string | null
+          reference_videos?: Json | null
+          registration_mode?: string | null
+          resize_sizes?: Json | null
           schedule_business_days?: number | null
+          scope?: string | null
+          scope_type?: string | null
           sort_order?: number | null
           status?: string | null
           target_audience?: string | null
-          target_insight?: string | null
-          tone_preset?: string | null
+          tone_manner_requests?: Json | null
+          tone_manners_count?: number | null
+          total_banner_count?: number | null
           total_video_count?: number | null
           updated_at?: string | null
           video_duration_seconds?: number | null
           work_title?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "projects_client_person_id_fkey"
+            columns: ["client_person_id"]
+            isOneToOne: false
+            referencedRelation: "client_persons"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "projects_product_id_fkey"
             columns: ["product_id"]
@@ -2270,6 +3813,90 @@ export type Database = {
           source_url?: string | null
           title?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      regulation_master_laws: {
+        Row: {
+          applicable_industries: Json | null
+          category: string | null
+          code: string
+          created_at: string | null
+          default_content: string | null
+          full_name: string | null
+          is_active: boolean | null
+          name: string
+          reference_url: string | null
+          short_description: string | null
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          applicable_industries?: Json | null
+          category?: string | null
+          code: string
+          created_at?: string | null
+          default_content?: string | null
+          full_name?: string | null
+          is_active?: boolean | null
+          name: string
+          reference_url?: string | null
+          short_description?: string | null
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          applicable_industries?: Json | null
+          category?: string | null
+          code?: string
+          created_at?: string | null
+          default_content?: string | null
+          full_name?: string | null
+          is_active?: boolean | null
+          name?: string
+          reference_url?: string | null
+          short_description?: string | null
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      regulation_master_media: {
+        Row: {
+          category: string | null
+          code: string
+          created_at: string | null
+          default_content: string | null
+          is_active: boolean | null
+          name: string
+          official_url: string | null
+          short_description: string | null
+          sort_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          code: string
+          created_at?: string | null
+          default_content?: string | null
+          is_active?: boolean | null
+          name: string
+          official_url?: string | null
+          short_description?: string | null
+          sort_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          code?: string
+          created_at?: string | null
+          default_content?: string | null
+          is_active?: boolean | null
+          name?: string
+          official_url?: string | null
+          short_description?: string | null
+          sort_order?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -2546,6 +4173,251 @@ export type Database = {
           },
         ]
       }
+      rule_duplicate_groups: {
+        Row: {
+          active_count: number
+          client_id: string | null
+          detected_at: string
+          detection_method: string
+          dismiss_reason: string | null
+          dismissed_at: string | null
+          dismissed_by: string | null
+          group_key: string
+          id: string
+          inactive_count: number
+          merged_at: string | null
+          merged_by: string | null
+          product_id: string | null
+          project_id: string | null
+          representative_title: string
+          rule_count: number
+          rule_ids: string[]
+          scope: string
+          similarity_score: number | null
+          status: string
+          suggested_master_rule_id: string | null
+          suggestion_reason: string | null
+          updated_at: string
+        }
+        Insert: {
+          active_count: number
+          client_id?: string | null
+          detected_at?: string
+          detection_method: string
+          dismiss_reason?: string | null
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          group_key: string
+          id?: string
+          inactive_count: number
+          merged_at?: string | null
+          merged_by?: string | null
+          product_id?: string | null
+          project_id?: string | null
+          representative_title: string
+          rule_count: number
+          rule_ids: string[]
+          scope: string
+          similarity_score?: number | null
+          status?: string
+          suggested_master_rule_id?: string | null
+          suggestion_reason?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active_count?: number
+          client_id?: string | null
+          detected_at?: string
+          detection_method?: string
+          dismiss_reason?: string | null
+          dismissed_at?: string | null
+          dismissed_by?: string | null
+          group_key?: string
+          id?: string
+          inactive_count?: number
+          merged_at?: string | null
+          merged_by?: string | null
+          product_id?: string | null
+          project_id?: string | null
+          representative_title?: string
+          rule_count?: number
+          rule_ids?: string[]
+          scope?: string
+          similarity_score?: number | null
+          status?: string
+          suggested_master_rule_id?: string | null
+          suggestion_reason?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rule_duplicate_groups_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rule_duplicate_groups_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rule_duplicate_groups_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products_with_check_settings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rule_duplicate_groups_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rule_duplicate_groups_suggested_master_rule_id_fkey"
+            columns: ["suggested_master_rule_id"]
+            isOneToOne: false
+            referencedRelation: "check_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rule_improvement_proposals: {
+        Row: {
+          ai_reasoning: string | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string | null
+          current_quality_score: number | null
+          current_value: Json
+          expected_quality_score: number | null
+          id: string
+          proposal_type: string
+          proposed_value: Json
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          rule_id: string
+          status: string
+          trigger_reason: string
+          updated_at: string
+        }
+        Insert: {
+          ai_reasoning?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_quality_score?: number | null
+          current_value: Json
+          expected_quality_score?: number | null
+          id?: string
+          proposal_type: string
+          proposed_value: Json
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          rule_id: string
+          status?: string
+          trigger_reason: string
+          updated_at?: string
+        }
+        Update: {
+          ai_reasoning?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          current_quality_score?: number | null
+          current_value?: Json
+          expected_quality_score?: number | null
+          id?: string
+          proposal_type?: string
+          proposed_value?: Json
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          rule_id?: string
+          status?: string
+          trigger_reason?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rule_improvement_proposals_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "check_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rule_merge_log: {
+        Row: {
+          action_summary: string | null
+          action_type: string
+          deactivated_rule_ids: string[]
+          deleted_rule_ids: string[]
+          duplicate_group_id: string | null
+          id: string
+          is_rollback_possible: boolean
+          master_rule_id: string
+          performed_at: string
+          performed_by: string
+          rolled_back_at: string | null
+          rolled_back_by: string | null
+        }
+        Insert: {
+          action_summary?: string | null
+          action_type: string
+          deactivated_rule_ids: string[]
+          deleted_rule_ids?: string[]
+          duplicate_group_id?: string | null
+          id?: string
+          is_rollback_possible?: boolean
+          master_rule_id: string
+          performed_at?: string
+          performed_by: string
+          rolled_back_at?: string | null
+          rolled_back_by?: string | null
+        }
+        Update: {
+          action_summary?: string | null
+          action_type?: string
+          deactivated_rule_ids?: string[]
+          deleted_rule_ids?: string[]
+          duplicate_group_id?: string | null
+          id?: string
+          is_rollback_possible?: boolean
+          master_rule_id?: string
+          performed_at?: string
+          performed_by?: string
+          rolled_back_at?: string | null
+          rolled_back_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rule_merge_log_duplicate_group_id_fkey"
+            columns: ["duplicate_group_id"]
+            isOneToOne: false
+            referencedRelation: "rule_duplicate_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rule_merge_log_master_rule_id_fkey"
+            columns: ["master_rule_id"]
+            isOneToOne: false
+            referencedRelation: "check_rules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rule_quality_audit_log: {
         Row: {
           ambiguous_count: number
@@ -2635,6 +4507,42 @@ export type Database = {
           },
         ]
       }
+      storage_files: {
+        Row: {
+          bucket: string
+          deleted_at: string | null
+          file_name: string
+          id: string
+          mime_type: string | null
+          size_bytes: number | null
+          storage_path: string
+          uploaded_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          bucket: string
+          deleted_at?: string | null
+          file_name: string
+          id?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          storage_path: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          bucket?: string
+          deleted_at?: string | null
+          file_name?: string
+          id?: string
+          mime_type?: string | null
+          size_bytes?: number | null
+          storage_path?: string
+          uploaded_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
       submission_logs: {
         Row: {
           action_type: string
@@ -2671,6 +4579,27 @@ export type Database = {
           product_id?: string | null
           project_id?: string | null
           version_number?: number
+        }
+        Relationships: []
+      }
+      system_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
         }
         Relationships: []
       }
@@ -2712,21 +4641,48 @@ export type Database = {
       products_with_check_settings: {
         Row: {
           abbreviation: string | null
+          actual_advertiser_name: string | null
+          ai_scan_metadata: Json | null
+          ai_scanned_at: string | null
+          applicable_laws: Json | null
+          approval_common_revisions: string | null
+          approval_flow: Json | null
+          assigned_person_ids: Json | null
+          business_subcategory: string | null
           client_id: string | null
           code: string | null
           color: string | null
+          competitors: Json | null
           created_at: string | null
+          default_bg_color: string | null
+          default_display_sec: number | null
+          default_switch_sec: number | null
+          default_transition: string | null
+          description: string | null
           external_product_id: string | null
+          frame_image_url: string | null
+          genre: string | null
           id: string | null
+          industry_category: string | null
           info_lines: string[] | null
+          kpi: string | null
           label: string | null
+          logo_image_url: string | null
+          lp_url: string | null
           meta: string | null
           name: string | null
+          ng_words: string[] | null
+          price_range: string | null
+          product_status: string | null
           rules_desc: string | null
           sample_text: string | null
           sf_enabled: boolean | null
           sort_order: number | null
+          target_audience: string | null
+          transaction_form: string | null
+          transaction_started_at: string | null
           updated_at: string | null
+          usp: string | null
           warning: string | null
           webhook_paths: Json | null
         }
@@ -2843,6 +4799,28 @@ export type Database = {
         Args: { p_token: string; p_user_id: string }
         Returns: boolean
       }
+      apply_duplicate_resolution: {
+        Args: {
+          p_actor_user_id?: string
+          p_archive_member_ids: string[]
+          p_group_id: string
+          p_master_rule_id: string
+        }
+        Returns: Json
+      }
+      apply_improvement_proposal: {
+        Args: { p_proposal_id: string; p_use_proposed_value?: Json }
+        Returns: Json
+      }
+      apply_rule_merge: {
+        Args: {
+          p_action_type: string
+          p_duplicate_group_id: string
+          p_master_rule_id: string
+          p_target_rule_ids: string[]
+        }
+        Returns: Json
+      }
       approve_rule_candidate: {
         Args: { p_candidate_id: string; p_reviewer_id?: string }
         Returns: string
@@ -2855,6 +4833,38 @@ export type Database = {
         }[]
       }
       audit_check_rules_quality: { Args: never; Returns: Json }
+      build_project_knowledge_context: {
+        Args: { p_project_id: string }
+        Returns: string
+      }
+      bulk_apply_duplicate_resolutions: {
+        Args: { p_actor_user_id?: string; p_group_ids?: string[] }
+        Returns: Json
+      }
+      bulk_apply_improvement_proposals: {
+        Args: { p_filter_defect_code?: string; p_proposal_ids?: string[] }
+        Returns: Json
+      }
+      bulk_archive_unused: { Args: never; Returns: Json }
+      bulk_generate_ai_proposals: {
+        Args: { p_defect_code: string }
+        Returns: Json
+      }
+      bulk_merge_duplicates: { Args: { p_only_exact?: boolean }; Returns: Json }
+      bulk_request_review_for_stale_rules: { Args: never; Returns: Json }
+      calc_business_days: {
+        Args: { end_date: string; start_date: string }
+        Returns: number
+      }
+      calculate_rule_quality_score: {
+        Args: { p_rule_id: string }
+        Returns: number
+      }
+      client_terms_filled_count: {
+        Args: { ct: Database["public"]["Tables"]["client_terms"]["Row"] }
+        Returns: number
+      }
+      count_rules_pending_embedding: { Args: never; Returns: Json }
       create_bulk_revision_comment: {
         Args: {
           p_comment_text: string
@@ -2870,12 +4880,116 @@ export type Database = {
         Args: { p_project_id: string }
         Returns: undefined
       }
+      detect_rule_duplicates: {
+        Args: {
+          p_method?: string
+          p_min_similarity?: number
+          p_persist?: boolean
+        }
+        Returns: Json
+      }
+      detect_rule_duplicates_semantic: {
+        Args: { p_max_pairs?: number; p_min_similarity?: number }
+        Returns: Json
+      }
+      detect_semantic_duplicate_pairs: {
+        Args: { p_limit?: number; p_min_similarity?: number }
+        Returns: {
+          rule_a_id: string
+          rule_a_title: string
+          rule_b_id: string
+          rule_b_title: string
+          similarity: number
+        }[]
+      }
       ensure_profile:
         | { Args: { p_email: string; p_user_id: string }; Returns: undefined }
         | { Args: { p_email: string; p_user_id: string }; Returns: undefined }
+      find_similar_rules_by_embedding: {
+        Args: {
+          p_client_id?: string
+          p_embedding: string
+          p_exclude_inactive?: boolean
+          p_exclude_rule_id?: string
+          p_limit?: number
+          p_min_similarity?: number
+          p_product_id?: string
+          p_project_id?: string
+          p_scope?: string
+        }
+        Returns: {
+          client_id: string
+          description: string
+          is_active: boolean
+          product_id: string
+          project_id: string
+          quality_score: number
+          rule_id: string
+          scope: string
+          similarity: number
+          title: string
+        }[]
+      }
+      find_similar_rules_semantic: {
+        Args: {
+          p_exclude_inactive?: boolean
+          p_limit?: number
+          p_min_similarity?: number
+          p_rule_id: string
+        }
+        Returns: {
+          client_id: string
+          description: string
+          is_active: boolean
+          product_id: string
+          project_id: string
+          quality_score: number
+          rule_id: string
+          scope: string
+          similarity: number
+          title: string
+        }[]
+      }
       generate_share_token: { Args: never; Returns: string }
+      get_actionable_duplicate_groups: {
+        Args: { p_limit?: number; p_offset?: number }
+        Returns: {
+          active_count: number
+          client_id: string
+          detected_at: string
+          detection_method: string
+          group_id: string
+          group_key: string
+          has_ai_proposal: boolean
+          impact_score: number
+          inactive_count: number
+          member_rule_ids: string[]
+          product_id: string
+          project_id: string
+          representative_title: string
+          rule_count: number
+          scope: string
+          similarity_score: number
+          suggested_master_rule_id: string
+          suggestion_reason: string
+        }[]
+      }
+      get_ai_judgment_quality_stats: { Args: never; Returns: Json }
+      get_ambiguous_word_rules: {
+        Args: never
+        Returns: {
+          description: string
+          id: string
+          is_auto_generated: boolean
+          matched_words: string[]
+          process_type: string
+          rule_id: string
+          title: string
+        }[]
+      }
       get_applicable_rules: {
         Args: {
+          p_min_quality_score?: number
           p_process_type?: string
           p_product_id: string
           p_project_id?: string
@@ -2890,6 +5004,7 @@ export type Database = {
           process_type: string
           product_id: string
           project_id: string
+          quality_score: number
           rule_id: string
           scope: string
           severity: string
@@ -2897,6 +5012,14 @@ export type Database = {
           source_type: string
           title: string
         }[]
+      }
+      get_duplicate_group_detail: {
+        Args: { p_group_id: string }
+        Returns: Json
+      }
+      get_duplicate_group_with_members: {
+        Args: { p_group_id: string }
+        Returns: Json
       }
       get_expected_size: {
         Args: { p_process_type: string; p_project_id: string }
@@ -2922,6 +5045,34 @@ export type Database = {
           role: string
           status: string
         }[]
+      }
+      get_knowledge_for_adcheck: {
+        Args: {
+          p_client_id: string
+          p_process_type: string
+          p_product_id?: string
+          p_project_id?: string
+        }
+        Returns: Json
+      }
+      get_knowledge_for_adgen: {
+        Args: {
+          p_client_id: string
+          p_function_name: string
+          p_product_id?: string
+          p_project_id?: string
+        }
+        Returns: Json
+      }
+      get_knowledge_fulfillment: { Args: never; Returns: Json }
+      get_latest_merge_log_for_group: {
+        Args: { p_group_id: string }
+        Returns: Json
+      }
+      get_min_quality_score: { Args: never; Returns: number }
+      get_phase2_knowledge_text: {
+        Args: { p_project_id: string }
+        Returns: string
       }
       get_profiles_by_ids: {
         Args: { p_ids: string[] }
@@ -2973,6 +5124,10 @@ export type Database = {
         Args: { p_share_token: string }
         Returns: Json
       }
+      get_project_knowledge_context: {
+        Args: { p_project_id: string; p_rebuild?: boolean }
+        Returns: Json
+      }
       get_project_patterns_for_creator: {
         Args: { p_share_token: string }
         Returns: Json
@@ -2982,6 +5137,16 @@ export type Database = {
         Returns: Json
       }
       get_project_status_summary: { Args: never; Returns: Json }
+      get_quality_gate_history: { Args: { p_limit?: number }; Returns: Json }
+      get_quality_trend: { Args: { p_days?: number }; Returns: Json }
+      get_regulation_master_options: { Args: never; Returns: Json }
+      get_regulations_for_context: {
+        Args: { p_law_codes?: string[]; p_media_codes?: string[] }
+        Returns: Json
+      }
+      get_rule_defects: { Args: { p_rule_id: string }; Returns: Json }
+      get_rule_duplicate_summary: { Args: { p_status?: string }; Returns: Json }
+      get_rule_quality_overview: { Args: never; Returns: Json }
       get_share_link_by_token: {
         Args: { token_param: string }
         Returns: {
@@ -3057,6 +5222,10 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_top_false_positive_rules: {
+        Args: { p_limit?: number }
+        Returns: Json
+      }
       get_user_role: { Args: { _user_id: string }; Returns: string }
       get_workspace_role: { Args: { _user_id: string }; Returns: string }
       is_admin:
@@ -3071,6 +5240,94 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      list_check_rules_page: {
+        Args: {
+          p_categories?: string[]
+          p_client_id?: string
+          p_limit: number
+          p_offset: number
+          p_process_types?: string[]
+          p_product_id?: string
+          p_quality_band?: string
+          p_search?: string
+          p_severities?: string[]
+          p_sort_by?: string
+          p_sort_order?: string
+          p_source_types?: string[]
+          p_status?: string
+        }
+        Returns: Json
+      }
+      list_clients_page: {
+        Args: {
+          p_am_profile_id?: string
+          p_industry?: string
+          p_limit: number
+          p_offset: number
+          p_search?: string
+          p_sort_by?: string
+          p_sort_order?: string
+        }
+        Returns: Json
+      }
+      list_duplicate_groups_page: {
+        Args: {
+          p_client_id?: string
+          p_limit: number
+          p_method?: string
+          p_min_count?: number
+          p_offset: number
+          p_product_id?: string
+          p_sort_by?: string
+          p_sort_order?: string
+          p_status?: string
+        }
+        Returns: Json
+      }
+      list_improvement_proposals_page: {
+        Args: {
+          p_limit: number
+          p_min_score_diff?: number
+          p_offset: number
+          p_proposal_type?: string
+          p_sort_by?: string
+          p_sort_order?: string
+          p_status?: string
+          p_trigger_reason?: string
+        }
+        Returns: Json
+      }
+      list_products_catalog_page: {
+        Args: {
+          p_client_id?: string
+          p_industry_category?: string
+          p_limit: number
+          p_offset: number
+          p_search?: string
+          p_sort_by?: string
+          p_sort_order?: string
+        }
+        Returns: Json
+      }
+      list_projects_page: {
+        Args: {
+          p_client_id?: string
+          p_creative_types?: string[]
+          p_delivery_month?: string
+          p_limit: number
+          p_offset: number
+          p_product_id?: string
+          p_search?: string
+          p_sort_by?: string
+          p_sort_order?: string
+          p_statuses?: string[]
+        }
+        Returns: Json
+      }
+      list_rules_with_defect: {
+        Args: { p_defect_code: string; p_limit?: number; p_offset?: number }
+        Returns: Json
+      }
       lookup_profile_by_email: {
         Args: { p_email: string }
         Returns: {
@@ -3079,6 +5336,10 @@ export type Database = {
         }[]
       }
       process_email_notification_queue: { Args: never; Returns: Json }
+      recalculate_all_rule_quality_scores: {
+        Args: { p_only_outdated?: boolean }
+        Returns: Json
+      }
       recover_stuck_checking_files: {
         Args: never
         Returns: {
@@ -3086,6 +5347,10 @@ export type Database = {
           recovered_id: string
           stuck_minutes: number
         }[]
+      }
+      reject_improvement_proposal: {
+        Args: { p_proposal_id: string; p_reason?: string }
+        Returns: Json
       }
       reject_rule_candidate: {
         Args: {
@@ -3095,14 +5360,30 @@ export type Database = {
         }
         Returns: undefined
       }
+      rollback_rule_merge: { Args: { p_merge_log_id: string }; Returns: Json }
       scenes_json_to_composition_text: {
         Args: { p_scenes: Json }
         Returns: string
+      }
+      search_similar_rules: {
+        Args: {
+          p_client_id?: string
+          p_limit?: number
+          p_min_similarity?: number
+          p_product_id?: string
+          p_project_id?: string
+          p_scope: string
+          p_title: string
+        }
+        Returns: Json
       }
       send_slack_notification:
         | { Args: { body: Json; channel_type: string }; Returns: undefined }
         | { Args: { message: string }; Returns: undefined }
       send_weekly_rule_improvement_report: { Args: never; Returns: undefined }
+      set_min_quality_score: { Args: { p_value: number }; Returns: Json }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       track_creator_access: {
         Args: { p_share_token: string }
         Returns: undefined
