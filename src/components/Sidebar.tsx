@@ -19,6 +19,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import adGenLogo from '@/assets/ad-gen-logo.png';
 
 interface SidebarProps {
   open: boolean;
@@ -111,7 +112,11 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
       >
         {/* Logo */}
         <div className="h-14 px-4 flex items-center border-b border-border bg-white">
-          <h2 className="text-lg font-bold brand-gradient-text whitespace-nowrap">∞ Ad Gen</h2>
+          <img
+            src={adGenLogo}
+            alt="Ad Gen"
+            className="h-7 w-auto"
+          />
           <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto lg:hidden" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
