@@ -3559,6 +3559,7 @@ export type Database = {
           lp_summary: string | null
           lp_url: string | null
           manga_settings: Json | null
+          memo: string | null
           name: string
           narration_config: Json | null
           narration_enabled: boolean | null
@@ -3630,6 +3631,7 @@ export type Database = {
           lp_summary?: string | null
           lp_url?: string | null
           manga_settings?: Json | null
+          memo?: string | null
           name: string
           narration_config?: Json | null
           narration_enabled?: boolean | null
@@ -3701,6 +3703,7 @@ export type Database = {
           lp_summary?: string | null
           lp_url?: string | null
           manga_settings?: Json | null
+          memo?: string | null
           name?: string
           narration_config?: Json | null
           narration_enabled?: boolean | null
