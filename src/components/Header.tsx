@@ -18,7 +18,7 @@ const Header = ({ onMenuToggle }: HeaderProps) => {
           <Menu className="h-5 w-5" />
         </Button>
         {/* Show logo on mobile only (sidebar hidden) */}
-        <img src={adGenLogo} alt="Ad Gen" className="h-9 w-auto lg:hidden" />
+        <img src={adGenLogo} alt="Ad Gen" className="h-8 w-auto lg:hidden" />
       </div>
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="icon" className="relative">
