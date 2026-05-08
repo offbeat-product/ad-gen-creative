@@ -79,7 +79,8 @@ export async function buildPrefillFromAdBrain(
   let differentiation = current.differentiation || '';
   if (!differentiation) {
     const lines: string[] = [];
-    if (product.competitors) lines.push(`競合: ${product.competitors}`);
+    const competitorsText = formatCompetitors(product.competitors);
+    if (competitorsText) lines.push(`競合: ${competitorsText}`);
     if (product.usp) lines.push(`強み: ${product.usp}`);
     if (lines.length > 0) differentiation = lines.join('\n');
   }
