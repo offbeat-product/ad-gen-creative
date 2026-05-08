@@ -180,6 +180,7 @@ const AppealAxisSettings = ({
       </h2>
 
       <AdBrainReferenceCard data={adBrain} loading={adBrainLoading} />
+      <AdBrainProjectInfoCard data={adBrain} />
       {context?.project.copyright_text && (
         <div className="text-xs text-muted-foreground">© {context.project.copyright_text}</div>
       )}
