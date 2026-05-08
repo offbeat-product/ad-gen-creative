@@ -9,8 +9,7 @@ import AppealAxisResult, {
   type SpotJob,
   type SpotAsset,
 } from '@/components/spot/AppealAxisResult';
-import { type BriefData, EMPTY_BRIEF } from '@/components/spot/BriefSection';
-import { saveBriefAsNewVersion } from '@/lib/brief-persistence';
+import { EMPTY_BRIEF } from '@/components/spot/BriefSection';
 
 const N8N_WEBHOOK_URL =
   'https://offbeat-inc.app.n8n.cloud/webhook/adgen-spot-appeal-axis-copy';
@@ -22,10 +21,7 @@ const AppealAxisTool = () => {
   const { state, updateState } = useSpotWizard();
 
   const [numAppealAxes, setNumAppealAxes] = useState(3);
-  const [numCopies, setNumCopies] = useState(3);
-  const [hint, setHint] = useState('');
-  const [briefData, setBriefData] = useState<BriefData>(EMPTY_BRIEF);
-  const [lpScrapedContent, setLpScrapedContent] = useState<string | null>(null);
+  const [numCopies, setNumCopies] = useState(1);
 
   const [jobId, setJobId] = useState<string | null>(null);
   const [job, setJob] = useState<SpotJob | null>(null);
@@ -38,7 +34,6 @@ const AppealAxisTool = () => {
       setJobId(jid);
       if (inputData.num_appeal_axes) setNumAppealAxes(Number(inputData.num_appeal_axes));
       if (inputData.num_copies) setNumCopies(Number(inputData.num_copies));
-      if (inputData.hint) setHint(String(inputData.hint));
     },
     []
   );
@@ -116,14 +111,6 @@ const AppealAxisTool = () => {
         const handleGenerate = async () => {
           if (!state.projectId || !user) return;
 
-          // 生成前に広告ブリーフを履歴へ保存(失敗してもブロックしない)
-          await saveBriefAsNewVersion(
-            state.projectId,
-            briefData,
-            'generation_trigger',
-            '訴求軸・コピー生成時点のブリーフ'
-          ).catch((e) => console.error('[AppealAxis] brief persist error:', e));
-
           const { data: newJob, error: jobError } = await supabase
             .from('gen_spot_jobs')
             .insert({
@@ -132,7 +119,6 @@ const AppealAxisTool = () => {
               input_data: {
                 num_appeal_axes: numAppealAxes,
                 num_copies: numCopies,
-                hint,
               },
               status: 'pending',
               created_by: user.id,
@@ -157,8 +143,6 @@ const AppealAxisTool = () => {
               project_id: state.projectId,
               num_appeal_axes: numAppealAxes,
               num_copies: numCopies,
-              hint,
-              brief: { ...briefData, lp_scraped_content: lpScrapedContent },
               copyright_text: context?.project.copyright_text ?? null,
               client_name: context?.project.product.client.name ?? null,
               product_name: context?.project.product.name ?? null,
@@ -184,11 +168,6 @@ const AppealAxisTool = () => {
             setNumAppealAxes={setNumAppealAxes}
             numCopies={numCopies}
             setNumCopies={setNumCopies}
-            hint={hint}
-            setHint={setHint}
-            briefData={briefData}
-            setBriefData={setBriefData}
-            onLpScrapedContentLoaded={setLpScrapedContent}
             onGenerate={handleGenerate}
             isRunning={isRunning}
           />
@@ -200,7 +179,7 @@ const AppealAxisTool = () => {
           assets={assets}
           jobId={jobId}
           context={context}
-          briefData={briefData}
+          briefData={EMPTY_BRIEF}
           state={state}
           onStartNew={handleStartNew}
         />
