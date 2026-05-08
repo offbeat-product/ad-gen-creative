@@ -115,7 +115,7 @@ const Sidebar = ({ open, onClose }: SidebarProps) => {
           <img
             src={adGenLogo}
             alt="Ad Gen"
-            className="h-6 w-auto"
+            className="h-7 w-auto"
           />
           <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto lg:hidden" onClick={onClose}>
             <X className="h-4 w-4" />
