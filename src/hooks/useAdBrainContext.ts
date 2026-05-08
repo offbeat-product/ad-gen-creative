@@ -30,6 +30,7 @@ export interface AdBrainBrief {
   ad_purpose_note?: string | null;
   compositions_count?: number | null;
   tone_manners_count?: number | null;
+  memo?: string | null;
 }
 
 export interface AdBrainCompetitor {
