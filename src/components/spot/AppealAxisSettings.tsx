@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import BriefSection, { type BriefData } from '@/components/spot/BriefSection';
 import BriefHistoryPanel from '@/components/spot/BriefHistoryPanel';
 import AdBrainReferenceCard from '@/components/spot/AdBrainReferenceCard';
+import AdBrainProjectInfoCard from '@/components/spot/AdBrainProjectInfoCard';
 import { loadCurrentBrief } from '@/lib/brief-persistence';
 import { useAdBrainContext } from '@/hooks/useAdBrainContext';
 import { buildPrefillFromAdBrain } from '@/lib/ad-brain-prefill';
