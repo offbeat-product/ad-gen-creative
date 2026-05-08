@@ -242,23 +242,19 @@ const AppealAxisSettings = ({
 
         <div className="space-y-2">
           <Label>各訴求軸あたりのコピー数</Label>
-          <Select
-            value={String(numCopies)}
-            onValueChange={(v) => setNumCopies(Number(v))}
-          >
+          <Select value="1" disabled>
             <SelectTrigger>
-              <SelectValue />
+              <SelectValue placeholder="1" />
             </SelectTrigger>
             <SelectContent>
-              {COUNT_OPTIONS.map((n) => (
-                <SelectItem key={n} value={String(n)}>
-                  {n}
-                </SelectItem>
-              ))}
+              <SelectItem value="1">1</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
+      <p className="text-xs text-muted-foreground -mt-2">
+        Ad Brain の構成案数に応じて訴求軸を自動設定します。1 訴求軸 = 1 コピーで生成されます。
+      </p>
 
       <Alert variant={totalPatterns >= 50 ? 'destructive' : 'default'}>
         <AlertDescription>
