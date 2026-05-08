@@ -252,7 +252,7 @@ const BriefSection = ({
           <div className="flex items-center gap-2 text-left">
             <Target className="h-4 w-4 text-secondary" />
             <span className="font-semibold text-sm">
-              🎯 広告ブリーフ
+              🎯 案件情報(Ad Gen 用追加入力)
             </span>
             <span className="text-xs text-muted-foreground font-normal">
               (精度を大きく左右します)
