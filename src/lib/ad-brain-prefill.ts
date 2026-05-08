@@ -1,9 +1,13 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { BriefData } from '@/components/spot/BriefSection';
-import type { AdBrainBrief, AdBrainContextResponse } from '@/hooks/useAdBrainContext';
+import {
+  formatCompetitors,
+  type AdBrainBrief,
+  type AdBrainContextResponse,
+} from '@/hooks/useAdBrainContext';
 
 interface ProductPrefillRow {
-  competitors: string | null;
+  competitors: unknown;
   usp: string | null;
   target_audience: string | null;
   lp_url: string | null;
