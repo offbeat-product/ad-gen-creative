@@ -561,13 +561,6 @@ export type Database = {
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "check_rules_source_reference_id_fkey"
-            columns: ["source_reference_id"]
-            isOneToOne: false
-            referencedRelation: "reference_materials"
-            referencedColumns: ["id"]
-          },
         ]
       }
       client_assets: {
@@ -4167,13 +4160,6 @@ export type Database = {
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "rule_candidates_source_reference_id_fkey"
-            columns: ["source_reference_id"]
-            isOneToOne: false
-            referencedRelation: "reference_materials"
-            referencedColumns: ["id"]
-          },
         ]
       }
       rule_duplicate_groups: {
@@ -4836,6 +4822,14 @@ export type Database = {
         }[]
       }
       audit_check_rules_quality: { Args: never; Returns: Json }
+      build_legal_content_from_codes: {
+        Args: { p_law_codes: string[] }
+        Returns: string
+      }
+      build_legal_content_from_jsonb: {
+        Args: { p_law_codes: Json }
+        Returns: string
+      }
       build_project_knowledge_context: {
         Args: { p_project_id: string }
         Returns: string
@@ -5326,6 +5320,14 @@ export type Database = {
           p_statuses?: string[]
         }
         Returns: Json
+      }
+      list_rules_needing_embedding: {
+        Args: { p_limit?: number }
+        Returns: {
+          description: string
+          rule_id: string
+          title: string
+        }[]
       }
       list_rules_with_defect: {
         Args: { p_defect_code: string; p_limit?: number; p_offset?: number }
