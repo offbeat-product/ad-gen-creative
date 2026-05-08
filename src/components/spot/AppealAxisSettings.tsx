@@ -14,6 +14,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import BriefSection, { type BriefData } from '@/components/spot/BriefSection';
 import BriefHistoryPanel from '@/components/spot/BriefHistoryPanel';
 import AdBrainReferenceCard from '@/components/spot/AdBrainReferenceCard';
+import AdBrainProjectInfoCard from '@/components/spot/AdBrainProjectInfoCard';
 import { loadCurrentBrief } from '@/lib/brief-persistence';
 import { useAdBrainContext } from '@/hooks/useAdBrainContext';
 import { buildPrefillFromAdBrain } from '@/lib/ad-brain-prefill';
@@ -86,6 +87,13 @@ const AppealAxisSettings = ({
         );
         setBriefData(brief);
         if (nextHint && nextHint !== hint) setHint(nextHint);
+
+        // 訴求軸 = compositions_count(自動)、コピー数 = 1(固定)
+        const cc = adBrain.project?.brief?.compositions_count;
+        if (typeof cc === 'number' && cc > 0) {
+          setNumAppealAxes(Math.min(10, Math.max(1, cc)));
+        }
+        setNumCopies(1);
       } catch (e) {
         console.error('[AppealAxis] prefill error:', e);
       }
@@ -172,6 +180,7 @@ const AppealAxisSettings = ({
       </h2>
 
       <AdBrainReferenceCard data={adBrain} loading={adBrainLoading} />
+      <AdBrainProjectInfoCard data={adBrain} />
       {context?.project.copyright_text && (
         <div className="text-xs text-muted-foreground">© {context.project.copyright_text}</div>
       )}
@@ -233,23 +242,19 @@ const AppealAxisSettings = ({
 
         <div className="space-y-2">
           <Label>各訴求軸あたりのコピー数</Label>
-          <Select
-            value={String(numCopies)}
-            onValueChange={(v) => setNumCopies(Number(v))}
-          >
+          <Select value="1" disabled>
             <SelectTrigger>
-              <SelectValue />
+              <SelectValue placeholder="1" />
             </SelectTrigger>
             <SelectContent>
-              {COUNT_OPTIONS.map((n) => (
-                <SelectItem key={n} value={String(n)}>
-                  {n}
-                </SelectItem>
-              ))}
+              <SelectItem value="1">1</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
+      <p className="text-xs text-muted-foreground -mt-2">
+        Ad Brain の構成案数に応じて訴求軸を自動設定します。1 訴求軸 = 1 コピーで生成されます。
+      </p>
 
       <Alert variant={totalPatterns >= 50 ? 'destructive' : 'default'}>
         <AlertDescription>

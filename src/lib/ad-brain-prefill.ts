@@ -1,9 +1,13 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { BriefData } from '@/components/spot/BriefSection';
-import type { AdBrainBrief, AdBrainContextResponse } from '@/hooks/useAdBrainContext';
+import {
+  formatCompetitors,
+  type AdBrainBrief,
+  type AdBrainContextResponse,
+} from '@/hooks/useAdBrainContext';
 
 interface ProductPrefillRow {
-  competitors: string | null;
+  competitors: unknown;
   usp: string | null;
   target_audience: string | null;
   lp_url: string | null;
@@ -75,7 +79,8 @@ export async function buildPrefillFromAdBrain(
   let differentiation = current.differentiation || '';
   if (!differentiation) {
     const lines: string[] = [];
-    if (product.competitors) lines.push(`競合: ${product.competitors}`);
+    const competitorsText = formatCompetitors(product.competitors);
+    if (competitorsText) lines.push(`競合: ${competitorsText}`);
     if (product.usp) lines.push(`強み: ${product.usp}`);
     if (lines.length > 0) differentiation = lines.join('\n');
   }

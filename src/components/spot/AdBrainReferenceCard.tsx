@@ -80,13 +80,23 @@ const AdBrainReferenceCard = ({ data, loading }: Props) => {
           ⚖️ 法令: {lawsCount} 件 / 📢 媒体: {mediaCount} 件
         </div>
         {empty > 0 && (
-          <div className="rounded-md bg-destructive/10 border border-destructive/20 px-2 py-1.5 text-destructive">
-            ⚠️ コンテンツが空のナレッジ: {empty} 件 (ナレッジ管理ページで内容を追加してください)
+          <div className="rounded-md bg-secondary-wash/60 border border-secondary/20 px-2 py-1.5 text-foreground">
+            📝 コンテンツが空のナレッジ {empty} 件あります。内容を追加すると AI 生成精度が向上します。
           </div>
         )}
         {noRules && (
-          <div className="rounded-md bg-amber-500/10 border border-amber-500/30 px-2 py-1.5 text-amber-700 dark:text-amber-400">
-            ⚠️ 関連ルールが 0 件です。ナレッジ管理で品質スコア・AI参照フラグを確認してください。
+          <div className="rounded-md bg-amber-500/10 border border-amber-500/30 px-2 py-1.5 text-amber-700 dark:text-amber-400 space-y-1">
+            <div>⚠️ この商材・案件にはルールが未設定です。</div>
+            {client?.id && (
+              <a
+                href={`https://ad-brain-rho.vercel.app/clients/${client.id}/rules`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline font-medium"
+              >
+                ルール管理ページで追加 →
+              </a>
+            )}
           </div>
         )}
       </CollapsibleContent>

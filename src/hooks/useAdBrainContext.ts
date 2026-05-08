@@ -26,6 +26,15 @@ export interface AdBrainBrief {
   appeal_requests?: string[] | null;
   tone_manner_requests?: string[] | null;
   lp_info?: LpInfo | null;
+  ad_purposes?: string[] | null;
+  ad_purpose_note?: string | null;
+  compositions_count?: number | null;
+  tone_manners_count?: number | null;
+}
+
+export interface AdBrainCompetitor {
+  name: string;
+  description?: string | null;
 }
 
 export interface AdBrainProduct {
@@ -34,11 +43,15 @@ export interface AdBrainProduct {
   applicable_laws?: string[];
   rules_count: number;
   materials_count: number;
-  competitors?: string | null;
+  /** v2.6: 配列(オブジェクト)に変更。後方互換で string も許容 */
+  competitors?: AdBrainCompetitor[] | string | null;
   usp?: string | null;
   target_audience?: string | null;
   lp_url?: string | null;
   ng_words?: string[] | null;
+  price_range?: string | null;
+  industry_category?: string | null;
+  description?: string | null;
 }
 
 export interface AdBrainContextResponse {
@@ -86,4 +99,24 @@ export function useAdBrainContext(projectId: string | null) {
     staleTime: 1000 * 60 * 5,
   });
   return { data: q.data ?? null, loading: q.isLoading, error: q.error, refetch: q.refetch };
+}
+
+/** 競合(配列 or 文字列)を表示用文字列へ整形(共通ユーティリティ) */
+export function formatCompetitors(competitors: unknown): string {
+  if (!competitors) return '';
+  if (typeof competitors === 'string') return competitors;
+  if (Array.isArray(competitors)) {
+    return competitors
+      .map((c) => {
+        if (typeof c === 'string') return c;
+        if (c && typeof c === 'object' && 'name' in (c as Record<string, unknown>)) {
+          const obj = c as { name?: string; description?: string };
+          return obj.description ? `${obj.name}(${obj.description})` : obj.name ?? '';
+        }
+        return String(c);
+      })
+      .filter(Boolean)
+      .join('、');
+  }
+  return String(competitors);
 }
