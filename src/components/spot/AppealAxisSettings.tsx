@@ -87,6 +87,13 @@ const AppealAxisSettings = ({
         );
         setBriefData(brief);
         if (nextHint && nextHint !== hint) setHint(nextHint);
+
+        // 訴求軸 = compositions_count(自動)、コピー数 = 1(固定)
+        const cc = adBrain.project?.brief?.compositions_count;
+        if (typeof cc === 'number' && cc > 0) {
+          setNumAppealAxes(Math.min(10, Math.max(1, cc)));
+        }
+        setNumCopies(1);
       } catch (e) {
         console.error('[AppealAxis] prefill error:', e);
       }
