@@ -4902,6 +4902,22 @@ export type Database = {
       ensure_profile:
         | { Args: { p_email: string; p_user_id: string }; Returns: undefined }
         | { Args: { p_email: string; p_user_id: string }; Returns: undefined }
+      find_most_similar_rule: {
+        Args: {
+          p_min_similarity?: number
+          p_process_type?: string
+          p_product_id: string
+          p_query_embedding: string
+        }
+        Returns: {
+          description: string
+          id: string
+          process_type: string
+          rule_id: string
+          similarity: number
+          title: string
+        }[]
+      }
       find_similar_rules_by_embedding: {
         Args: {
           p_client_id?: string
